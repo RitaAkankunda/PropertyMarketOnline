@@ -1,0 +1,585 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Home,
+  Building2,
+  MessageSquare,
+  Heart,
+  Settings,
+  User,
+  LogOut,
+  Plus,
+  Bell,
+  Search,
+  Eye,
+  TrendingUp,
+  Calendar,
+  DollarSign,
+  Users,
+  Clock,
+  ChevronRight,
+  MoreVertical,
+  Edit,
+  Trash2,
+  BarChart3,
+  Wallet,
+  FileText,
+  BadgeCheck,
+  AlertCircle,
+} from "lucide-react";
+import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
+import { cn, formatCurrency } from "@/lib/utils";
+import { propertyService, authService } from "@/services";
+import { useAuthStore } from "@/store";
+import type { Property, User as UserType } from "@/types";
+
+// Types for dashboard data
+interface DashboardStats {
+  totalProperties: number;
+  totalViews: number;
+  totalMessages: number;
+  revenue: number;
+  propertyChange: string;
+  viewsChange: string;
+  messagesChange: string;
+  revenueChange: string;
+}
+
+interface Activity {
+  id: string;
+  type: "inquiry" | "view" | "verification" | "message";
+  message: string;
+  time: string;
+  read: boolean;
+}
+
+interface Appointment {
+  id: string;
+  title: string;
+  property: string;
+  client: string;
+  date: string;
+  time: string;
+}
+
+// Navigation items
+const navigation = [
+  { name: "Overview", href: "/dashboard", icon: Home, current: true },
+  { name: "My Properties", href: "/dashboard/properties", icon: Building2, current: false },
+  { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: 0, current: false },
+  { name: "Saved", href: "/dashboard/saved", icon: Heart, current: false },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, current: false },
+  { name: "Payments", href: "/dashboard/payments", icon: Wallet, current: false },
+  { name: "Documents", href: "/dashboard/documents", icon: FileText, current: false },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings, current: false },
+];
+
+// Stats configuration
+const statsConfig = [
+  {
+    name: "Total Properties",
+    key: "totalProperties" as const,
+    changeKey: "propertyChange" as const,
+    icon: Building2,
+    color: "blue",
+    format: (v: number) => v.toString(),
+  },
+  {
+    name: "Total Views",
+    key: "totalViews" as const,
+    changeKey: "viewsChange" as const,
+    icon: Eye,
+    color: "green",
+    format: (v: number) => v.toLocaleString(),
+  },
+  {
+    name: "Messages",
+    key: "totalMessages" as const,
+    changeKey: "messagesChange" as const,
+    icon: MessageSquare,
+    color: "purple",
+    format: (v: number) => v.toString(),
+  },
+  {
+    name: "Revenue",
+    key: "revenue" as const,
+    changeKey: "revenueChange" as const,
+    icon: DollarSign,
+    color: "orange",
+    format: (v: number) => formatCurrency(v, "UGX"),
+  },
+];
+
+export default function DashboardPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalProperties: 0,
+    totalViews: 0,
+    totalMessages: 0,
+    revenue: 0,
+    propertyChange: "0",
+    viewsChange: "0%",
+    messagesChange: "0",
+    revenueChange: "0%",
+  });
+  const [recentProperties, setRecentProperties] = useState<Property[]>([]);
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  
+  // Get user from auth store
+  const { user } = useAuthStore();
+  
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch user's properties
+        const propertiesResponse = await propertyService.getProperties({}, 1, 3);
+        setRecentProperties(propertiesResponse.data);
+        
+        // TODO: Fetch stats from API when available
+        // const statsResponse = await dashboardService.getStats();
+        // setStats(statsResponse.data);
+        
+        // TODO: Fetch activities from API when available
+        // const activitiesResponse = await dashboardService.getActivities();
+        // setRecentActivities(activitiesResponse.data);
+        
+        // TODO: Fetch appointments from API when available
+        // const appointmentsResponse = await dashboardService.getAppointments();
+        // setAppointments(appointmentsResponse.data);
+        
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Display name from user or fallback
+  const displayName = user ? `${user.firstName} ${user.lastName}` : "User";
+  const userEmail = user?.email || "user@example.com";
+  const userInitials = user 
+    ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase()
+    : "U";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      {/* Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r hidden lg:block">
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="h-16 flex items-center px-6 border-b">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
+                <Home className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-lg font-bold text-slate-900">PropertyMarket</span>
+            </Link>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition",
+                  item.current
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                {item.name}
+                {item.badge && (
+                  <Badge className="ml-auto bg-red-500 text-white text-xs">
+                    {item.badge}
+                  </Badge>
+                )}
+              </Link>
+            ))}
+          </nav>
+
+          {/* User Profile */}
+          <div className="p-4 border-t">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                {userInitials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <p className="text-sm font-medium text-slate-900 truncate">{displayName}</p>
+                  {user?.isVerified && <BadgeCheck className="w-4 h-4 text-green-500" />}
+                </div>
+                <p className="text-xs text-slate-500 truncate">{userEmail}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="lg:pl-64">
+        {/* Top Header */}
+        <header className="sticky top-0 z-40 bg-white border-b">
+          <div className="flex items-center justify-between h-16 px-4 lg:px-8">
+            {/* Search */}
+            <div className="flex-1 max-w-xl">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search properties, messages..."
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 ml-4">
+              <Button variant="outline" size="icon" className="relative">
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  4
+                </span>
+              </Button>
+              <Link
+                href="/listings/create"
+                className="inline-flex items-center justify-center h-10 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Listing
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="p-4 lg:p-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">
+              Welcome back, {displayName.split(" ")[0]}! 👋
+            </h1>
+            <p className="text-slate-500">
+              Here&apos;s what&apos;s happening with your properties today.
+            </p>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {statsConfig.map((statConfig) => (
+              <Card key={statConfig.name} className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div
+                    className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center",
+                      statConfig.color === "blue" && "bg-blue-100",
+                      statConfig.color === "green" && "bg-green-100",
+                      statConfig.color === "purple" && "bg-purple-100",
+                      statConfig.color === "orange" && "bg-orange-100"
+                    )}
+                  >
+                    <statConfig.icon
+                      className={cn(
+                        "w-6 h-6",
+                        statConfig.color === "blue" && "text-blue-600",
+                        statConfig.color === "green" && "text-green-600",
+                        statConfig.color === "purple" && "text-purple-600",
+                        statConfig.color === "orange" && "text-orange-600"
+                      )}
+                    />
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-xs text-green-600 border-green-200 bg-green-50"
+                  >
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    {stats[statConfig.changeKey]}
+                  </Badge>
+                </div>
+                <p className="text-2xl font-bold text-slate-900 mb-1">
+                  {statConfig.format(stats[statConfig.key])}
+                </p>
+                <p className="text-sm text-slate-500">{statConfig.name}</p>
+              </Card>
+            ))}
+          </div>
+
+          {/* Main Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Properties List */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Recent Properties */}
+              <Card>
+                <div className="p-6 border-b">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-slate-900">Recent Properties</h2>
+                    <Link
+                      href="/dashboard/properties"
+                      className="text-sm text-blue-600 hover:underline flex items-center"
+                    >
+                      View All
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+                <div className="divide-y">
+                  {recentProperties.length > 0 ? (
+                    recentProperties.map((property) => (
+                    <div key={property.id} className="p-4 hover:bg-slate-50 transition">
+                      <div className="flex gap-4">
+                        <div className="w-24 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-slate-200">
+                          {property.images && property.images[0] ? (
+                            <img
+                              src={property.images[0].url}
+                              alt={property.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Building2 className="w-8 h-8 text-slate-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium text-slate-900 truncate">
+                                  {property.title}
+                                </h3>
+                                {property.isVerified && (
+                                  <BadgeCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-sm text-slate-500">
+                                {property.location.district}, {property.location.city}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={property.status === "active" ? "default" : "secondary"}
+                                className={cn(
+                                  "text-xs",
+                                  property.status === "active" && "bg-green-500",
+                                  property.status === "pending" && "bg-yellow-500"
+                                )}
+                              >
+                                {property.status}
+                              </Badge>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6 mt-2">
+                            <p className="font-semibold text-blue-600">
+                              {formatCurrency(property.price, "UGX")}
+                            </p>
+                            <span className="flex items-center gap-1 text-sm text-slate-500">
+                              <Eye className="w-4 h-4" />
+                              {property.views || 0}
+                            </span>
+                            <span className="flex items-center gap-1 text-sm text-slate-500">
+                              <MessageSquare className="w-4 h-4" />
+                              0
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                      <p className="text-slate-500 mb-4">No properties yet</p>
+                      <Link
+                        href="/listings/create"
+                        className="inline-flex items-center justify-center h-9 px-4 text-sm rounded-lg font-medium bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Your First Property
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Link href="/listings/create">
+                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
+                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-3">
+                      <Plus className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <p className="font-medium text-slate-900 text-sm">Add Property</p>
+                  </Card>
+                </Link>
+                <Link href="/dashboard/messages">
+                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
+                    <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mb-3">
+                      <MessageSquare className="w-5 h-5 text-green-600" />
+                    </div>
+                    <p className="font-medium text-slate-900 text-sm">Messages</p>
+                  </Card>
+                </Link>
+                <Link href="/providers">
+                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
+                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mb-3">
+                      <Users className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <p className="font-medium text-slate-900 text-sm">Find Providers</p>
+                  </Card>
+                </Link>
+                <Link href="/dashboard/analytics">
+                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
+                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mb-3">
+                      <BarChart3 className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <p className="font-medium text-slate-900 text-sm">Analytics</p>
+                  </Card>
+                </Link>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Recent Activity */}
+              <Card>
+                <div className="p-6 border-b">
+                  <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
+                </div>
+                <div className="divide-y">
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className={cn(
+                        "p-4 hover:bg-slate-50 transition",
+                        !activity.read && "bg-blue-50"
+                      )}
+                    >
+                      <div className="flex gap-3">
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                            activity.type === "inquiry" && "bg-blue-100",
+                            activity.type === "view" && "bg-green-100",
+                            activity.type === "verification" && "bg-purple-100",
+                            activity.type === "message" && "bg-orange-100"
+                          )}
+                        >
+                          {activity.type === "inquiry" && (
+                            <MessageSquare className="w-4 h-4 text-blue-600" />
+                          )}
+                          {activity.type === "view" && <Eye className="w-4 h-4 text-green-600" />}
+                          {activity.type === "verification" && (
+                            <BadgeCheck className="w-4 h-4 text-purple-600" />
+                          )}
+                          {activity.type === "message" && (
+                            <MessageSquare className="w-4 h-4 text-orange-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-700">{activity.message}</p>
+                          <p className="text-xs text-slate-400 mt-1">{activity.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Bell className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                      <p className="text-sm text-slate-500">No recent activity</p>
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 border-t">
+                  <Button variant="ghost" className="w-full" size="sm">
+                    View All Activity
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Upcoming Appointments */}
+              <Card>
+                <div className="p-6 border-b">
+                  <h2 className="text-lg font-semibold text-slate-900">Upcoming</h2>
+                </div>
+                <div className="divide-y">
+                  {appointments.length > 0 ? (
+                    appointments.map((appointment) => (
+                    <div key={appointment.id} className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Calendar className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900 text-sm">{appointment.title}</p>
+                          <p className="text-xs text-slate-500">{appointment.property}</p>
+                          <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
+                            <Clock className="w-3 h-3" />
+                            {appointment.date} at {appointment.time}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                      <p className="text-sm text-slate-500">No upcoming appointments</p>
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 border-t">
+                  <Button variant="outline" className="w-full" size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Schedule Appointment
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Verification Reminder */}
+              <Card className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-slate-900 mb-1">Complete Verification</h3>
+                    <p className="text-sm text-slate-600 mb-3">
+                      Verify your account to unlock all features and build trust with buyers.
+                    </p>
+                    <Button size="sm" className="bg-yellow-600 hover:bg-yellow-700">
+                      Verify Now
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
