@@ -24,7 +24,7 @@ export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.LISTER, UserRole.PROVIDER, UserRole.ADMIN)
+  @Roles(UserRole.LISTER, UserRole.PROPERTY_MANAGER, UserRole.ADMIN)
   @Post()
   create(@Body() createPropertyDto: CreatePropertyDto, @Request() req) {
     return this.propertiesService.create(createPropertyDto, req.user.sub);
@@ -47,7 +47,7 @@ export class PropertiesController {
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.LISTER, UserRole.PROVIDER, UserRole.ADMIN)
+  @Roles(UserRole.LISTER, UserRole.PROPERTY_MANAGER, UserRole.ADMIN)
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -63,7 +63,7 @@ export class PropertiesController {
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.LISTER, UserRole.PROVIDER, UserRole.ADMIN)
+  @Roles(UserRole.LISTER, UserRole.PROPERTY_MANAGER, UserRole.ADMIN)
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
     return this.propertiesService.remove(id, req.user.sub, req.user.role);

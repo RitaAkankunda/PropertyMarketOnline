@@ -19,7 +19,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   password: string;
 
   @Column({
@@ -35,6 +35,15 @@ export class User {
   @Column()
   lastName: string;
 
+  @Column({ nullable: true })
+  phone?: string;
+
+  @Column({ nullable: true })
+  provider?: string;
+
+  @Column({ nullable: true })
+  providerId?: string;
+
   @OneToMany(() => Property, (property) => property.owner)
   properties: Property[];
 
@@ -43,7 +52,9 @@ export class User {
 
   @BeforeInsert()
   async hashPassword() {
-    this.password = await bcrypt.hash(this.password, 10);
+    if (this.password) {
+      this.password = await bcrypt.hash(this.password, 10);
+    }
   }
 
   @UpdateDateColumn()

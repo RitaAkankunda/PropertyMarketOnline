@@ -3,9 +3,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PropertiesModule } from './properties/properties.module';
+import { User } from './users/entities/user.entity';
+import { Property } from './properties/entities/property.entity';
 
 @Module({
   imports: [
@@ -23,8 +26,11 @@ import { PropertiesModule } from './properties/properties.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        entities: [User, Property],
         synchronize: true,
+        ssl: configService.get<string>('DB_HOST')?.includes('supabase') 
+          ? { rejectUnauthorized: false } 
+          : false,
       }),
     }),
     UsersModule,

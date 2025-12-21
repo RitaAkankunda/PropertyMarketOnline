@@ -5,6 +5,15 @@ import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserRole } from './enums/user-role.enum';
 
+export interface CreateOAuthUserDto {
+  email: string;
+  firstName: string;
+  lastName: string;
+  provider: string;
+  providerId: string;
+  role: UserRole;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -22,6 +31,18 @@ export class UsersService {
     }
 
     const user = this.userRepository.create(createUserDto);
+    return await this.userRepository.save(user);
+  }
+
+  async createOAuthUser(oauthUserDto: CreateOAuthUserDto): Promise<User> {
+    const user = this.userRepository.create({
+      email: oauthUserDto.email,
+      firstName: oauthUserDto.firstName,
+      lastName: oauthUserDto.lastName,
+      provider: oauthUserDto.provider,
+      providerId: oauthUserDto.providerId,
+      role: oauthUserDto.role,
+    });
     return await this.userRepository.save(user);
   }
 
