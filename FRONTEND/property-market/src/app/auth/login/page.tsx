@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Building2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui";
 import { useAuth } from "@/hooks";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, API_BASE_URL } from "@/lib/constants";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -151,8 +151,13 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Button variant="outline" type="button">
+              <div className="mt-4">
+                <Button 
+                  variant="outline" 
+                  type="button"
+                  className="w-full"
+                  onClick={() => window.location.href = `${API_BASE_URL}/auth/google`}
+                >
                   <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -171,13 +176,7 @@ export default function LoginPage() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  Google
-                </Button>
-                <Button variant="outline" type="button">
-                  <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.164 6.839 9.49.5.09.682-.218.682-.486 0-.24-.009-.875-.013-1.713-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.091-.647.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.03-2.682-.104-.253-.447-1.27.097-2.646 0 0 .84-.27 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.376.203 2.394.1 2.646.64.698 1.026 1.59 1.026 2.682 0 3.841-2.337 4.687-4.565 4.935.359.31.678.92.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .27.18.58.688.482C19.138 20.16 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                  </svg>
-                  GitHub
+                  Continue with Google
                 </Button>
               </div>
             </div>

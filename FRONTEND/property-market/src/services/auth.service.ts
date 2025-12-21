@@ -17,20 +17,26 @@ export interface RegisterData {
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  accessToken: string;
 }
 
 export const authService = {
   // Login user
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     const response = await api.post<AuthResponse>("/auth/login", credentials);
-    return response.data;
+    return {
+      user: response.data.user,
+      token: response.data.accessToken,
+    };
   },
 
   // Register new user
-  async register(data: RegisterData): Promise<AuthResponse> {
+  async register(data: RegisterData): Promise<{ user: User; token: string }> {
     const response = await api.post<AuthResponse>("/auth/signup", data);
-    return response.data;
+    return {
+      user: response.data.user,
+      token: response.data.accessToken,
+    };
   },
 
   // Get current user profile
