@@ -119,6 +119,38 @@ const getMockProperty = (id: string) => {
       },
       amenities: ["Electricity Available", "Water Available", "Road Access", "Security", "Level Terrain", "Infrastructure"],
     };
+  } else if (id.startsWith("commercial-")) {
+    const commercialNumber = parseInt(id.replace("commercial-", "")) || 1;
+    
+    return {
+      id,
+      title: `Commercial Property #${commercialNumber}`,
+      description: `This exceptional commercial property offers prime business location with high visibility and foot traffic. Perfect for retail, office space, or any commercial venture. Features modern facilities, ample parking, and excellent accessibility. The property is strategically located in a thriving business district with proximity to major transportation routes and urban amenities.`,
+      price: 500000000 + (commercialNumber * 500000000),
+      currency: "UGX",
+      propertyType: "commercial",
+      listingType: "sale",
+      backLink: "/properties?type=commercial",
+      backText: "Back to Commercial",
+      images: [
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
+        "https://images.unsplash.com/photo-1497366216548-37526070297c",
+        "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
+      ],
+      location: {
+        address: `${commercialNumber} Business District`,
+        city: "Kampala",
+        district: ["Central", "Nakawa", "Kololo"][commercialNumber % 3],
+        country: "Uganda",
+      },
+      features: {
+        area: 2000 + (commercialNumber * 500),
+        areaUnit: "sqft",
+        floors: 1 + (commercialNumber % 3),
+      },
+      amenities: ["Parking", "Security", "Elevator", "Loading Dock", "High Visibility", "Prime Location"],
+    };
   }
   
   // Default fallback

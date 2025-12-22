@@ -179,6 +179,62 @@ const LAND_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
   updatedAt: new Date().toISOString(),
 }));
 
+// Mockup data for commercial (36 total = 3 pages of 12)
+const COMMERCIAL_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
+  id: `commercial-${i + 1}`,
+  title: `Commercial Property #${i + 1}`,
+  description: `Prime commercial space perfect for retail, office, or business operations. Located in a high-traffic area with excellent visibility and accessibility. Features modern facilities, ample parking, and proximity to major transportation routes.`,
+  price: 500000000 + (i * 500000000),
+  currency: "UGX",
+  propertyType: "commercial" as const,
+  listingType: "sale" as const,
+  status: "active" as const,
+  images: [
+    {
+      id: `img-commercial-${i}`,
+      url: [
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
+        "https://images.unsplash.com/photo-1497366216548-37526070297c",
+        "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
+        "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+      ][i % 6],
+      alt: `Commercial Property ${i + 1}`,
+      isPrimary: true,
+    },
+  ],
+  location: {
+    address: `${i + 1} Business District`,
+    city: "Kampala",
+    district: ["Central", "Nakawa", "Kololo"][i % 3],
+    country: "Uganda",
+    coordinates: { lat: 0.3476, lng: 32.5825 },
+  },
+  features: {
+    area: 2000 + (i * 500),
+    areaUnit: "sqft" as const,
+    floors: 1 + (i % 3),
+  },
+  amenities: ["Parking", "Security", "Elevator", "Loading Dock", "High Visibility"],
+  owner: {
+    id: "owner-4",
+    email: "owner@example.com",
+    firstName: "Michael",
+    lastName: "Thompson",
+    role: "lister" as const,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  views: 70 + i * 7,
+  leads: 5 + i,
+  isVerified: true,
+  isFeatured: i < 6,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}));
+
 function PropertiesPage() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<PropertyFiltersType>({});
@@ -223,6 +279,13 @@ function PropertiesPage() {
       // For land, use mockup data
       if (propertyType === "land") {
         setProperties(LAND_MOCKUPS as any);
+        setIsLoading(false);
+        return;
+      }
+
+      // For commercial, use mockup data
+      if (propertyType === "commercial") {
+        setProperties(COMMERCIAL_MOCKUPS as any);
         setIsLoading(false);
         return;
       }
