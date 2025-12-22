@@ -2,33 +2,105 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Grid, List, Map, Building2 } from "lucide-react";
+import { Grid, List, Map, Building2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui";
 import { PropertyFilters, PropertyGrid } from "@/components/properties";
 import { propertyService } from "@/services";
 import type { Property, PropertyFilters as PropertyFiltersType } from "@/types";
 
+// Mockup data for houses (36 total = 3 pages of 12)
+const HOUSE_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
+  id: `house-${i + 1}`,
+  title: `Beautiful House #${i + 1}`,
+  description: `Stunning ${3 + (i % 3)} bedroom house with modern amenities and spacious living areas.`,
+  price: 400000000 + (i * 50000000),
+  currency: "UGX",
+  propertyType: "house" as const,
+  listingType: "sale" as const,
+  status: "active" as const,
+  images: [
+    {
+      id: `img-${i}`,
+      url: [
+        "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+        "https://images.unsplash.com/photo-1564013799919-ab600027ffc6",
+        "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+        "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
+        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b",
+      ][i % 6],
+      alt: `House ${i + 1}`,
+      isPrimary: true,
+    },
+  ],
+  location: {
+    address: `${i + 1} Property Street`,
+    city: "Kampala",
+    district: ["Kampala", "Wakiso", "Entebbe"][i % 3],
+    country: "Uganda",
+    coordinates: { lat: 0.3476, lng: 32.5825 },
+  },
+  features: {
+    bedrooms: 3 + (i % 3),
+    bathrooms: 2 + (i % 2),
+    area: 2500 + (i * 100),
+    areaUnit: "sqft" as const,
+    yearBuilt: 2020 + (i % 5),
+  },
+  amenities: ["Parking", "Garden", "Security"],
+  owner: {
+    id: "owner-1",
+    email: "owner@example.com",
+    firstName: "John",
+    lastName: "Doe",
+    role: "lister" as const,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  views: 100 + i * 10,
+  leads: 5 + i,
+  isVerified: true,
+  isFeatured: i < 6,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}));
+
 function PropertiesPage() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<PropertyFiltersType>({});
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const propertiesPerPage = 12;
+
+  // Get property type from URL
+  const propertyType = searchParams.get("type");
 
   // Initialize filters from URL params
   useEffect(() => {
     const type = searchParams.get("type");
     if (type) {
-      setFilters((prev) => ({ ...prev, listingType: type as any }));
+      setFilters((prev) => ({ ...prev, propertyType: type as any }));
     }
   }, [searchParams]);
 
-  // Fetch properties from API
+  // Fetch or use mockup properties
   useEffect(() => {
-    const fetchProperties = async () => {
+    const loadProperties = async () => {
       setIsLoading(true);
       setError(null);
+      
+      // For houses, use mockup data
+      if (propertyType === "houses" || propertyType === "house") {
+        setProperties(HOUSE_MOCKUPS as any);
+        setIsLoading(false);
+        return;
+      }
+
+      // For other types, try to fetch from API
       try {
         const response = await propertyService.getProperties(filters);
         setProperties(response.data || []);
@@ -41,8 +113,19 @@ function PropertiesPage() {
       }
     };
 
-    fetchProperties();
-  }, [filters]);
+    loadProperties();
+  }, [filters, propertyType]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(properties.length / propertiesPerPage);
+  const startIndex = (currentPage - 1) * propertiesPerPage;
+  const endIndex = startIndex + propertiesPerPage;
+  const currentProperties = properties.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -58,11 +141,14 @@ function PropertiesPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 to-slate-900/80" />
         </div>
         <div className="container mx-auto px-4 py-12 relative z-10">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Find Your Perfect Property
+          <h1 className="text-3xl font-bold text-white mb-2 capitalize">
+            {propertyType ? `${propertyType} Properties` : "Find Your Perfect Property"}
           </h1>
           <p className="text-slate-300">
-            Browse properties available for sale, rent, and lease in Uganda
+            {propertyType 
+              ? `Browse our collection of ${propertyType} available in Uganda`
+              : "Browse properties available for sale, rent, and lease in Uganda"
+            }
           </p>
         </div>
       </div>
@@ -87,7 +173,7 @@ function PropertiesPage() {
               "Loading properties..."
             ) : (
               <>
-                Showing <span className="font-medium">{properties.length}</span> properties
+                Showing <span className="font-medium">{startIndex + 1}-{Math.min(endIndex, properties.length)}</span> of <span className="font-medium">{properties.length}</span> properties
               </>
             )}
           </p>
@@ -141,19 +227,44 @@ function PropertiesPage() {
         )}
 
         {/* Property Grid */}
-        {(isLoading || properties.length > 0) && (
+        {(isLoading || currentProperties.length > 0) && (
           <PropertyGrid
-            properties={properties}
+            properties={currentProperties}
             isLoading={isLoading}
             variant={viewMode}
           />
         )}
 
-        {/* Load More */}
-        {properties.length > 0 && (
-          <div className="text-center mt-12">
-            <Button variant="outline" size="lg">
-              Load More Properties
+        {/* Pagination */}
+        {!isLoading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-12">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                onClick={() => handlePageChange(page)}
+                className="min-w-[40px]"
+              >
+                {page}
+              </Button>
+            ))}
+            
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         )}
