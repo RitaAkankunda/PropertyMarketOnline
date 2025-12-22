@@ -151,6 +151,39 @@ const getMockProperty = (id: string) => {
       },
       amenities: ["Electricity Available", "Water Available", "Road Access", "Security", "Level Terrain", "Infrastructure"],
     };
+  } else if (id.startsWith("office-")) {
+    const officeNumber = parseInt(id.replace("office-", "")) || 1;
+    return {
+      id,
+      title: `Executive Office #${officeNumber}`,
+      description: `Modern ${2 + (officeNumber % 3)}-room office suite with premium amenities, high-speed internet, and city views. Ideal for startups and established businesses alike.`,
+      price: 350000000 + (officeNumber * 25000000),
+      currency: "UGX",
+      propertyType: "office",
+      listingType: "sale",
+      backLink: "/properties?type=offices",
+      backText: "Back to Offices",
+      images: [
+        "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+        "https://images.unsplash.com/photo-1497366412874-3415097a27e7",
+        "https://images.unsplash.com/photo-1497366216548-37526070297c",
+        "https://images.unsplash.com/photo-1497215728101-856f4ea42174",
+      ],
+      location: {
+        address: `${officeNumber} Office Park`,
+        city: "Kampala",
+        district: ["Kampala", "Wakiso", "Entebbe"][officeNumber % 3],
+        country: "Uganda",
+      },
+      features: {
+        bedrooms: 0,
+        bathrooms: 2 + (officeNumber % 2),
+        area: 1200 + (officeNumber * 100),
+        yearBuilt: 2019 + (officeNumber % 5),
+        parking: 2 + (officeNumber % 3),
+      },
+      amenities: ["Parking", "High-Speed Internet", "Security", "Conference Room", "Reception"],
+    };
   } else if (id.startsWith("commercial-")) {
     const commercialNumber = parseInt(id.replace("commercial-", "")) || 1;
     

@@ -1,4 +1,60 @@
 "use client";
+// Mockup data for offices (36 total = 3 pages of 12)
+const OFFICE_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
+  id: `office-${i + 1}`,
+  title: `Executive Office #${i + 1}`,
+  description: `Modern ${2 + (i % 3)}-room office suite with premium amenities, high-speed internet, and city views. Ideal for startups and established businesses alike.`,
+  price: 350000000 + (i * 25000000),
+  currency: "UGX",
+  propertyType: "office" as const,
+  listingType: "sale" as const,
+  status: "active" as const,
+  images: [
+    {
+      id: `img-office-${i}`,
+      url: [
+        "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+        "https://images.unsplash.com/photo-1497366412874-3415097a27e7",
+        "https://images.unsplash.com/photo-1497366216548-37526070297c",
+        "https://images.unsplash.com/photo-1497215728101-856f4ea42174",
+      ][i % 4],
+      alt: `Office ${i + 1}`,
+      isPrimary: true,
+    },
+  ],
+  location: {
+    address: `${i + 1} Office Park`,
+    city: "Kampala",
+    district: ["Kampala", "Wakiso", "Entebbe"][i % 3],
+    country: "Uganda",
+    coordinates: { lat: 0.3476, lng: 32.5825 },
+  },
+  features: {
+    bedrooms: 0,
+    bathrooms: 2 + (i % 2),
+    area: 1200 + (i * 100),
+    areaUnit: "sqft" as const,
+    yearBuilt: 2019 + (i % 5),
+    parking: 2 + (i % 3),
+  },
+  amenities: ["Parking", "High-Speed Internet", "Security", "Conference Room", "Reception"],
+  owner: {
+    id: "owner-5",
+    email: "owner@example.com",
+    firstName: "Olivia",
+    lastName: "Officeowner",
+    role: "lister" as const,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  views: 60 + i * 5,
+  leads: 3 + i,
+  isVerified: true,
+  isFeatured: i < 6,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}));
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -350,6 +406,13 @@ function PropertiesPage() {
       // For commercial, use mockup data
       if (propertyType === "commercial") {
         setProperties(COMMERCIAL_MOCKUPS as any);
+        setIsLoading(false);
+        return;
+      }
+
+      // For offices, use mockup data
+      if (propertyType === "offices" || propertyType === "office") {
+        setProperties(OFFICE_MOCKUPS as any);
         setIsLoading(false);
         return;
       }
