@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Search,
   Building2,
@@ -10,10 +11,8 @@ import {
   MessageSquare,
   Shield,
   TrendingUp,
-  Users,
   Star,
   ChevronRight,
-  Play,
   Zap,
   Clock,
   Globe,
@@ -24,14 +23,14 @@ import {
   Sparkles,
   Truck,
 } from "lucide-react";
-import { Button, Card, Badge } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { APP_NAME } from "@/lib/constants";
 
 // Hero Section Categories
 const heroCategories = [
-  { id: "buy", label: "Buy", icon: Home, href: "/properties?type=sale" },
-  { id: "rent", label: "Rent", icon: Building2, href: "/properties?type=rent" },
-  { id: "lease", label: "Lease", icon: MapPin, href: "/properties?type=lease" },
+  { id: "buy", label: "Buy", icon: Home, href: "/category/buy" },
+  { id: "rent", label: "Rent", icon: Building2, href: "/category/rent" },
+  { id: "lease", label: "Lease", icon: MapPin, href: "/category/lease" },
   { id: "list", label: "List Property", icon: TrendingUp, href: "/listings/create" },
 ];
 
@@ -144,10 +143,13 @@ export default function HomePage() {
       <section className="relative text-white overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=2000&q=80"
             alt="Modern apartments"
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
           />
           {/* Dark Overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-blue-900/85 to-slate-900/90" />

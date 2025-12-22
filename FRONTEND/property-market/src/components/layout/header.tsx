@@ -3,19 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import {
-  Home,
-  Search,
-  Plus,
-  User,
-  Menu,
-  X,
-  MessageSquare,
-  Bell,
-  Building2,
-  Wrench,
-  LogIn,
-} from "lucide-react";
+import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
@@ -23,6 +11,9 @@ import { APP_NAME } from "@/lib/constants";
 
 const mainNavLinks = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/category/buy", label: "Buy", icon: Home },
+  { href: "/category/rent", label: "Rent", icon: Building2 },
+  { href: "/category/lease", label: "Lease", icon: MapPin },
   { href: "/properties", label: "Properties", icon: Building2 },
   { href: "/providers", label: "Service Providers", icon: Wrench },
 ];

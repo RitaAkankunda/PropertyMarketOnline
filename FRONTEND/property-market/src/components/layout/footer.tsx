@@ -19,9 +19,9 @@ const footerLinks = {
     { href: "/blog", label: "Blog" },
   ],
   properties: [
-    { href: "/properties?type=sale", label: "Buy Property" },
-    { href: "/properties?type=rent", label: "Rent Property" },
-    { href: "/properties?type=lease", label: "Lease Property" },
+    { href: "/category/buy", label: "Buy Property" },
+    { href: "/category/rent", label: "Rent Property" },
+    { href: "/category/lease", label: "Lease Property" },
     { href: "/listings/create", label: "List Your Property" },
   ],
   services: [
