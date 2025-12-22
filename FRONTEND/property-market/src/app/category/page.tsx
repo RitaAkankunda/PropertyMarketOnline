@@ -2,34 +2,87 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { PropertyGrid } from "@/components/properties/property-grid";
 import { propertyService } from "@/services/property.service";
 import { Button } from "@/components/ui";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import type { Property } from "@/types";
- import type { ListingType } from "@/types";
+import Link from "next/link";
+import type { Property, PropertyType, ListingType } from "@/types";
+
+const PROPERTY_TYPES: { type: PropertyType; label: string; icon: string }[] = [
+  { type: "house", label: "Houses", icon: "🏠" },
+  { type: "apartment", label: "Apartments", icon: "🏢" },
+  { type: "land", label: "Land", icon: "📍" },
+  { type: "commercial", label: "Commercial", icon: "🏬" },
+  { type: "villa", label: "Villas", icon: "🏡" },
+  { type: "office", label: "Offices", icon: "🏛️" },
+];
+
+const MOCKUP_IMAGES = [
+  "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&h=300&fit=crop",
+  "https://images.unsplash.com/photo-1570129477492-45a003537e67?w=400&h=300&fit=crop",
+  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop",
+];
+
+interface PropertyWithMockup extends Partial<Property> {
+  mockupImage: string;
+  title: string;
+  price: number;
+  currency: string;
+}
 
 export default function CategoryPage() {
   const searchParams = useSearchParams();
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [propertiesByType, setPropertiesByType] = useState<
+    Record<PropertyType, PropertyWithMockup[]>
+  >({} as Record<PropertyType, PropertyWithMockup[]>);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get category from URL (?type=rent|lease|buy|list)
- 
-  const type = (searchParams.get("type") as ListingType) || "rent";
+  const type = (searchParams.get("type") as ListingType) || "sale";
 
   useEffect(() => {
     const fetchProperties = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await propertyService.getProperties({ listingType: type as ListingType }, 1, 16);
-        setProperties(response.data || []);
+        const response = await propertyService.getProperties(
+          { listingType: type as ListingType },
+          1,
+          100
+        );
+
+        const properties = response.data || [];
+        const grouped: Record<PropertyType, PropertyWithMockup[]> = {};
+
+        // Group properties by type
+        PROPERTY_TYPES.forEach((pt) => {
+          const typeProperties = properties
+            .filter((p) => p.propertyType === pt.type)
+            .slice(0, 4)
+            .map((p, index) => ({
+              ...p,
+              mockupImage: MOCKUP_IMAGES[index % MOCKUP_IMAGES.length],
+            }));
+
+          // Fill with mockup data if not enough real properties
+          while (typeProperties.length < 4) {
+            const index = typeProperties.length;
+            typeProperties.push({
+              mockupImage: MOCKUP_IMAGES[index % MOCKUP_IMAGES.length],
+              title: `${pt.label} #${index + 1}`,
+              price: 150000 + index * 50000,
+              currency: "UGX",
+            });
+          }
+
+          grouped[pt.type] = typeProperties;
+        });
+
+        setPropertiesByType(grouped);
       } catch (err) {
         setError("Failed to load properties. Please try again later.");
-        setProperties([]);
       } finally {
         setIsLoading(false);
       }
@@ -45,23 +98,90 @@ export default function CategoryPage() {
         <h1 className="text-4xl font-bold mb-2 capitalize">{type} Properties</h1>
         <p className="text-lg">Browse the latest {type} properties in Uganda</p>
       </div>
-      {/* Property Grid */}
-      <main className="flex-1 container mx-auto px-4 py-8">
-        {error && (
-          <div className="text-center text-red-500 mb-8">{error}</div>
+
+      {/* Main Content */}
+      <main className="flex-1 container mx-auto px-4 py-12">
+        {error && <div className="text-center text-red-500 mb-8">{error}</div>}
+
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Loading properties...</p>
+          </div>
+        ) : (
+          <div className="space-y-16">
+            {PROPERTY_TYPES.map((propertyType) => (
+              <section key={propertyType.type}>
+                {/* Category Header */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="text-4xl">{propertyType.icon}</span>
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900">
+                        {propertyType.label}
+                      </h2>
+                      <p className="text-gray-600">
+                        Explore our {propertyType.label.toLowerCase()} listings
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Property Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  {(propertiesByType[propertyType.type] || []).map(
+                    (property, index) => (
+                      <Link
+                        key={`${propertyType.type}-${index}`}
+                        href={property.id ? `/properties/${property.id}` : "#"}
+                      >
+                        <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow cursor-pointer h-full">
+                          {/* Image */}
+                          <div className="relative h-48 overflow-hidden bg-gray-200">
+                            <img
+                              src={property.mockupImage}
+                              alt={property.title}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform"
+                            />
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-4">
+                            <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-2">
+                              {property.title}
+                            </h3>
+                            <p className="text-2xl font-bold text-blue-600 mb-3">
+                              {property.currency} {property.price?.toLocaleString()}
+                            </p>
+                            <Button
+                              className="w-full"
+                              size="sm"
+                              variant="outline"
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  )}
+                </div>
+
+                {/* Browse All Button */}
+                <div className="flex justify-center mb-12">
+                  <Link
+                    href={`/listings?type=${propertyType.type}&listing=${type}`}
+                  >
+                    <Button variant="outline" size="lg">
+                      View All {propertyType.label} →
+                    </Button>
+                  </Link>
+                </div>
+              </section>
+            ))}
+          </div>
         )}
-        <PropertyGrid
-          properties={properties}
-          isLoading={isLoading}
-          variant="grid"
-          className="mb-8"
-        />
-        <div className="flex justify-center mt-8">
-          <Button variant="outline" size="lg">
-            View All
-          </Button>
-        </div>
       </main>
+
       <Footer />
     </div>
   );
