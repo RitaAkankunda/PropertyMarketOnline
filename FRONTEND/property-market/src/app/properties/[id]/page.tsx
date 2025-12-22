@@ -19,10 +19,9 @@ import { cn, formatCurrency } from "@/lib/utils";
 
 // Mockup property data
 const getMockProperty = (id: string) => {
-  // Check if it's a house or apartment
+  // Check if it's a house, villa, or apartment
   if (id.startsWith("house-")) {
     const houseNumber = parseInt(id.replace("house-", "")) || 1;
-    
     return {
       id,
       title: `Beautiful House #${houseNumber}`,
@@ -51,6 +50,39 @@ const getMockProperty = (id: string) => {
         area: 2500 + (houseNumber * 100),
         yearBuilt: 2020 + (houseNumber % 5),
         parking: 2,
+      },
+      amenities: ["Parking", "Garden", "Security", "Swimming Pool", "Gym", "Modern Kitchen"],
+    };
+  } else if (id.startsWith("villa-")) {
+    const villaNumber = parseInt(id.replace("villa-", "")) || 1;
+    return {
+      id,
+      title: `Luxury Villa #${villaNumber}`,
+      description: `Exquisite ${4 + (villaNumber % 3)} bedroom villa with premium amenities, lush gardens, and modern architecture. Perfect for luxury living and entertaining guests.`,
+      price: 1200000000 + (villaNumber * 50000000),
+      currency: "UGX",
+      propertyType: "villa",
+      listingType: "sale",
+      backLink: "/properties?type=villas",
+      backText: "Back to Villas",
+      images: [
+        "https://images.unsplash.com/photo-1613490493576-7fde63acd811",
+        "https://images.unsplash.com/photo-1600585154526-990dced4db0d",
+        "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
+        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b",
+      ],
+      location: {
+        address: `${villaNumber} Villa Lane`,
+        city: "Kampala",
+        district: ["Kampala", "Wakiso", "Entebbe"][villaNumber % 3],
+        country: "Uganda",
+      },
+      features: {
+        bedrooms: 4 + (villaNumber % 3),
+        bathrooms: 3 + (villaNumber % 2),
+        area: 3500 + (villaNumber * 100),
+        yearBuilt: 2021 + (villaNumber % 5),
+        parking: 3,
       },
       amenities: ["Parking", "Garden", "Security", "Swimming Pool", "Gym", "Modern Kitchen"],
     };

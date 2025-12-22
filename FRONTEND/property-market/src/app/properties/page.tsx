@@ -66,6 +66,62 @@ const HOUSE_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
   updatedAt: new Date().toISOString(),
 }));
 
+// Mockup data for villas (36 total = 3 pages of 12)
+const VILLA_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
+  id: `villa-${i + 1}`,
+  title: `Luxury Villa #${i + 1}`,
+  description: `Exquisite ${4 + (i % 3)} bedroom villa with premium amenities, lush gardens, and modern architecture. Perfect for luxury living and entertaining guests.`,
+  price: 1200000000 + (i * 50000000),
+  currency: "UGX",
+  propertyType: "villa" as const,
+  listingType: "sale" as const,
+  status: "active" as const,
+  images: [
+    {
+      id: `img-villa-${i}`,
+      url: [
+        "https://images.unsplash.com/photo-1613490493576-7fde63acd811",
+        "https://images.unsplash.com/photo-1600585154526-990dced4db0d",
+        "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
+        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b",
+      ][i % 4],
+      alt: `Villa ${i + 1}`,
+      isPrimary: true,
+    },
+  ],
+  location: {
+    address: `${i + 1} Villa Lane`,
+    city: "Kampala",
+    district: ["Kampala", "Wakiso", "Entebbe"][i % 3],
+    country: "Uganda",
+    coordinates: { lat: 0.3476, lng: 32.5825 },
+  },
+  features: {
+    bedrooms: 4 + (i % 3),
+    bathrooms: 3 + (i % 2),
+    area: 3500 + (i * 100),
+    areaUnit: "sqft" as const,
+    yearBuilt: 2021 + (i % 5),
+  },
+  amenities: ["Parking", "Garden", "Security", "Swimming Pool", "Gym", "Modern Kitchen"],
+  owner: {
+    id: "owner-3",
+    email: "owner@example.com",
+    firstName: "Alice",
+    lastName: "Villaowner",
+    role: "lister" as const,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  views: 200 + i * 10,
+  leads: 8 + i,
+  isVerified: true,
+  isFeatured: i < 6,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}));
+
 // Mockup data for apartments (36 total = 3 pages of 12)
 const APARTMENT_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
   id: `apartment-${i + 1}`,
@@ -151,9 +207,17 @@ function PropertiesPage() {
       setIsLoading(true);
       setError(null);
       
+
       // For houses, use mockup data
       if (propertyType === "houses" || propertyType === "house") {
         setProperties(HOUSE_MOCKUPS as any);
+        setIsLoading(false);
+        return;
+      }
+
+      // For villas, use mockup data
+      if (propertyType === "villas" || propertyType === "villa") {
+        setProperties(VILLA_MOCKUPS as any);
         setIsLoading(false);
         return;
       }

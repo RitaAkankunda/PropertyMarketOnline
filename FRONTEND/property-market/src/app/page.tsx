@@ -375,41 +375,76 @@ export default function HomePage() {
 
                 {/* Property Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  {type.mockups.map((mockup, idx) => (
-                    <Link
-                      key={idx}
-                      href={`/properties?type=${type.name.toLowerCase()}`}
-                      className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-                    >
-                      <div className="relative h-48 overflow-hidden bg-gray-200">
-                        <Image
-                          src={mockup.img}
-                          alt={mockup.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
-                          {mockup.title}
-                        </h4>
-                        <p className="text-xl font-bold text-blue-600 mb-3">
-                          UGX {mockup.price}
-                        </p>
-                        <div className="flex items-center justify-between text-sm text-slate-500">
-                          <span>View Details</span>
-                          <ChevronRight className="w-4 h-4" />
+                  {type.mockups.map((mockup, idx) => {
+                    // For Villas, link to villa detail page
+                    if (type.name.toLowerCase() === "villas") {
+                      return (
+                        <Link
+                          key={idx}
+                          href={`/properties/villa-${idx + 1}`}
+                          className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+                        >
+                          <div className="relative h-48 overflow-hidden bg-gray-200">
+                            <Image
+                              src={mockup.img}
+                              alt={mockup.title}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                            />
+                          </div>
+                          <div className="p-4">
+                            <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
+                              {mockup.title}
+                            </h4>
+                            <p className="text-xl font-bold text-blue-600 mb-3">
+                              UGX {mockup.price}
+                            </p>
+                            <div className="flex items-center justify-between text-sm text-slate-500">
+                              <span>View Details</span>
+                              <ChevronRight className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    }
+                    // Default: link to category listing
+                    return (
+                      <Link
+                        key={idx}
+                        href={`/properties?type=${type.name.toLowerCase()}`}
+                        className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+                      >
+                        <div className="relative h-48 overflow-hidden bg-gray-200">
+                          <Image
+                            src={mockup.img}
+                            alt={mockup.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                          />
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                        <div className="p-4">
+                          <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
+                            {mockup.title}
+                          </h4>
+                          <p className="text-xl font-bold text-blue-600 mb-3">
+                            UGX {mockup.price}
+                          </p>
+                          <div className="flex items-center justify-between text-sm text-slate-500">
+                            <span>View Details</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
 
                 {/* Browse All Button */}
                 <div className="text-center">
                   <Link
-                    href={`/properties?type=${type.name.toLowerCase()}`}
+                    href={type.name.toLowerCase() === "villas" ? "/properties?type=villas" : `/properties?type=${type.name.toLowerCase()}`}
                     className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-white shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     View All {type.name}
