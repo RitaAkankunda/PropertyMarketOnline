@@ -124,6 +124,61 @@ const APARTMENT_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
   updatedAt: new Date().toISOString(),
 }));
 
+// Mockup data for land (36 total = 3 pages of 12)
+const LAND_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
+  id: `land-${i + 1}`,
+  title: `Prime Land Plot #${i + 1}`,
+  description: `Excellent ${0.5 + (i % 3) * 0.5} acre land parcel perfect for residential or commercial development. Located in a rapidly developing area with excellent infrastructure, utilities readily available, and easy access to major roads. Ideal for building your dream home or investment opportunity.`,
+  price: 80000000 + (i * 20000000),
+  currency: "UGX",
+  propertyType: "land" as const,
+  listingType: "sale" as const,
+  status: "active" as const,
+  images: [
+    {
+      id: `img-land-${i}`,
+      url: [
+        "https://images.unsplash.com/photo-1500382017468-9049fed747ef",
+        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+        "https://images.unsplash.com/photo-1426604966848-d7adac402bff",
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
+        "https://images.unsplash.com/photo-1464822759844-d150f39ac1ac",
+      ][i % 6],
+      alt: `Land Plot ${i + 1}`,
+      isPrimary: true,
+    },
+  ],
+  location: {
+    address: `${i + 1} Land Avenue`,
+    city: "Kampala",
+    district: ["Kampala", "Wakiso", "Mukono"][i % 3],
+    country: "Uganda",
+    coordinates: { lat: 0.3476, lng: 32.5825 },
+  },
+  features: {
+    area: (0.5 + (i % 3) * 0.5) * 43560, // Convert acres to sqft
+    areaUnit: "sqft" as const,
+  },
+  amenities: ["Electricity Available", "Water Available", "Road Access", "Security"],
+  owner: {
+    id: "owner-3",
+    email: "owner@example.com",
+    firstName: "David",
+    lastName: "Johnson",
+    role: "lister" as const,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  views: 60 + i * 6,
+  leads: 3 + i,
+  isVerified: true,
+  isFeatured: i < 6,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}));
+
 function PropertiesPage() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<PropertyFiltersType>({});
@@ -161,6 +216,13 @@ function PropertiesPage() {
       // For apartments, use mockup data
       if (propertyType === "apartments" || propertyType === "apartment") {
         setProperties(APARTMENT_MOCKUPS as any);
+        setIsLoading(false);
+        return;
+      }
+
+      // For land, use mockup data
+      if (propertyType === "land") {
+        setProperties(LAND_MOCKUPS as any);
         setIsLoading(false);
         return;
       }

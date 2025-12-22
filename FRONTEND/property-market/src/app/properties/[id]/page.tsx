@@ -88,6 +88,37 @@ const getMockProperty = (id: string) => {
       },
       amenities: ["Parking", "Elevator", "Security", "Gym", "Pool", "Balcony"],
     };
+  } else if (id.startsWith("land-")) {
+    const landNumber = parseInt(id.replace("land-", "")) || 1;
+    
+    return {
+      id,
+      title: `Prime Land Plot #${landNumber}`,
+      description: `This exceptional ${0.5 + (landNumber % 3) * 0.5} acre land parcel offers tremendous potential for residential or commercial development. Situated in a prime location with excellent accessibility, the property features level terrain, established infrastructure, and proximity to essential amenities. Whether you're planning to build your dream home, start a business, or invest for the future, this land provides the perfect foundation for your vision. All utilities are readily available, and the area is experiencing rapid growth and development.`,
+      price: 80000000 + (landNumber * 20000000),
+      currency: "UGX",
+      propertyType: "land",
+      listingType: "sale",
+      backLink: "/properties?type=land",
+      backText: "Back to Land",
+      images: [
+        "https://images.unsplash.com/photo-1500382017468-9049fed747ef",
+        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+        "https://images.unsplash.com/photo-1426604966848-d7adac402bff",
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+      ],
+      location: {
+        address: `${landNumber} Land Avenue`,
+        city: "Kampala",
+        district: ["Kampala", "Wakiso", "Mukono"][landNumber % 3],
+        country: "Uganda",
+      },
+      features: {
+        area: (0.5 + (landNumber % 3) * 0.5) * 43560, // Convert acres to sqft
+        areaUnit: "sqft",
+      },
+      amenities: ["Electricity Available", "Water Available", "Road Access", "Security", "Level Terrain", "Infrastructure"],
+    };
   }
   
   // Default fallback
@@ -234,36 +265,55 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             {/* Features Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
-                <Bed className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="text-sm text-slate-600">Bedrooms</p>
-                  <p className="font-semibold text-slate-900">{property.features.bedrooms}</p>
+            {property.propertyType === "land" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+                  <Square className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-slate-600">Land Area</p>
+                    <p className="font-semibold text-slate-900">{(property.features.area / 43560).toFixed(1)} acres</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+                  <MapPin className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-slate-600">Location</p>
+                    <p className="font-semibold text-slate-900">{property.location.district}</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
-                <Bath className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="text-sm text-slate-600">Bathrooms</p>
-                  <p className="font-semibold text-slate-900">{property.features.bathrooms}</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+                  <Bed className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-slate-600">Bedrooms</p>
+                    <p className="font-semibold text-slate-900">{property.features.bedrooms}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+                  <Bath className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-slate-600">Bathrooms</p>
+                    <p className="font-semibold text-slate-900">{property.features.bathrooms}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+                  <Square className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-slate-600">Area</p>
+                    <p className="font-semibold text-slate-900">{property.features.area} sqft</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+                  <Car className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-slate-600">Parking</p>
+                    <p className="font-semibold text-slate-900">{property.features.parking} Cars</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
-                <Square className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="text-sm text-slate-600">Area</p>
-                  <p className="font-semibold text-slate-900">{property.features.area} sqft</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
-                <Car className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="text-sm text-slate-600">Parking</p>
-                  <p className="font-semibold text-slate-900">{property.features.parking} Cars</p>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* About Section */}
             <div className="mb-6">

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
-import type { Property, PropertyType, ListingType } from "@/types";
+import type { Property, PropertyType, ListingType, User } from "@/types";
 
 const PROPERTY_TYPES: { type: PropertyType; label: string; icon: string }[] = [
   { type: "house", label: "Houses", icon: "🏠" },
@@ -54,10 +54,12 @@ export default function CategoryPage() {
         );
 
         const properties = response.data || [];
-        const grouped: Record<PropertyType, PropertyWithMockup[]> = {};
+        const grouped: Record<PropertyType, PropertyWithMockup[]> = {} as Record<PropertyType, PropertyWithMockup[]>;
 
-        // Group properties by type
+        // Initialize grouped object with empty arrays for all property types
         PROPERTY_TYPES.forEach((pt) => {
+          grouped[pt.type] = [];
+
           const typeProperties = properties
             .filter((p) => p.propertyType === pt.type)
             .slice(0, 4)
@@ -70,10 +72,33 @@ export default function CategoryPage() {
           while (typeProperties.length < 4) {
             const index = typeProperties.length;
             typeProperties.push({
-              mockupImage: MOCKUP_IMAGES[index % MOCKUP_IMAGES.length],
+              id: `mock-${pt.type}-${index + 1}`,
               title: `${pt.label} #${index + 1}`,
+              description: `Beautiful ${pt.label.toLowerCase()} property`,
               price: 150000 + index * 50000,
               currency: "UGX",
+              propertyType: pt.type,
+              listingType: "sale",
+              status: "active",
+              images: [],
+              location: {
+                address: "",
+                city: "",
+                country: "",
+              },
+              features: {
+                area: 1000,
+                areaUnit: "sqft",
+              },
+              amenities: [],
+              owner: {} as User,
+              views: 0,
+              leads: 0,
+              isVerified: false,
+              isFeatured: false,
+              createdAt: "",
+              updatedAt: "",
+              mockupImage: MOCKUP_IMAGES[index % MOCKUP_IMAGES.length],
             });
           }
 

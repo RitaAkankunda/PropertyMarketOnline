@@ -112,22 +112,31 @@ export function PropertyCard({
 
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {property.features.bedrooms && (
+                {property.propertyType === "land" ? (
                   <span className="flex items-center gap-1">
-                    <Bed className="h-4 w-4" />
-                    {property.features.bedrooms} Beds
+                    <Square className="h-4 w-4" />
+                    {(property.features.area / 43560).toFixed(1)} acres
                   </span>
+                ) : (
+                  <>
+                    {property.features.bedrooms && (
+                      <span className="flex items-center gap-1">
+                        <Bed className="h-4 w-4" />
+                        {property.features.bedrooms} Beds
+                      </span>
+                    )}
+                    {property.features.bathrooms && (
+                      <span className="flex items-center gap-1">
+                        <Bath className="h-4 w-4" />
+                        {property.features.bathrooms} Baths
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Square className="h-4 w-4" />
+                      {property.features.area} {property.features.areaUnit}
+                    </span>
+                  </>
                 )}
-                {property.features.bathrooms && (
-                  <span className="flex items-center gap-1">
-                    <Bath className="h-4 w-4" />
-                    {property.features.bathrooms} Baths
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  <Square className="h-4 w-4" />
-                  {property.features.area} {property.features.areaUnit}
-                </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Eye className="h-4 w-4" />
