@@ -66,6 +66,64 @@ const HOUSE_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
   updatedAt: new Date().toISOString(),
 }));
 
+// Mockup data for apartments (36 total = 3 pages of 12)
+const APARTMENT_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
+  id: `apartment-${i + 1}`,
+  title: `Modern Apartment #${i + 1}`,
+  description: `Luxurious ${2 + (i % 3)} bedroom apartment with stunning city views and premium finishes.`,
+  price: 180000000 + (i * 30000000),
+  currency: "UGX",
+  propertyType: "apartment" as const,
+  listingType: "sale" as const,
+  status: "active" as const,
+  images: [
+    {
+      id: `img-apt-${i}`,
+      url: [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00",
+        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267",
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
+        "https://images.unsplash.com/photo-1502672260066-6bc35f0a1f80",
+        "https://images.unsplash.com/photo-1493809842364-78817add7ffb",
+      ][i % 6],
+      alt: `Apartment ${i + 1}`,
+      isPrimary: true,
+    },
+  ],
+  location: {
+    address: `${i + 1} Urban Heights`,
+    city: "Kampala",
+    district: ["Kampala", "Nakawa", "Makindye"][i % 3],
+    country: "Uganda",
+    coordinates: { lat: 0.3476, lng: 32.5825 },
+  },
+  features: {
+    bedrooms: 2 + (i % 3),
+    bathrooms: 2 + (i % 2),
+    area: 1200 + (i * 50),
+    areaUnit: "sqft" as const,
+    yearBuilt: 2018 + (i % 5),
+  },
+  amenities: ["Parking", "Elevator", "Security", "Gym", "Pool"],
+  owner: {
+    id: "owner-2",
+    email: "owner@example.com",
+    firstName: "Jane",
+    lastName: "Smith",
+    role: "lister" as const,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  views: 80 + i * 8,
+  leads: 4 + i,
+  isVerified: true,
+  isFeatured: i < 6,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}));
+
 function PropertiesPage() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<PropertyFiltersType>({});
@@ -96,6 +154,13 @@ function PropertiesPage() {
       // For houses, use mockup data
       if (propertyType === "houses" || propertyType === "house") {
         setProperties(HOUSE_MOCKUPS as any);
+        setIsLoading(false);
+        return;
+      }
+
+      // For apartments, use mockup data
+      if (propertyType === "apartments" || propertyType === "apartment") {
+        setProperties(APARTMENT_MOCKUPS as any);
         setIsLoading(false);
         return;
       }

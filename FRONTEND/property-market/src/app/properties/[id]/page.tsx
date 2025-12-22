@@ -19,36 +19,92 @@ import { cn, formatCurrency } from "@/lib/utils";
 
 // Mockup property data
 const getMockProperty = (id: string) => {
-  const houseNumber = parseInt(id.replace("house-", "")) || 1;
+  // Check if it's a house or apartment
+  if (id.startsWith("house-")) {
+    const houseNumber = parseInt(id.replace("house-", "")) || 1;
+    
+    return {
+      id,
+      title: `Beautiful House #${houseNumber}`,
+      description: `This stunning ${3 + (houseNumber % 3)} bedroom house offers modern living at its finest. Features include spacious living areas, contemporary kitchen with high-end appliances, elegant bathrooms, and a beautiful outdoor space perfect for entertaining. Located in a prime neighborhood with easy access to schools, shopping centers, and major highways. The property boasts excellent natural lighting throughout, premium finishes, and thoughtful design details that make it truly special.`,
+      price: 400000000 + (houseNumber * 50000000),
+      currency: "UGX",
+      propertyType: "house",
+      listingType: "sale",
+      backLink: "/properties?type=houses",
+      backText: "Back to Houses",
+      images: [
+        "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+        "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
+        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b",
+      ],
+      location: {
+        address: `${houseNumber} Property Street`,
+        city: "Kampala",
+        district: ["Kampala", "Wakiso", "Entebbe"][houseNumber % 3],
+        country: "Uganda",
+      },
+      features: {
+        bedrooms: 3 + (houseNumber % 3),
+        bathrooms: 2 + (houseNumber % 2),
+        area: 2500 + (houseNumber * 100),
+        yearBuilt: 2020 + (houseNumber % 5),
+        parking: 2,
+      },
+      amenities: ["Parking", "Garden", "Security", "Swimming Pool", "Gym", "Modern Kitchen"],
+    };
+  } else if (id.startsWith("apartment-")) {
+    const apartmentNumber = parseInt(id.replace("apartment-", "")) || 1;
+    
+    return {
+      id,
+      title: `Modern Apartment #${apartmentNumber}`,
+      description: `Experience luxurious ${2 + (apartmentNumber % 3)} bedroom apartment living with breathtaking city views. This premium residence features an open-concept layout, floor-to-ceiling windows, gourmet kitchen with stainless steel appliances, spa-like bathrooms, and private balcony. Residents enjoy access to world-class amenities including a fitness center, swimming pool, and 24/7 concierge service. Perfect for those seeking urban sophistication and convenience.`,
+      price: 180000000 + (apartmentNumber * 30000000),
+      currency: "UGX",
+      propertyType: "apartment",
+      listingType: "sale",
+      backLink: "/properties?type=apartments",
+      backText: "Back to Apartments",
+      images: [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00",
+        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267",
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
+      ],
+      location: {
+        address: `${apartmentNumber} Urban Heights`,
+        city: "Kampala",
+        district: ["Kampala", "Nakawa", "Makindye"][apartmentNumber % 3],
+        country: "Uganda",
+      },
+      features: {
+        bedrooms: 2 + (apartmentNumber % 3),
+        bathrooms: 2 + (apartmentNumber % 2),
+        area: 1200 + (apartmentNumber * 50),
+        yearBuilt: 2018 + (apartmentNumber % 5),
+        parking: 1,
+      },
+      amenities: ["Parking", "Elevator", "Security", "Gym", "Pool", "Balcony"],
+    };
+  }
   
+  // Default fallback
   return {
     id,
-    title: `Beautiful House #${houseNumber}`,
-    description: `This stunning ${3 + (houseNumber % 3)} bedroom house offers modern living at its finest. Features include spacious living areas, contemporary kitchen with high-end appliances, elegant bathrooms, and a beautiful outdoor space perfect for entertaining. Located in a prime neighborhood with easy access to schools, shopping centers, and major highways. The property boasts excellent natural lighting throughout, premium finishes, and thoughtful design details that make it truly special.`,
-    price: 400000000 + (houseNumber * 50000000),
+    title: "Property Not Found",
+    description: "This property could not be found.",
+    price: 0,
     currency: "UGX",
     propertyType: "house",
     listingType: "sale",
-    images: [
-      "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-      "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
-      "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b",
-    ],
-    location: {
-      address: `${houseNumber} Property Street`,
-      city: "Kampala",
-      district: ["Kampala", "Wakiso", "Entebbe"][houseNumber % 3],
-      country: "Uganda",
-    },
-    features: {
-      bedrooms: 3 + (houseNumber % 3),
-      bathrooms: 2 + (houseNumber % 2),
-      area: 2500 + (houseNumber * 100),
-      yearBuilt: 2020 + (houseNumber % 5),
-      parking: 2,
-    },
-    amenities: ["Parking", "Garden", "Security", "Swimming Pool", "Gym", "Modern Kitchen"],
+    backLink: "/properties",
+    backText: "Back to Properties",
+    images: [],
+    location: { address: "", city: "", district: "", country: "" },
+    features: { bedrooms: 0, bathrooms: 0, area: 0, yearBuilt: 0, parking: 0 },
+    amenities: [],
   };
 };
 
@@ -80,11 +136,11 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">
           <Link
-            href="/properties?type=houses"
+            href={property.backLink}
             className="inline-flex items-center text-slate-600 hover:text-slate-900 transition"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Houses
+            {property.backText}
           </Link>
         </div>
       </div>
