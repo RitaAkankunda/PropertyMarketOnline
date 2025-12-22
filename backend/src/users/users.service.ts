@@ -62,4 +62,8 @@ export class UsersService {
     user.role = UserRole.ADMIN;
     return await this.userRepository.save(user);
   }
+
+  async findByRoles(roles: UserRole[]): Promise<User[]> {
+    return await this.userRepository.find({ where: { role: roles as any } });
+  }
 }

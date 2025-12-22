@@ -7,6 +7,8 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PropertiesModule } from './properties/properties.module';
+import { ProvidersModule } from './providers/providers.module';
+import { PaymentsModule } from './payments/payments.module';
 import { User } from './users/entities/user.entity';
 import { Property } from './properties/entities/property.entity';
 
@@ -36,6 +38,8 @@ import { Property } from './properties/entities/property.entity';
     UsersModule,
     AuthModule,
     PropertiesModule,
+    ProvidersModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
