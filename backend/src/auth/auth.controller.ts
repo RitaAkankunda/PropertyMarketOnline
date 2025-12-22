@@ -2,7 +2,7 @@ import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res 
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
-import { GoogleAuthGuard, AppleAuthGuard } from './guards';
+import { GoogleAuthGuard } from './guards';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 
@@ -40,22 +40,5 @@ export class AuthController {
     
     // Redirect to frontend with token
     res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}&provider=google`);
-  }
-
-  // Apple OAuth
-  @Get('apple')
-  @UseGuards(AppleAuthGuard)
-  appleAuth() {
-    // Guard redirects to Apple
-  }
-
-  @Post('apple/callback')
-  @UseGuards(AppleAuthGuard)
-  async appleAuthCallback(@Req() req: any, @Res() res: Response) {
-    const { accessToken, user } = req.user;
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
-    
-    // Redirect to frontend with token
-    res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}&provider=apple`);
   }
 }
