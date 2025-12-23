@@ -6,7 +6,7 @@ import { Grid, List, Map, Building2, ChevronLeft, ChevronRight } from "lucide-re
 import { Button } from "@/components/ui";
 import { PropertyFilters, PropertyGrid } from "@/components/properties";
 import { propertyService } from "@/services";
-import type { Property, PropertyFilters as PropertyFiltersType } from "@/types";
+import type { Property, PropertyFilters as PropertyFiltersType, PropertyType } from "@/types";
 
 // Property type labels
 const propertyTypeLabels: Record<string, string> = {
@@ -46,7 +46,7 @@ function PropertiesPage() {
         offices: "office",
       };
       const normalizedType = propertyTypeMap[type.toLowerCase()] || type.toLowerCase();
-      setFilters((prev) => ({ ...prev, propertyType: normalizedType as any }));
+      setFilters((prev) => ({ ...prev, propertyType: [normalizedType as PropertyType] }));
     }
   }, [searchParams]);
 
@@ -90,13 +90,13 @@ function PropertiesPage() {
   }, [filters, propertyType]);
 
   // Check if a specific property type filter is applied
-  const isFilteredByType = !!filters.propertyType;
-  const filteredType = filters.propertyType;
+  const isFilteredByType = !!filters.propertyType && filters.propertyType.length > 0;
+  const filteredType = filters.propertyType?.[0];
   
   // Get all property types that have properties
   // If filtered by type, only show that type
-  const propertyTypesWithProperties = isFilteredByType
-    ? [filteredType].filter(type => propertiesByType[type] && propertiesByType[type].length > 0)
+  const propertyTypesWithProperties = isFilteredByType && filteredType && propertiesByType[filteredType]?.length > 0
+    ? [filteredType]
     : Object.keys(propertiesByType).filter(
         (type) => propertiesByType[type].length > 0
       );
@@ -112,10 +112,10 @@ function PropertiesPage() {
   };
   
   // Calculate total pages (based on the category with most properties, or current filtered category)
-  const propertiesToPaginate = isFilteredByType && propertiesByType[filteredType]
+  const propertiesToPaginate = isFilteredByType && filteredType && propertiesByType[filteredType]
     ? propertiesByType[filteredType]
     : Object.values(propertiesByType).flat();
-  const maxPropertiesInCategory = isFilteredByType && propertiesByType[filteredType]
+  const maxPropertiesInCategory = isFilteredByType && filteredType && propertiesByType[filteredType]
     ? propertiesByType[filteredType].length
     : Math.max(
         ...Object.values(propertiesByType).map(props => props.length),
@@ -143,15 +143,15 @@ function PropertiesPage() {
         </div>
         <div className="container mx-auto px-4 py-12 relative z-10">
           <h1 className="text-3xl font-bold text-white mb-2 capitalize">
-            {filters.propertyType 
-              ? `${propertyTypeLabels[filters.propertyType] || filters.propertyType} Properties`
+            {filters.propertyType?.[0] 
+              ? `${propertyTypeLabels[filters.propertyType[0]] || filters.propertyType[0]} Properties`
               : propertyType 
                 ? `${propertyType} Properties` 
                 : "Find Your Perfect Property"}
           </h1>
           <p className="text-slate-300">
-            {filters.propertyType
-              ? `Browse our collection of ${propertyTypeLabels[filters.propertyType] || filters.propertyType} available in Uganda`
+            {filters.propertyType?.[0]
+              ? `Browse our collection of ${propertyTypeLabels[filters.propertyType[0]] || filters.propertyType[0]} available in Uganda`
               : propertyType 
                 ? `Browse our collection of ${propertyType} available in Uganda`
                 : "Browse properties available for sale, rent, and lease in Uganda"
@@ -239,7 +239,7 @@ function PropertiesPage() {
         {/* Properties Grouped by Category */}
         {!isLoading && propertyTypesWithProperties.length > 0 && (
           <div className="space-y-12">
-            {propertyTypesWithProperties.map((type) => {
+            {propertyTypesWithProperties.map((type: string) => {
               const typeProperties = propertiesByType[type];
               const paginatedProperties = getPaginatedPropertiesForCategory(type);
               const typeLabel = propertyTypeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
