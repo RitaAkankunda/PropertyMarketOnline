@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Heart,
@@ -13,9 +14,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  Edit,
+  Loader2,
 } from "lucide-react";
 import { Button, Badge, Card } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
+import { propertyService } from "@/services/property.service";
+import { useAuth } from "@/hooks";
+import type { Property } from "@/types";
 
 // Mockup property data
 const getMockProperty = (id: string) => {
@@ -238,18 +244,90 @@ const getMockProperty = (id: string) => {
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
-  const property = getMockProperty(id);
+  const [property, setProperty] = useState<Property | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchProperty() {
+      try {
+        setIsLoading(true);
+        const data = await propertyService.getProperty(id);
+        console.log('Fetched property data:', data);
+        console.log('Property owner:', data.owner);
+        console.log('Property ownerId:', (data as any).ownerId);
+        setProperty(data);
+      } catch (err: any) {
+        console.error("Failed to fetch property:", err);
+        setError(err.message || "Failed to load property");
+        // Fallback to mock data if API fails
+        const mockData = getMockProperty(id) as any;
+        console.log('Using mock data (no owner):', mockData);
+        setProperty(mockData);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProperty();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Property Not Found</h1>
+          <p className="text-muted-foreground mb-4">{error || "This property could not be found."}</p>
+          <Link href="/properties">
+            <Button>Back to Properties</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user is the owner - check both owner.id and ownerId
+  const propertyOwnerId = property.owner?.id || (property as any).ownerId;
+  const isOwner = isAuthenticated && user && propertyOwnerId === user.id;
+  
+  // Debug logging
+  console.log('Property owner check:', {
+    isAuthenticated,
+    userId: user?.id,
+    propertyOwnerId,
+    propertyOwner: property.owner,
+    propertyOwnerIdField: (property as any).ownerId,
+    isOwner,
+    fullProperty: property,
+  });
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
+    if (property.images && property.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
+    }
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+    if (property.images && property.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+    }
   };
+
+  const propertyImages = property.images && property.images.length > 0 
+    ? property.images.map(img => typeof img === 'string' ? img : img.url)
+    : [];
 
   const paymentMethods = [
     { id: "mtn", name: "MTN Mobile Money", icon: "📱", color: "bg-yellow-500" },
@@ -262,14 +340,30 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     <div className="min-h-screen bg-slate-50">
       {/* Back Button */}
       <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link
-            href={property.backLink}
+            href="/properties"
             className="inline-flex items-center text-slate-600 hover:text-slate-900 transition"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            {property.backText}
+            Back to Properties
           </Link>
+          {isOwner && (
+            <Button
+              onClick={() => router.push(`/properties/${id}/edit`)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              Edit Property
+            </Button>
+          )}
+          {/* Debug: Show owner info if authenticated */}
+          {isAuthenticated && !isOwner && (
+            <div className="text-xs text-muted-foreground">
+              Not owner (User: {user?.id?.substring(0, 8)}..., Owner: {property.owner?.id?.substring(0, 8) || (property as any).ownerId?.substring(0, 8) || 'N/A'}...)
+            </div>
+          )}
         </div>
       </div>
 
@@ -277,11 +371,17 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         {/* Image Slideshow */}
         <Card className="mb-8 overflow-hidden">
           <div className="relative aspect-video bg-slate-900">
-            <img
-              src={property.images[currentImageIndex]}
-              alt={`${property.title} - Image ${currentImageIndex + 1}`}
-              className="w-full h-full object-cover"
-            />
+            {propertyImages.length > 0 ? (
+              <img
+                src={propertyImages[currentImageIndex]}
+                alt={`${property.title} - Image ${currentImageIndex + 1}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <p>No images available</p>
+              </div>
+            )}
 
             {/* Navigation Arrows */}
             <button
@@ -298,9 +398,11 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             </button>
 
             {/* Image Counter */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium">
-              {currentImageIndex + 1} / {property.images.length}
-            </div>
+            {propertyImages.length > 0 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium">
+                {currentImageIndex + 1} / {propertyImages.length}
+              </div>
+            )}
 
             {/* Favorite Button */}
             <button
@@ -315,26 +417,28 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           </div>
 
           {/* Thumbnail Navigation */}
-          <div className="flex gap-2 p-4 bg-white overflow-x-auto">
-            {property.images.map((image, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentImageIndex(index)}
-                className={cn(
-                  "flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition",
-                  currentImageIndex === index
-                    ? "border-blue-500 scale-105"
-                    : "border-slate-200 opacity-70 hover:opacity-100 hover:border-blue-300"
-                )}
-              >
-                <img
-                  src={image}
-                  alt={`Thumbnail ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
+          {propertyImages.length > 0 && (
+            <div className="flex gap-2 p-4 bg-white overflow-x-auto">
+              {propertyImages.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={cn(
+                    "flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition",
+                    currentImageIndex === index
+                      ? "border-blue-500 scale-105"
+                      : "border-slate-200 opacity-70 hover:opacity-100 hover:border-blue-300"
+                  )}
+                >
+                  <img
+                    src={image}
+                    alt={`Thumbnail ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* About Card */}

@@ -6,7 +6,7 @@ import {
   IsArray,
   Min,
 } from 'class-validator';
-import { PropertyType } from '../entities/property.entity';
+import { PropertyType, ListingType } from '../entities/property.entity';
 
 export class CreatePropertyDto {
   @IsString()
@@ -21,6 +21,9 @@ export class CreatePropertyDto {
 
   @IsEnum(PropertyType)
   propertyType: PropertyType;
+
+  @IsEnum(ListingType)
+  listingType: ListingType;
 
   @IsOptional()
   @IsNumber()

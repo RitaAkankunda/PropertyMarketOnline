@@ -19,16 +19,39 @@ export class PropertiesService {
   ) {}
 
   async create(createPropertyDto: CreatePropertyDto, userId: string) {
-    const property = this.propertyRepository.create({
-      ...createPropertyDto,
-      ownerId: userId,
-    });
-    return await this.propertyRepository.save(property);
+    try {
+      console.log('[PROPERTIES] Creating property:', {
+        title: createPropertyDto.title,
+        propertyType: createPropertyDto.propertyType,
+        userId,
+      });
+      
+      const property = this.propertyRepository.create({
+        ...createPropertyDto,
+        ownerId: userId,
+      });
+      
+      console.log('[PROPERTIES] Property entity created, saving to database...');
+      const savedProperty = await this.propertyRepository.save(property);
+      console.log('[PROPERTIES] Property saved successfully:', savedProperty.id);
+      
+      return savedProperty;
+    } catch (error) {
+      console.error('[PROPERTIES] Error creating property:', error);
+      console.error('[PROPERTIES] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        createPropertyDto,
+        userId,
+      });
+      throw error;
+    }
   }
 
   async findAll(queryDto: QueryPropertyDto) {
     const {
       propertyType,
+      listingType,
       minPrice,
       maxPrice,
       bedrooms,
@@ -36,13 +59,20 @@ export class PropertiesService {
       limit = 10,
     } = queryDto;
 
+    // Build query without owner join for better performance on list views
+    // Owner will be loaded only when needed (e.g., in findOne)
     const query = this.propertyRepository
-      .createQueryBuilder('property')
-      .leftJoinAndSelect('property.owner', 'owner');
+      .createQueryBuilder('property');
 
     if (propertyType) {
       query.andWhere('property.propertyType = :propertyType', {
         propertyType,
+      });
+    }
+
+    if (listingType) {
+      query.andWhere('property.listingType = :listingType', {
+        listingType,
       });
     }
 
@@ -58,9 +88,13 @@ export class PropertiesService {
       query.andWhere('property.bedrooms = :bedrooms', { bedrooms });
     }
 
+    // Add ordering for consistent results
+    query.orderBy('property.createdAt', 'DESC');
+
     const skip = (page - 1) * limit;
     query.skip(skip).take(limit);
 
+    // Use getManyAndCount for pagination
     const [items, total] = await query.getManyAndCount();
 
     return {

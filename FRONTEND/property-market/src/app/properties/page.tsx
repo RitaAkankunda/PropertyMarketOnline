@@ -1,60 +1,4 @@
 "use client";
-// Mockup data for offices (36 total = 3 pages of 12)
-const OFFICE_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
-  id: `office-${i + 1}`,
-  title: `Executive Office #${i + 1}`,
-  description: `Modern ${2 + (i % 3)}-room office suite with premium amenities, high-speed internet, and city views. Ideal for startups and established businesses alike.`,
-  price: 350000000 + (i * 25000000),
-  currency: "UGX",
-  propertyType: "office" as const,
-  listingType: "sale" as const,
-  status: "active" as const,
-  images: [
-    {
-      id: `img-office-${i}`,
-      url: [
-        "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
-        "https://images.unsplash.com/photo-1497366412874-3415097a27e7",
-        "https://images.unsplash.com/photo-1497366216548-37526070297c",
-        "https://images.unsplash.com/photo-1497215728101-856f4ea42174",
-      ][i % 4],
-      alt: `Office ${i + 1}`,
-      isPrimary: true,
-    },
-  ],
-  location: {
-    address: `${i + 1} Office Park`,
-    city: "Kampala",
-    district: ["Kampala", "Wakiso", "Entebbe"][i % 3],
-    country: "Uganda",
-    coordinates: { lat: 0.3476, lng: 32.5825 },
-  },
-  features: {
-    bedrooms: 0,
-    bathrooms: 2 + (i % 2),
-    area: 1200 + (i * 100),
-    areaUnit: "sqft" as const,
-    yearBuilt: 2019 + (i % 5),
-    parking: 2 + (i % 3),
-  },
-  amenities: ["Parking", "High-Speed Internet", "Security", "Conference Room", "Reception"],
-  owner: {
-    id: "owner-5",
-    email: "owner@example.com",
-    firstName: "Olivia",
-    lastName: "Officeowner",
-    role: "lister" as const,
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  views: 60 + i * 5,
-  leads: 3 + i,
-  isVerified: true,
-  isFeatured: i < 6,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}));
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -64,288 +8,17 @@ import { PropertyFilters, PropertyGrid } from "@/components/properties";
 import { propertyService } from "@/services";
 import type { Property, PropertyFilters as PropertyFiltersType } from "@/types";
 
-// Mockup data for houses (36 total = 3 pages of 12)
-const HOUSE_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
-  id: `house-${i + 1}`,
-  title: `Beautiful House #${i + 1}`,
-  description: `Stunning ${3 + (i % 3)} bedroom house with modern amenities and spacious living areas.`,
-  price: 400000000 + (i * 50000000),
-  currency: "UGX",
-  propertyType: "house" as const,
-  listingType: "sale" as const,
-  status: "active" as const,
-  images: [
-    {
-      id: `img-${i}`,
-      url: [
-        "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-        "https://images.unsplash.com/photo-1564013799919-ab600027ffc6",
-        "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
-        "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
-        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b",
-      ][i % 6],
-      alt: `House ${i + 1}`,
-      isPrimary: true,
-    },
-  ],
-  location: {
-    address: `${i + 1} Property Street`,
-    city: "Kampala",
-    district: ["Kampala", "Wakiso", "Entebbe"][i % 3],
-    country: "Uganda",
-    coordinates: { lat: 0.3476, lng: 32.5825 },
-  },
-  features: {
-    bedrooms: 3 + (i % 3),
-    bathrooms: 2 + (i % 2),
-    area: 2500 + (i * 100),
-    areaUnit: "sqft" as const,
-    yearBuilt: 2020 + (i % 5),
-  },
-  amenities: ["Parking", "Garden", "Security"],
-  owner: {
-    id: "owner-1",
-    email: "owner@example.com",
-    firstName: "John",
-    lastName: "Doe",
-    role: "lister" as const,
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  views: 100 + i * 10,
-  leads: 5 + i,
-  isVerified: true,
-  isFeatured: i < 6,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}));
-
-// Mockup data for villas (36 total = 3 pages of 12)
-const VILLA_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
-  id: `villa-${i + 1}`,
-  title: `Luxury Villa #${i + 1}`,
-  description: `Exquisite ${4 + (i % 3)} bedroom villa with premium amenities, lush gardens, and modern architecture. Perfect for luxury living and entertaining guests.`,
-  price: 1200000000 + (i * 50000000),
-  currency: "UGX",
-  propertyType: "villa" as const,
-  listingType: "sale" as const,
-  status: "active" as const,
-  images: [
-    {
-      id: `img-villa-${i}`,
-      url: [
-        "https://images.unsplash.com/photo-1613490493576-7fde63acd811",
-        "https://images.unsplash.com/photo-1600585154526-990dced4db0d",
-        "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
-        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b",
-      ][i % 4],
-      alt: `Villa ${i + 1}`,
-      isPrimary: true,
-    },
-  ],
-  location: {
-    address: `${i + 1} Villa Lane`,
-    city: "Kampala",
-    district: ["Kampala", "Wakiso", "Entebbe"][i % 3],
-    country: "Uganda",
-    coordinates: { lat: 0.3476, lng: 32.5825 },
-  },
-  features: {
-    bedrooms: 4 + (i % 3),
-    bathrooms: 3 + (i % 2),
-    area: 3500 + (i * 100),
-    areaUnit: "sqft" as const,
-    yearBuilt: 2021 + (i % 5),
-  },
-  amenities: ["Parking", "Garden", "Security", "Swimming Pool", "Gym", "Modern Kitchen"],
-  owner: {
-    id: "owner-3",
-    email: "owner@example.com",
-    firstName: "Alice",
-    lastName: "Villaowner",
-    role: "lister" as const,
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  views: 200 + i * 10,
-  leads: 8 + i,
-  isVerified: true,
-  isFeatured: i < 6,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}));
-
-// Mockup data for apartments (36 total = 3 pages of 12)
-const APARTMENT_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
-  id: `apartment-${i + 1}`,
-  title: `Modern Apartment #${i + 1}`,
-  description: `Luxurious ${2 + (i % 3)} bedroom apartment with stunning city views and premium finishes.`,
-  price: 180000000 + (i * 30000000),
-  currency: "UGX",
-  propertyType: "apartment" as const,
-  listingType: "sale" as const,
-  status: "active" as const,
-  images: [
-    {
-      id: `img-apt-${i}`,
-      url: [
-        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00",
-        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267",
-        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
-        "https://images.unsplash.com/photo-1502672260066-6bc35f0a1f80",
-        "https://images.unsplash.com/photo-1493809842364-78817add7ffb",
-      ][i % 6],
-      alt: `Apartment ${i + 1}`,
-      isPrimary: true,
-    },
-  ],
-  location: {
-    address: `${i + 1} Urban Heights`,
-    city: "Kampala",
-    district: ["Kampala", "Nakawa", "Makindye"][i % 3],
-    country: "Uganda",
-    coordinates: { lat: 0.3476, lng: 32.5825 },
-  },
-  features: {
-    bedrooms: 2 + (i % 3),
-    bathrooms: 2 + (i % 2),
-    area: 1200 + (i * 50),
-    areaUnit: "sqft" as const,
-    yearBuilt: 2018 + (i % 5),
-  },
-  amenities: ["Parking", "Elevator", "Security", "Gym", "Pool"],
-  owner: {
-    id: "owner-2",
-    email: "owner@example.com",
-    firstName: "Jane",
-    lastName: "Smith",
-    role: "lister" as const,
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  views: 80 + i * 8,
-  leads: 4 + i,
-  isVerified: true,
-  isFeatured: i < 6,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}));
-
-// Mockup data for land (36 total = 3 pages of 12)
-const LAND_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
-  id: `land-${i + 1}`,
-  title: `Prime Land Plot #${i + 1}`,
-  description: `Excellent ${0.5 + (i % 3) * 0.5} acre land parcel perfect for residential or commercial development. Located in a rapidly developing area with excellent infrastructure, utilities readily available, and easy access to major roads. Ideal for building your dream home or investment opportunity.`,
-  price: 80000000 + (i * 20000000),
-  currency: "UGX",
-  propertyType: "land" as const,
-  listingType: "sale" as const,
-  status: "active" as const,
-  images: [
-    {
-      id: `img-land-${i}`,
-      url: [
-        "https://images.unsplash.com/photo-1500382017468-9049fed747ef",
-        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-        "https://images.unsplash.com/photo-1426604966848-d7adac402bff",
-        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
-        "https://images.unsplash.com/photo-1464822759844-d150f39ac1ac",
-      ][i % 6],
-      alt: `Land Plot ${i + 1}`,
-      isPrimary: true,
-    },
-  ],
-  location: {
-    address: `${i + 1} Land Avenue`,
-    city: "Kampala",
-    district: ["Kampala", "Wakiso", "Mukono"][i % 3],
-    country: "Uganda",
-    coordinates: { lat: 0.3476, lng: 32.5825 },
-  },
-  features: {
-    area: (0.5 + (i % 3) * 0.5) * 43560, // Convert acres to sqft
-    areaUnit: "sqft" as const,
-  },
-  amenities: ["Electricity Available", "Water Available", "Road Access", "Security"],
-  owner: {
-    id: "owner-3",
-    email: "owner@example.com",
-    firstName: "David",
-    lastName: "Johnson",
-    role: "lister" as const,
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  views: 60 + i * 6,
-  leads: 3 + i,
-  isVerified: true,
-  isFeatured: i < 6,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}));
-
-// Mockup data for commercial (36 total = 3 pages of 12)
-const COMMERCIAL_MOCKUPS = Array.from({ length: 36 }, (_, i) => ({
-  id: `commercial-${i + 1}`,
-  title: `Commercial Property #${i + 1}`,
-  description: `Prime commercial space perfect for retail, office, or business operations. Located in a high-traffic area with excellent visibility and accessibility. Features modern facilities, ample parking, and proximity to major transportation routes.`,
-  price: 500000000 + (i * 500000000),
-  currency: "UGX",
-  propertyType: "commercial" as const,
-  listingType: "sale" as const,
-  status: "active" as const,
-  images: [
-    {
-      id: `img-commercial-${i}`,
-      url: [
-        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
-        "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
-        "https://images.unsplash.com/photo-1497366216548-37526070297c",
-        "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
-        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
-        "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
-      ][i % 6],
-      alt: `Commercial Property ${i + 1}`,
-      isPrimary: true,
-    },
-  ],
-  location: {
-    address: `${i + 1} Business District`,
-    city: "Kampala",
-    district: ["Central", "Nakawa", "Kololo"][i % 3],
-    country: "Uganda",
-    coordinates: { lat: 0.3476, lng: 32.5825 },
-  },
-  features: {
-    area: 2000 + (i * 500),
-    areaUnit: "sqft" as const,
-    floors: 1 + (i % 3),
-  },
-  amenities: ["Parking", "Security", "Elevator", "Loading Dock", "High Visibility"],
-  owner: {
-    id: "owner-4",
-    email: "owner@example.com",
-    firstName: "Michael",
-    lastName: "Thompson",
-    role: "lister" as const,
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  views: 70 + i * 7,
-  leads: 5 + i,
-  isVerified: true,
-  isFeatured: i < 6,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}));
+// Property type labels
+const propertyTypeLabels: Record<string, string> = {
+  house: "Houses",
+  apartment: "Apartments",
+  villa: "Villas",
+  land: "Land",
+  commercial: "Commercial",
+  office: "Offices",
+  warehouse: "Warehouses",
+  hotel: "Hotels",
+};
 
 function PropertiesPage() {
   const searchParams = useSearchParams();
@@ -353,9 +26,10 @@ function PropertiesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [propertiesByType, setPropertiesByType] = useState<Record<string, Property[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const propertiesPerPage = 12;
+  const propertiesPerCategoryPerPage = 4; // Show 4 properties per category per page
 
   // Get property type from URL
   const propertyType = searchParams.get("type");
@@ -364,67 +38,49 @@ function PropertiesPage() {
   useEffect(() => {
     const type = searchParams.get("type");
     if (type) {
-      setFilters((prev) => ({ ...prev, propertyType: type as any }));
+      // Map plural forms to singular (apartments -> apartment, houses -> house, etc.)
+      const propertyTypeMap: Record<string, string> = {
+        apartments: "apartment",
+        houses: "house",
+        villas: "villa",
+        offices: "office",
+      };
+      const normalizedType = propertyTypeMap[type.toLowerCase()] || type.toLowerCase();
+      setFilters((prev) => ({ ...prev, propertyType: normalizedType as any }));
     }
   }, [searchParams]);
 
-  // Fetch or use mockup properties
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  // Fetch properties from API
   useEffect(() => {
     const loadProperties = async () => {
       setIsLoading(true);
       setError(null);
       
-
-      // For houses, use mockup data
-      if (propertyType === "houses" || propertyType === "house") {
-        setProperties(HOUSE_MOCKUPS as any);
-        setIsLoading(false);
-        return;
-      }
-
-      // For villas, use mockup data
-      if (propertyType === "villas" || propertyType === "villa") {
-        setProperties(VILLA_MOCKUPS as any);
-        setIsLoading(false);
-        return;
-      }
-
-      // For apartments, use mockup data
-      if (propertyType === "apartments" || propertyType === "apartment") {
-        setProperties(APARTMENT_MOCKUPS as any);
-        setIsLoading(false);
-        return;
-      }
-
-      // For land, use mockup data
-      if (propertyType === "land") {
-        setProperties(LAND_MOCKUPS as any);
-        setIsLoading(false);
-        return;
-      }
-
-      // For commercial, use mockup data
-      if (propertyType === "commercial") {
-        setProperties(COMMERCIAL_MOCKUPS as any);
-        setIsLoading(false);
-        return;
-      }
-
-      // For offices, use mockup data
-      if (propertyType === "offices" || propertyType === "office") {
-        setProperties(OFFICE_MOCKUPS as any);
-        setIsLoading(false);
-        return;
-      }
-
-      // For other types, try to fetch from API
       try {
         const response = await propertyService.getProperties(filters);
-        setProperties(response.data || []);
+        const allProperties = response.data || [];
+        setProperties(allProperties);
+        
+        // Group properties by type
+        const grouped: Record<string, Property[]> = {};
+        allProperties.forEach((property) => {
+          const type = property.propertyType;
+          if (!grouped[type]) {
+            grouped[type] = [];
+          }
+          grouped[type].push(property);
+        });
+        setPropertiesByType(grouped);
       } catch (err) {
         console.error("Failed to fetch properties:", err);
         setError("Failed to load properties. Please try again later.");
         setProperties([]);
+        setPropertiesByType({});
       } finally {
         setIsLoading(false);
       }
@@ -433,12 +89,40 @@ function PropertiesPage() {
     loadProperties();
   }, [filters, propertyType]);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(properties.length / propertiesPerPage);
-  const startIndex = (currentPage - 1) * propertiesPerPage;
-  const endIndex = startIndex + propertiesPerPage;
-  const currentProperties = properties.slice(startIndex, endIndex);
-
+  // Check if a specific property type filter is applied
+  const isFilteredByType = !!filters.propertyType;
+  const filteredType = filters.propertyType;
+  
+  // Get all property types that have properties
+  // If filtered by type, only show that type
+  const propertyTypesWithProperties = isFilteredByType
+    ? [filteredType].filter(type => propertiesByType[type] && propertiesByType[type].length > 0)
+    : Object.keys(propertiesByType).filter(
+        (type) => propertiesByType[type].length > 0
+      );
+  
+  const totalProperties = properties.length;
+  
+  // Calculate pagination for each category
+  const getPaginatedPropertiesForCategory = (type: string) => {
+    const categoryProperties = propertiesByType[type] || [];
+    const startIndex = (currentPage - 1) * propertiesPerCategoryPerPage;
+    const endIndex = startIndex + propertiesPerCategoryPerPage;
+    return categoryProperties.slice(startIndex, endIndex);
+  };
+  
+  // Calculate total pages (based on the category with most properties, or current filtered category)
+  const propertiesToPaginate = isFilteredByType && propertiesByType[filteredType]
+    ? propertiesByType[filteredType]
+    : Object.values(propertiesByType).flat();
+  const maxPropertiesInCategory = isFilteredByType && propertiesByType[filteredType]
+    ? propertiesByType[filteredType].length
+    : Math.max(
+        ...Object.values(propertiesByType).map(props => props.length),
+        0
+      );
+  const totalPages = Math.ceil(maxPropertiesInCategory / propertiesPerCategoryPerPage);
+  
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -459,12 +143,18 @@ function PropertiesPage() {
         </div>
         <div className="container mx-auto px-4 py-12 relative z-10">
           <h1 className="text-3xl font-bold text-white mb-2 capitalize">
-            {propertyType ? `${propertyType} Properties` : "Find Your Perfect Property"}
+            {filters.propertyType 
+              ? `${propertyTypeLabels[filters.propertyType] || filters.propertyType} Properties`
+              : propertyType 
+                ? `${propertyType} Properties` 
+                : "Find Your Perfect Property"}
           </h1>
           <p className="text-slate-300">
-            {propertyType 
-              ? `Browse our collection of ${propertyType} available in Uganda`
-              : "Browse properties available for sale, rent, and lease in Uganda"
+            {filters.propertyType
+              ? `Browse our collection of ${propertyTypeLabels[filters.propertyType] || filters.propertyType} available in Uganda`
+              : propertyType 
+                ? `Browse our collection of ${propertyType} available in Uganda`
+                : "Browse properties available for sale, rent, and lease in Uganda"
             }
           </p>
         </div>
@@ -490,7 +180,10 @@ function PropertiesPage() {
               "Loading properties..."
             ) : (
               <>
-                Showing <span className="font-medium">{startIndex + 1}-{Math.min(endIndex, properties.length)}</span> of <span className="font-medium">{properties.length}</span> properties
+                Showing <span className="font-medium">{totalProperties}</span> properties across <span className="font-medium">{propertyTypesWithProperties.length}</span> categories
+                {totalPages > 1 && (
+                  <> • Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span></>
+                )}
               </>
             )}
           </p>
@@ -543,11 +236,58 @@ function PropertiesPage() {
           </div>
         )}
 
-        {/* Property Grid */}
-        {(isLoading || currentProperties.length > 0) && (
+        {/* Properties Grouped by Category */}
+        {!isLoading && propertyTypesWithProperties.length > 0 && (
+          <div className="space-y-12">
+            {propertyTypesWithProperties.map((type) => {
+              const typeProperties = propertiesByType[type];
+              const paginatedProperties = getPaginatedPropertiesForCategory(type);
+              const typeLabel = propertyTypeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+              const categoryTotalPages = Math.ceil(typeProperties.length / propertiesPerCategoryPerPage);
+              const startIndex = (currentPage - 1) * propertiesPerCategoryPerPage;
+              const endIndex = Math.min(startIndex + propertiesPerCategoryPerPage, typeProperties.length);
+              
+              return (
+                <div key={type} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">{typeLabel}</h2>
+                      <p className="text-slate-600 mt-1">
+                        {typeProperties.length} {typeProperties.length === 1 ? 'property' : 'properties'} available
+                        {categoryTotalPages > 1 && (
+                          <> • Showing {startIndex + 1}-{endIndex} of {typeProperties.length}</>
+                        )}
+                      </p>
+                    </div>
+                    {typeProperties.length > propertiesPerCategoryPerPage && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setFilters({ ...filters, propertyType: type as any })}
+                      >
+                        View All {typeLabel}
+                      </Button>
+                    )}
+                  </div>
+                  {paginatedProperties.length > 0 ? (
+                    <PropertyGrid
+                      properties={paginatedProperties}
+                      isLoading={false}
+                      variant={viewMode}
+                    />
+                  ) : (
+                    <p className="text-slate-500 text-center py-8">No more properties in this category.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
           <PropertyGrid
-            properties={currentProperties}
-            isLoading={isLoading}
+            properties={[]}
+            isLoading={true}
             variant={viewMode}
           />
         )}

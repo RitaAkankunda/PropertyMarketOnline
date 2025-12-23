@@ -1,6 +1,7 @@
 // API Configuration
 // Set NEXT_PUBLIC_API_URL in your .env.local to connect to your backend
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// Backend runs on port 3001 with /api prefix
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 // App Configuration
 export const APP_NAME = "PropertyMarket Online";

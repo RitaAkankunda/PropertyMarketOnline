@@ -11,8 +11,19 @@ import { User } from 'src/users/entities/user.entity';
 export enum PropertyType {
   HOUSE = 'house',
   APARTMENT = 'apartment',
+  CONDO = 'condo',
+  TOWNHOUSE = 'townhouse',
+  VILLA = 'villa',
   LAND = 'land',
   COMMERCIAL = 'commercial',
+  WAREHOUSE = 'warehouse',
+  OFFICE = 'office',
+}
+
+export enum ListingType {
+  SALE = 'sale',
+  RENT = 'rent',
+  LEASE = 'lease',
 }
 
 @Entity('properties')
@@ -34,6 +45,13 @@ export class Property {
     enum: PropertyType,
   })
   propertyType: PropertyType;
+
+  @Column({
+    type: 'enum',
+    enum: ListingType,
+    default: ListingType.SALE,
+  })
+  listingType: ListingType;
 
   @Column({ nullable: true })
   bedrooms: number;

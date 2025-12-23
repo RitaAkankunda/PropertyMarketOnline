@@ -1,11 +1,15 @@
 import { IsOptional, IsEnum, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PropertyType } from '../entities/property.entity';
+import { PropertyType, ListingType } from '../entities/property.entity';
 
 export class QueryPropertyDto {
   @IsOptional()
   @IsEnum(PropertyType)
   propertyType?: PropertyType;
+
+  @IsOptional()
+  @IsEnum(ListingType)
+  listingType?: ListingType;
 
   @IsOptional()
   @IsNumber()

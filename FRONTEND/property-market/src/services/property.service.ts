@@ -32,6 +32,7 @@ export interface CreatePropertyData {
     floors?: number;
   };
   amenities?: string[];
+  images?: string[];
 }
 
 export const propertyService = {
@@ -56,50 +57,282 @@ export const propertyService = {
     }
     
     params.append("page", String(page));
-    params.append("pageSize", String(pageSize));
+    params.append("limit", String(pageSize)); // Backend uses 'limit' not 'pageSize'
 
-    const response = await api.get<PaginatedResponse<Property>>(
-      `/listings?${params.toString()}`
-    );
-    return response.data;
+    const response = await api.get<{
+      items: any[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(`/properties?${params.toString()}`);
+    
+    // Transform backend response to frontend expected format
+    // Backend returns properties with latitude/longitude, but frontend expects location object
+    const transformedItems: Property[] = response.data.items.map((item: any) => ({
+      ...item,
+      location: item.location || {
+        city: 'Kampala', // Default city
+        district: '',
+        country: 'Uganda',
+        address: '',
+        latitude: item.latitude,
+        longitude: item.longitude,
+        coordinates: item.latitude && item.longitude ? {
+          lat: item.latitude,
+          lng: item.longitude,
+        } : undefined,
+      },
+      features: item.features || {
+        bedrooms: item.bedrooms,
+        area: 0,
+        areaUnit: 'sqft',
+      },
+      images: item.images ? (Array.isArray(item.images) && item.images.length > 0 ? item.images
+        .filter((url: any) => {
+          // Filter out empty, null, or invalid URLs
+          if (!url) return false;
+          const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
+        })
+        .map((url: string, index: number) => {
+          const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return {
+            id: `img-${index}`,
+            url: imageUrl,
+            alt: item.title,
+            isPrimary: index === 0, // First image is the cover/primary
+          };
+        }) : []) : [],
+      currency: item.currency || 'UGX',
+      listingType: item.listingType || 'sale', // Default to 'sale' if not provided
+      status: item.status || 'active',
+      views: item.views || 0,
+      leads: item.leads || 0,
+      isVerified: item.isVerified || false,
+      isFeatured: item.isFeatured || false,
+      amenities: item.amenities || [],
+    }));
+    
+    return {
+      data: transformedItems,
+      meta: {
+        total: response.data.total,
+        page: response.data.page,
+        pageSize: response.data.limit,
+        totalPages: response.data.totalPages,
+      },
+    };
   },
 
   // Get single property by ID
   async getProperty(id: string): Promise<Property> {
-    const response = await api.get<Property>(`/listings/${id}`);
-    return response.data;
+    const response = await api.get<any>(`/properties/${id}`);
+    const item = response.data;
+    
+    // Transform backend response to frontend expected format
+    return {
+      ...item,
+      owner: item.owner || (item.ownerId ? { id: item.ownerId } : undefined),
+      location: item.location || {
+        city: 'Kampala',
+        district: '',
+        country: 'Uganda',
+        address: '',
+        latitude: item.latitude,
+        longitude: item.longitude,
+        coordinates: item.latitude && item.longitude ? {
+          lat: item.latitude,
+          lng: item.longitude,
+        } : undefined,
+      },
+      features: item.features || {
+        bedrooms: item.bedrooms,
+        area: 0,
+        areaUnit: 'sqft',
+      },
+      images: item.images ? (Array.isArray(item.images) && item.images.length > 0 ? item.images
+        .filter((url: any) => {
+          // Filter out empty, null, or invalid URLs
+          if (!url) return false;
+          const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
+        })
+        .map((url: string, index: number) => {
+          const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return {
+            id: `img-${index}`,
+            url: imageUrl,
+            alt: item.title,
+            isPrimary: index === 0, // First image is the cover/primary
+          };
+        }) : []) : [],
+      currency: item.currency || 'UGX',
+      listingType: item.listingType || 'sale', // Default to 'sale' if not provided
+      status: item.status || 'active',
+      views: item.views || 0,
+      leads: item.leads || 0,
+      isVerified: item.isVerified || false,
+      isFeatured: item.isFeatured || false,
+      amenities: item.amenities || [],
+    };
   },
 
   // Create new property listing
   async createProperty(data: CreatePropertyData): Promise<Property> {
-    const response = await api.post<Property>("/listings", data);
+    // Transform data to match backend DTO structure
+    const backendData = {
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      propertyType: data.propertyType,
+      listingType: data.listingType || 'sale', // Default to 'sale' if not provided
+      bedrooms: data.features?.bedrooms,
+      latitude: data.location?.latitude || 0.3476, // Default to Kampala coordinates
+      longitude: data.location?.longitude || 32.5825,
+      images: (data as any).images || [], // Include images if provided
+    };
+    
+    console.log("Sending property data to backend:", backendData);
+    
+    const response = await api.post<Property>("/properties", backendData);
+    
+    console.log("Backend response:", response.data);
+    
     return response.data;
   },
 
   // Update property listing
   async updateProperty(id: string, data: Partial<CreatePropertyData>): Promise<Property> {
-    const response = await api.patch<Property>(`/listings/${id}`, data);
-    return response.data;
-  },
+    // Transform frontend data format to backend format
+    // Only include fields that are in CreatePropertyDto to avoid validation errors
+    const backendData: any = {};
+    
+    if (data.title !== undefined) backendData.title = data.title;
+    if (data.description !== undefined) backendData.description = data.description;
+    if (data.price !== undefined) backendData.price = data.price;
+    if (data.propertyType !== undefined) backendData.propertyType = data.propertyType;
+    if (data.listingType !== undefined) backendData.listingType = data.listingType;
+    if (data.features?.bedrooms !== undefined) backendData.bedrooms = data.features.bedrooms;
+    
+    // Get latitude and longitude - required by backend
+    const latitude = data.location?.latitude || data.location?.coordinates?.lat || 0.3476;
+    const longitude = data.location?.longitude || data.location?.coordinates?.lng || 32.5825;
+    backendData.latitude = latitude;
+    backendData.longitude = longitude;
+    
+    // Only include images if provided (must be valid URLs)
+    if ((data as any).images !== undefined) {
+      backendData.images = (data as any).images.filter((url: string) => 
+        typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))
+      );
+    }
 
-  // Delete property listing
-  async deleteProperty(id: string): Promise<void> {
-    await api.delete(`/listings/${id}`);
+    console.log("Updating property with data:", backendData);
+    
+    try {
+      const response = await api.patch<any>(`/properties/${id}`, backendData);
+      const item = response.data;
+    
+    // Transform backend response to frontend expected format
+    return {
+      ...item,
+      location: item.location || {
+        city: 'Kampala',
+        district: '',
+        country: 'Uganda',
+        address: '',
+        latitude: item.latitude,
+        longitude: item.longitude,
+        coordinates: item.latitude && item.longitude ? {
+          lat: item.latitude,
+          lng: item.longitude,
+        } : undefined,
+      },
+      features: item.features || {
+        bedrooms: item.bedrooms,
+        area: 0,
+        areaUnit: 'sqft',
+      },
+      images: item.images ? (Array.isArray(item.images) && item.images.length > 0 ? item.images
+        .filter((url: any) => {
+          // Filter out empty, null, or invalid URLs
+          if (!url) return false;
+          const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
+        })
+        .map((url: string, index: number) => {
+          const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return {
+            id: `img-${index}`,
+            url: imageUrl,
+            alt: item.title,
+            isPrimary: index === 0, // First image is the cover/primary
+          };
+        }) : []) : [],
+      currency: item.currency || 'UGX',
+      listingType: item.listingType || 'sale', // Default to 'sale' if not provided
+      status: item.status || 'active',
+      views: item.views || 0,
+      leads: item.leads || 0,
+      isVerified: item.isVerified || false,
+      isFeatured: item.isFeatured || false,
+      amenities: item.amenities || [],
+    };
+    } catch (error: any) {
+      console.error("Property update error:", error);
+      console.error("Error response data:", error.response?.data);
+      console.error("Error response status:", error.response?.status);
+      
+      // Re-throw with more details
+      if (error.response?.data) {
+        const errorMessage = error.response.data.message || 
+                            (Array.isArray(error.response.data.message) 
+                              ? error.response.data.message.join(', ')
+                              : JSON.stringify(error.response.data));
+        throw new Error(errorMessage);
+      }
+      throw error;
+    }
   },
 
   // Upload property images
-  async uploadImages(propertyId: string, files: File[]): Promise<string[]> {
+  async uploadImages(files: File[]): Promise<string[]> {
     const formData = new FormData();
     files.forEach((file) => {
-      formData.append("images", file);
+      formData.append("files", file);
     });
 
     const response = await api.post<{ urls: string[] }>(
-      `/listings/${propertyId}/images`,
+      "/properties/upload",
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
     );
     return response.data.urls;
+  },
+
+  // Delete property listing
+  async deleteProperty(id: string): Promise<void> {
+    await api.delete(`/properties/${id}`);
+  },
+
+  // Upload property images
+  async uploadImages(files: File[]): Promise<string[]> {
+    if (!files || files.length === 0) {
+      return [];
+    }
+    
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const response = await api.post<{ urls: string[] }>(
+      "/properties/upload",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return response.data.urls || [];
   },
 
   // Delete property image
@@ -137,10 +370,68 @@ export const propertyService = {
     page: number = 1,
     pageSize: number = 10
   ): Promise<PaginatedResponse<Property>> {
-    const response = await api.get<PaginatedResponse<Property>>(
-      `/listings/my?page=${page}&pageSize=${pageSize}`
+    const response = await api.get<any[]>(
+      `/properties/my/properties`
     );
-    return response.data;
+    // Backend returns array directly, ensure it's always an array
+    const rawProperties = Array.isArray(response.data) ? response.data : [];
+    
+    // Transform backend response to frontend expected format
+    const properties: Property[] = rawProperties.map((item: any) => ({
+      ...item,
+      location: item.location || {
+        city: 'Kampala',
+        district: '',
+        country: 'Uganda',
+        address: '',
+        latitude: item.latitude,
+        longitude: item.longitude,
+        coordinates: item.latitude && item.longitude ? {
+          lat: item.latitude,
+          lng: item.longitude,
+        } : undefined,
+      },
+      features: item.features || {
+        bedrooms: item.bedrooms,
+        area: 0,
+        areaUnit: 'sqft',
+      },
+      images: item.images ? (Array.isArray(item.images) && item.images.length > 0 ? item.images
+        .filter((url: any) => {
+          // Filter out empty, null, or invalid URLs
+          if (!url) return false;
+          const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
+        })
+        .map((url: string, index: number) => {
+          const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
+          return {
+            id: `img-${index}`,
+            url: imageUrl,
+            alt: item.title,
+            isPrimary: index === 0, // First image is the cover/primary
+          };
+        }) : []) : [],
+      currency: item.currency || 'UGX',
+      listingType: item.listingType || 'sale', // Default to 'sale' if not provided
+      status: item.status || 'active',
+      views: item.views || 0,
+      leads: item.leads || 0,
+      isVerified: item.isVerified || false,
+      isFeatured: item.isFeatured || false,
+      amenities: item.amenities || [],
+    }));
+    
+    // Transform to paginated response format
+    return {
+      data: properties,
+      meta: {
+        total: properties.length,
+        page: 1,
+        pageSize: properties.length,
+        totalPages: 1,
+      },
+    };
   },
 
   // Feature/Unfeature property (Admin)

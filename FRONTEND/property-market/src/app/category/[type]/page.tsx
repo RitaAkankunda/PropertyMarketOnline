@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 import { PropertyGrid } from "@/components/properties/property-grid";
 import { propertyService } from "@/services/property.service";
 import { Button } from "@/components/ui";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import type { Property, ListingType } from "@/types";
 
 export default function CategoryPage() {
@@ -36,7 +34,6 @@ export default function CategoryPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
       {/* Banner */}
       <div className="bg-gradient-to-br from-blue-900 to-blue-600 py-12 text-center text-white">
         <h1 className="text-4xl font-bold mb-2 capitalize">{type} Properties</h1>
@@ -59,7 +56,6 @@ export default function CategoryPage() {
           </Button>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

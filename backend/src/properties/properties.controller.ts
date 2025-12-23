@@ -56,7 +56,17 @@ export class PropertiesController {
   @Roles(UserRole.LISTER, UserRole.PROPERTY_MANAGER, UserRole.ADMIN)
   @Post()
   create(@Body() createPropertyDto: CreatePropertyDto, @Request() req) {
-    return this.propertiesService.create(createPropertyDto, req.user.sub);
+    try {
+      console.log('[PROPERTIES CONTROLLER] Create request received:', {
+        title: createPropertyDto.title,
+        propertyType: createPropertyDto.propertyType,
+        user: req.user,
+      });
+      return this.propertiesService.create(createPropertyDto, req.user.sub);
+    } catch (error) {
+      console.error('[PROPERTIES CONTROLLER] Error in create endpoint:', error);
+      throw error;
+    }
   }
 
 

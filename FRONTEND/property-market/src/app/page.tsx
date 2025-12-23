@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -25,6 +28,8 @@ import {
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { APP_NAME } from "@/lib/constants";
+import { propertyService } from "@/services";
+import type { Property, PropertyType } from "@/types";
 
 // Hero Section Categories
 const heroCategories = [
@@ -94,67 +99,37 @@ const features = [
   },
 ];
 
-// Property Types with mockup data
+// Property Types
 const propertyTypes = [
   { 
     name: "Houses", 
+    type: "house" as PropertyType,
     icon: Home,
-    mockups: [
-      { img: "https://images.unsplash.com/photo-1568605114967-8130f3a36994", title: "Modern Family House", price: "450,000,000" },
-      { img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c", title: "Luxury Villa", price: "850,000,000" },
-      { img: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6", title: "Cozy Bungalow", price: "320,000,000" },
-      { img: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914", title: "Suburban Home", price: "550,000,000" },
-    ]
   },
   { 
     name: "Apartments", 
+    type: "apartment" as PropertyType,
     icon: Building2,
-    mockups: [
-      { img: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00", title: "City Center Apartment", price: "180,000,000" },
-      { img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267", title: "Penthouse Suite", price: "420,000,000" },
-      { img: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750", title: "Modern Studio", price: "95,000,000" },
-      { img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2", title: "Luxury Condo", price: "275,000,000" },
-    ]
-  },
-  { 
-    name: "Land", 
-    icon: MapPin,
-    mockups: [
-      { img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef", title: "Residential Plot", price: "120,000,000" },
-      { img: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e", title: "Commercial Land", price: "350,000,000" },
-      { img: "https://images.unsplash.com/photo-1426604966848-d7adac402bff", title: "Farm Land", price: "80,000,000" },
-      { img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e", title: "Beach Front Plot", price: "650,000,000" },
-    ]
-  },
-  { 
-    name: "Commercial", 
-    icon: Building2,
-    mockups: [
-      { img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab", title: "Office Building", price: "2,500,000,000" },
-      { img: "https://images.unsplash.com/photo-1441986300917-64674bd600d8", title: "Retail Space", price: "450,000,000" },
-      { img: "https://images.unsplash.com/photo-1497366216548-37526070297c", title: "Shopping Complex", price: "1,800,000,000" },
-      { img: "https://images.unsplash.com/photo-1497366811353-6870744d04b2", title: "Business Center", price: "950,000,000" },
-    ]
   },
   { 
     name: "Villas", 
+    type: "villa" as PropertyType,
     icon: Home,
-    mockups: [
-      { img: "https://images.unsplash.com/photo-1613490493576-7fde63acd811", title: "Luxury Villa", price: "1,200,000,000" },
-      { img: "https://images.unsplash.com/photo-1600585154526-990dced4db0d", title: "Modern Villa", price: "980,000,000" },
-      { img: "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde", title: "Mediterranean Villa", price: "1,450,000,000" },
-      { img: "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b", title: "Garden Villa", price: "890,000,000" },
-    ]
+  },
+  { 
+    name: "Land", 
+    type: "land" as PropertyType,
+    icon: MapPin,
+  },
+  { 
+    name: "Commercial", 
+    type: "commercial" as PropertyType,
+    icon: Building2,
   },
   { 
     name: "Offices", 
+    type: "office" as PropertyType,
     icon: Building2,
-    mockups: [
-      { img: "https://images.unsplash.com/photo-1497366754035-f200968a6e72", title: "Executive Office", price: "350,000,000" },
-      { img: "https://images.unsplash.com/photo-1497366412874-3415097a27e7", title: "Open Plan Office", price: "280,000,000" },
-      { img: "https://images.unsplash.com/photo-1497366216548-37526070297c", title: "Co-working Space", price: "185,000,000" },
-      { img: "https://images.unsplash.com/photo-1497215728101-856f4ea42174", title: "Corporate Office", price: "520,000,000" },
-    ]
   },
 ];
 
@@ -191,6 +166,80 @@ const whyChooseUs = [
 ];
 
 export default function HomePage() {
+  const [propertiesByType, setPropertiesByType] = useState<Record<PropertyType, Property[]>>({} as Record<PropertyType, Property[]>);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      setIsLoading(true);
+      try {
+        console.log('[HOME PAGE] Starting to fetch properties...');
+        
+        // First, fetch ALL properties without category filter to get all available properties
+        const allPropertiesResponse = await propertyService.getProperties(
+          undefined, // No filters - get all properties
+          1,
+          100 // Get more properties to ensure we see all of them
+        );
+        
+        console.log('[HOME PAGE] API Response:', {
+          total: allPropertiesResponse.meta?.total,
+          dataLength: allPropertiesResponse.data?.length,
+          fullResponse: allPropertiesResponse
+        });
+        
+        const allProperties = allPropertiesResponse.data || [];
+        console.log('[HOME PAGE] All properties fetched:', allProperties.length);
+        console.log('[HOME PAGE] Properties:', allProperties.map(p => ({
+          id: p.id,
+          title: p.title,
+          propertyType: p.propertyType,
+          listingType: p.listingType
+        })));
+
+        // Group properties by type
+        const grouped = {} as Record<PropertyType, Property[]>;
+        
+        // Initialize all property types with empty arrays
+        propertyTypes.forEach((pt) => {
+          grouped[pt.type] = [];
+        });
+
+        // Group properties by their propertyType
+        allProperties.forEach((property) => {
+          if (property.propertyType) {
+            const normalizedType = property.propertyType.toLowerCase();
+            // Find matching property type
+            const matchingType = propertyTypes.find(pt => pt.type.toLowerCase() === normalizedType);
+            if (matchingType && grouped[matchingType.type]) {
+              grouped[matchingType.type].push(property);
+            } else {
+              console.warn('[HOME PAGE] Property type not found in propertyTypes:', property.propertyType, property);
+            }
+          } else {
+            console.warn('[HOME PAGE] Property missing propertyType:', property);
+          }
+        });
+
+        console.log('[HOME PAGE] Properties grouped by type:', Object.keys(grouped).map(key => ({
+          type: key,
+          count: grouped[key as PropertyType].length
+        })));
+        setPropertiesByType(grouped);
+      } catch (err) {
+        console.error("[HOME PAGE] Failed to fetch properties:", err);
+        console.error("[HOME PAGE] Error details:", {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, []);
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -359,133 +408,86 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="space-y-16">
-            {propertyTypes.map((type) => (
-              <div key={type.name}>
-                {/* Category Header */}
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl flex items-center justify-center">
-                    <type.icon className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{type.name}</h3>
-                    <p className="text-slate-600">Explore our {type.name.toLowerCase()} listings</p>
-                  </div>
-                </div>
-
-                {/* Property Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  {type.mockups.map((mockup, idx) => {
-                    // For Villas, link to villa detail page
-                    if (type.name.toLowerCase() === "villas") {
-                      return (
-                        <Link
-                          key={idx}
-                          href={`/properties/villa-${idx + 1}`}
-                          className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-                        >
-                          <div className="relative h-48 overflow-hidden bg-gray-200">
-                            <Image
-                              src={mockup.img}
-                              alt={mockup.title}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                            />
-                          </div>
-                          <div className="p-4">
-                            <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
-                              {mockup.title}
-                            </h4>
-                            <p className="text-xl font-bold text-blue-600 mb-3">
-                              UGX {mockup.price}
-                            </p>
-                            <div className="flex items-center justify-between text-sm text-slate-500">
-                              <span>View Details</span>
-                              <ChevronRight className="w-4 h-4" />
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    }
-                    // For Offices, link to office detail page
-                    if (type.name.toLowerCase() === "offices") {
-                      return (
-                        <Link
-                          key={idx}
-                          href={`/properties/office-${idx + 1}`}
-                          className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-                        >
-                          <div className="relative h-48 overflow-hidden bg-gray-200">
-                            <Image
-                              src={mockup.img}
-                              alt={mockup.title}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                            />
-                          </div>
-                          <div className="p-4">
-                            <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
-                              {mockup.title}
-                            </h4>
-                            <p className="text-xl font-bold text-blue-600 mb-3">
-                              UGX {mockup.price}
-                            </p>
-                            <div className="flex items-center justify-between text-sm text-slate-500">
-                              <span>View Details</span>
-                              <ChevronRight className="w-4 h-4" />
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    }
-                    // Default: link to category listing
-                    return (
-                      <Link
-                        key={idx}
-                        href={`/properties?type=${type.name.toLowerCase()}`}
-                        className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-                      >
-                        <div className="relative h-48 overflow-hidden bg-gray-200">
-                          <Image
-                            src={mockup.img}
-                            alt={mockup.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                          />
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500">Loading properties...</p>
+            </div>
+          ) : (
+            <div className="space-y-16">
+              {propertyTypes
+                .filter((type) => {
+                  const properties = propertiesByType[type.type] || [];
+                  return properties.length > 0;
+                })
+                .map((type) => {
+                  const properties = propertiesByType[type.type] || [];
+                  return (
+                    <div key={type.name}>
+                      {/* Category Header */}
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl flex items-center justify-center">
+                          <type.icon className="w-8 h-8 text-blue-600" />
                         </div>
-                        <div className="p-4">
-                          <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
-                            {mockup.title}
-                          </h4>
-                          <p className="text-xl font-bold text-blue-600 mb-3">
-                            UGX {mockup.price}
-                          </p>
-                          <div className="flex items-center justify-between text-sm text-slate-500">
-                            <span>View Details</span>
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
+                        <div>
+                          <h3 className="text-2xl font-bold text-slate-900">{type.name}</h3>
+                          <p className="text-slate-600">Explore our {type.name.toLowerCase()} listings</p>
                         </div>
-                      </Link>
-                    );
-                  })}
-                </div>
+                      </div>
 
-                {/* Browse All Button */}
-                <div className="text-center">
-                  <Link
-                    href={type.name.toLowerCase() === "villas" ? "/properties?type=villas" : type.name.toLowerCase() === "offices" ? "/properties?type=offices" : `/properties?type=${type.name.toLowerCase()}`}
-                    className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-white shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                  >
-                    View All {type.name}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                      {/* Property Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        {properties.slice(0, 4).map((property) => (
+                          <Link
+                            key={property.id}
+                            href={`/properties/${property.id}`}
+                            className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+                          >
+                            <div className="relative h-48 overflow-hidden bg-gray-200">
+                              {property.images && property.images.length > 0 ? (
+                                <Image
+                                  src={property.images[0].url}
+                                  alt={property.title}
+                                  fill
+                                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                                  <type.icon className="w-12 h-12 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="p-4">
+                              <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
+                                {property.title}
+                              </h4>
+                              <p className="text-xl font-bold text-blue-600 mb-3">
+                                {property.currency} {property.price?.toLocaleString()}
+                              </p>
+                              <div className="flex items-center justify-between text-sm text-slate-500">
+                                <span>View Details</span>
+                                <ChevronRight className="w-4 h-4" />
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* Browse All Button */}
+                      <div className="text-center">
+                        <Link
+                          href={`/properties?type=${type.type}`}
+                          className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-white shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                        >
+                          View All {type.name}
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       </section>
 

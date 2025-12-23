@@ -26,7 +26,7 @@ const registerSchema = z
     lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     phone: z.string().optional(),
-    role: z.enum(["buyer", "renter", "lister", "property_manager"]),
+    role: z.enum(["buyer", "lister", "property_manager"]),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -48,7 +48,6 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 const roleOptions = [
   { value: "buyer", label: "Buyer - I want to buy property" },
-  { value: "renter", label: "Renter - I want to rent property" },
   { value: "lister", label: "Lister - I want to list property for sale/rent" },
   { value: "property_manager", label: "Property Manager - I manage properties" },
 ];

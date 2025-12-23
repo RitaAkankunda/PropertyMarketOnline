@@ -35,10 +35,28 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleAuthCallback(@Req() req: any, @Res() res: Response) {
-    const { accessToken, user } = req.user;
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
-    
-    // Redirect to frontend with token
-    res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}&provider=google`);
+    try {
+      const { accessToken, user } = req.user;
+      
+      // Force frontend URL to be localhost:3000 (frontend port)
+      // Don't use FRONTEND_URL env var as it might be wrong
+      const frontendUrl = 'http://localhost:3000';
+      
+      console.log('[GOOGLE OAUTH] Callback received, redirecting to frontend:', {
+        frontendUrl,
+        hasToken: !!accessToken,
+        userId: user?.id,
+        tokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : 'none',
+      });
+      
+      // Redirect to frontend with token
+      const redirectUrl = `${frontendUrl}/auth/callback?token=${encodeURIComponent(accessToken)}&provider=google`;
+      console.log('[GOOGLE OAUTH] Redirect URL:', redirectUrl);
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('[GOOGLE OAUTH] Error in callback:', error);
+      const frontendUrl = 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/auth/callback?error=authentication_failed`);
+    }
   }
 }

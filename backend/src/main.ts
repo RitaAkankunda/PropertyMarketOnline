@@ -1,9 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AllExceptionsFilter } from './common/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Add global exception filter for better error logging
+  app.useGlobalFilters(new AllExceptionsFilter());
   
   app.enableCors({
     origin: (origin, callback) => {
@@ -28,7 +33,23 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  await app.listen(3001);
-  console.log('Application is running on: http://localhost:3000');
+
+  // API prefix
+  app.setGlobalPrefix('api');
+
+  // Swagger documentation
+  const config = new DocumentBuilder()
+    .setTitle('PropertyMarket Online API')
+    .setDescription('Property marketplace API with service providers, jobs, and payments')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+  const port = process.env.PORT || 3001;
+  await app.listen(port);
+  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
 }
 bootstrap();

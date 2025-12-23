@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -23,6 +23,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<any>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const {
     register,
@@ -32,12 +34,76 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  // Log API URL on component mount for debugging
+  useEffect(() => {
+    const initLog = `[LOGIN PAGE LOADED] ${new Date().toISOString()}\nAPI Base URL: ${API_BASE_URL}`;
+    console.log("%c" + initLog, "background: #1a1a1a; color: #4fc3f7; padding: 5px; font-size: 12px; font-weight: bold;");
+  }, []);
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       setError(null);
-      await login(data);
-      router.push("/dashboard");
+      setErrorDetails(null);
+      setShowDetails(false);
+      
+      // Persistent logging that won't get cleared
+      const logMessage = `[LOGIN ATTEMPT] ${new Date().toISOString()}\nEmail: ${data.email}\nAPI URL: ${API_BASE_URL}`;
+      console.log("%c" + logMessage, "background: #222; color: #bada55; padding: 5px; font-size: 12px;");
+      
+      // Also store in localStorage for persistence
+      if (typeof window !== "undefined") {
+        const logs = JSON.parse(localStorage.getItem("login_logs") || "[]");
+        logs.push({ timestamp: new Date().toISOString(), action: "attempt", email: data.email, apiUrl: API_BASE_URL });
+        localStorage.setItem("login_logs", JSON.stringify(logs.slice(-10))); // Keep last 10 logs
+      }
+      
+      const loginResponse = await login(data);
+      
+      const successLog = `[LOGIN SUCCESS] ${new Date().toISOString()}\nEmail: ${data.email}\nRole: ${loginResponse?.user?.role || 'unknown'}`;
+      console.log("%c" + successLog, "background: #222; color: #00ff00; padding: 5px; font-size: 12px;");
+      console.log("[LOGIN] User data after login:", loginResponse?.user);
+      
+      // Small delay to ensure state is updated before redirect
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 100);
     } catch (err: unknown) {
+      // Capture full error details
+      const errorInfo: any = {
+        message: err instanceof Error ? err.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+        email: data.email,
+        apiUrl: API_BASE_URL,
+      };
+      
+      if (err instanceof Error) {
+        errorInfo.stack = err.stack;
+        errorInfo.name = err.name;
+      }
+      
+      // Check if it's an axios error with response
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as any;
+        errorInfo.status = axiosError.response?.status;
+        errorInfo.statusText = axiosError.response?.statusText;
+        errorInfo.responseData = axiosError.response?.data;
+        errorInfo.requestUrl = axiosError.config?.url;
+        errorInfo.baseURL = axiosError.config?.baseURL;
+      }
+      
+      // Persistent error logging
+      const errorLog = `[LOGIN ERROR] ${new Date().toISOString()}\n${JSON.stringify(errorInfo, null, 2)}`;
+      console.error("%c" + errorLog, "background: #222; color: #ff6b6b; padding: 5px; font-size: 12px;");
+      console.error("Full error object:", err);
+      
+      // Store in localStorage
+      if (typeof window !== "undefined") {
+        const logs = JSON.parse(localStorage.getItem("login_logs") || "[]");
+        logs.push({ timestamp: new Date().toISOString(), action: "error", error: errorInfo });
+        localStorage.setItem("login_logs", JSON.stringify(logs.slice(-10)));
+      }
+      
+      setErrorDetails(errorInfo);
       if (err instanceof Error) {
         setError(err.message || "Invalid email or password. Please try again.");
       } else {
@@ -77,8 +143,37 @@ export default function LoginPage() {
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {error && (
-                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                  {error}
+                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-destructive font-medium text-sm mb-1">Login Failed</p>
+                      <p className="text-destructive text-sm">{error}</p>
+                      {errorDetails && (
+                        <button
+                          type="button"
+                          onClick={() => setShowDetails(!showDetails)}
+                          className="mt-2 text-xs text-destructive/80 hover:text-destructive underline"
+                        >
+                          {showDetails ? "Hide" : "Show"} technical details
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {showDetails && errorDetails && (
+                    <div className="mt-3 p-3 bg-black/50 rounded text-xs font-mono text-white/80 overflow-auto max-h-60">
+                      <div className="mb-2 font-semibold text-white">Error Details:</div>
+                      <pre className="whitespace-pre-wrap break-words">
+                        {JSON.stringify(errorDetails, null, 2)}
+                      </pre>
+                      <div className="mt-3 pt-3 border-t border-white/20">
+                        <div className="text-white/60 text-xs">
+                          <div>API URL: {errorDetails.apiUrl || API_BASE_URL}</div>
+                          {errorDetails.status && <div>Status: {errorDetails.status} {errorDetails.statusText}</div>}
+                          {errorDetails.requestUrl && <div>Request: {errorDetails.baseURL}{errorDetails.requestUrl}</div>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

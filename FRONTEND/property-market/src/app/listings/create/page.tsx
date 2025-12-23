@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,10 +14,15 @@ import {
   Check,
   Info,
   ImagePlus,
+  AlertCircle,
 } from "lucide-react";
 import { Button, Input, Select, Textarea, Card, Badge } from "@/components/ui";
+import { useToastContext } from "@/components/ui/toast-provider";
 import { cn } from "@/lib/utils";
 import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS } from "@/lib/constants";
+import { propertyService } from "@/services";
+import { useAuthStore } from "@/store";
+import { useRequireRole } from "@/hooks/use-auth";
 
 const steps = [
   { id: 1, title: "Basic Info", description: "Property type & listing details" },
@@ -49,6 +55,17 @@ const amenitiesList = [
 ];
 
 export default function CreateListingPage() {
+  const router = useRouter();
+  const { success, error: showError } = useToastContext();
+  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
+  
+  // Protect route: Only LISTER, PROPERTY_MANAGER, ADMIN can create listings
+  const { hasAccess } = useRequireRole(
+    ['lister', 'property_manager', 'admin'],
+    '/'
+  );
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Basic Info
@@ -130,9 +147,115 @@ export default function CreateListingPage() {
   };
 
   const handleSubmit = async () => {
-    // TODO: Submit to API
-    console.log("Submitting:", formData);
-    alert("Listing submitted successfully! (Demo)");
+    // Validate required fields
+    if (!formData.title || !formData.description || !formData.propertyType || !formData.price) {
+      showError("Please fill in all required fields (Title, Description, Property Type, and Price).");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Prepare data for API
+      const propertyData = {
+        title: formData.title,
+        description: formData.description,
+        propertyType: formData.propertyType,
+        listingType: formData.listingType,
+        price: parseFloat(formData.price),
+        currency: formData.currency,
+        location: {
+          address: formData.address,
+          city: formData.city,
+          district: formData.district,
+          country: "Uganda",
+          // Default coordinates for Kampala if not provided
+          latitude: 0.3476,
+          longitude: 32.5825,
+        },
+        features: {
+          bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
+          bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
+          area: formData.size ? parseFloat(formData.size) : undefined,
+          areaUnit: formData.sizeUnit,
+          parking: formData.parking ? parseInt(formData.parking) : undefined,
+          yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
+        },
+        amenities: formData.amenities,
+        images: formData.images.map(img => img.url).filter(url => url.startsWith('http')), // Only include uploaded URLs
+      };
+
+      const createdProperty = await propertyService.createProperty(propertyData);
+      
+      console.log("Property created successfully:", createdProperty);
+      console.log("Created property ID:", createdProperty?.id);
+      console.log("Created property type:", createdProperty?.propertyType);
+      
+      if (!createdProperty?.id) {
+        throw new Error("Property was created but no ID was returned from the server");
+      }
+      
+      success("Listing submitted successfully! Your property is now live.", 5000);
+      
+      // Redirect to properties list filtered by the property type so user can see their listing
+      const propertyType = createdProperty.propertyType || formData.propertyType || "apartment";
+      // Map singular to plural for URL
+      const propertyTypeMap: Record<string, string> = {
+        apartment: "apartments",
+        house: "houses",
+        villa: "villas",
+        office: "offices",
+        land: "land",
+        commercial: "commercial",
+      };
+      const urlType = propertyTypeMap[propertyType] || propertyType;
+      
+      setTimeout(() => {
+        router.push(`/properties?type=${urlType}`);
+      }, 2000);
+    } catch (err: any) {
+      console.error("Failed to submit listing:", err);
+      console.error("Error response:", err.response?.data);
+      console.error("Error status:", err.response?.status);
+      
+      // Show more specific error message
+      let errorMessage = "Failed to submit listing. Please try again.";
+      
+      // Check if backend is not running (HTML response or connection refused)
+      if (err.message?.includes("HTML instead of JSON") || 
+          err.message?.includes("Cannot connect to backend") ||
+          err.code === "ECONNREFUSED" ||
+          err.message?.includes("Network Error")) {
+        errorMessage = "Backend server is not running. Please start the backend server on port 3001 and try again.";
+      } else if (err.response) {
+        // API returned an error response
+        const status = err.response.status;
+        const message = err.response.data?.message || err.response.data?.error || err.response.data?.error?.message;
+        
+        // Log full error details
+        console.error("Full error response data:", JSON.stringify(err.response.data, null, 2));
+        
+        if (status === 401) {
+          errorMessage = "You need to be logged in to create a listing. Please log in and try again.";
+        } else if (status === 403) {
+          errorMessage = "You don't have permission to create listings. Please contact support.";
+        } else if (status === 400) {
+          errorMessage = message || "Invalid data. Please check all fields and try again.";
+        } else if (status === 500) {
+          // Show more details for 500 errors
+          const errorDetails = err.response.data?.error || err.response.data?.message || "Server error";
+          errorMessage = `Server error: ${errorDetails}. Please check the backend logs and try again.`;
+          console.error("500 Error details:", errorDetails);
+        } else if (message) {
+          errorMessage = message;
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        errorMessage = "Unable to connect to server. Please check if the backend is running on port 3001.";
+      }
+      
+      showError(errorMessage, 8000);
+      setIsSubmitting(false);
+    }
   };
 
   const propertyTypeOptions = [
@@ -752,9 +875,22 @@ export default function CreateListingPage() {
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
-                <Check className="w-4 h-4 mr-2" />
-                Publish Listing
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Publish Listing
+                  </>
+                )}
               </Button>
             )}
           </div>

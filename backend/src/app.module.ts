@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -9,8 +9,8 @@ import { AuthModule } from './auth/auth.module';
 import { PropertiesModule } from './properties/properties.module';
 import { ProvidersModule } from './providers/providers.module';
 import { PaymentsModule } from './payments/payments.module';
-import { User } from './users/entities/user.entity';
-import { Property } from './properties/entities/property.entity';
+import { DatabaseConfig } from './config/database.config';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -19,27 +19,14 @@ import { Property } from './properties/entities/property.entity';
       envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_DATABASE'),
-        entities: [User, Property],
-        synchronize: true,
-        ssl: configService.get<string>('DB_HOST')?.includes('supabase') 
-          ? { rejectUnauthorized: false } 
-          : false,
-      }),
+      useClass: DatabaseConfig,
     }),
     UsersModule,
     AuthModule,
     PropertiesModule,
     ProvidersModule,
     PaymentsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

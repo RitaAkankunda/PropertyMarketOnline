@@ -26,8 +26,24 @@ export function PropertyCard({
   className,
   variant = "default",
 }: PropertyCardProps) {
-  const primaryImage =
-    property.images.find((img) => img.isPrimary) || property.images[0];
+  // Get primary image (marked as primary, or first image, or handle string array)
+  const getPrimaryImage = () => {
+    if (!property.images || property.images.length === 0) {
+      return null;
+    }
+    
+    // Handle case where images might be strings (legacy format)
+    if (typeof property.images[0] === 'string') {
+      const url = property.images[0];
+      return url ? { url, isPrimary: true } : null;
+    }
+    
+    // Find primary image or use first one
+    const primary = property.images.find((img) => img.isPrimary) || property.images[0];
+    return primary?.url ? primary : null;
+  };
+  
+  const primaryImage = getPrimaryImage();
 
   const listingTypeColors = {
     sale: "bg-green-500",
@@ -93,7 +109,7 @@ export function PropertyCard({
                   </Link>
                   <div className="flex items-center text-muted-foreground text-sm mt-1">
                     <MapPin className="h-4 w-4 mr-1" />
-                    {property.location.city}, {property.location.district}
+                    {property.location?.city || 'Location'}, {property.location?.district || ''}
                   </div>
                 </div>
                 <p className="text-xl font-bold text-primary whitespace-nowrap">
@@ -159,12 +175,19 @@ export function PropertyCard({
     >
       {/* Image */}
       <div className="relative h-48 overflow-hidden">
-        <Image
-          src={primaryImage?.url || "/placeholder-property.jpg"}
-          alt={property.title}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {primaryImage?.url ? (
+          <Image
+            src={primaryImage.url}
+            alt={primaryImage.alt || property.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            unoptimized={primaryImage.url.startsWith('blob:') || primaryImage.url.startsWith('http://localhost')}
+          />
+        ) : (
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <span className="text-gray-400 text-sm">No image</span>
+          </div>
+        )}
         <div className="absolute top-3 left-3 flex gap-2">
           <span
             className={cn(
@@ -197,7 +220,7 @@ export function PropertyCard({
       <div className="p-4">
         <div className="flex items-center text-muted-foreground text-sm mb-2">
           <MapPin className="h-4 w-4 mr-1" />
-          {property.location.city}, {property.location.district}
+          {property.location?.city || 'Location'}{property.location?.district ? `, ${property.location.district}` : ''}
         </div>
 
         <Link

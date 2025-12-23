@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Home,
   Building2,
@@ -33,6 +34,7 @@ import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
 import { propertyService, authService } from "@/services";
 import { useAuthStore } from "@/store";
+import { useRequireRole } from "@/hooks/use-auth";
 import type { Property, User as UserType } from "@/types";
 
 // Types for dashboard data
@@ -76,6 +78,7 @@ const navigation = [
   { name: "Settings", href: "/dashboard/settings", icon: Settings, current: false },
 ];
 
+
 // Stats configuration
 const statsConfig = [
   {
@@ -113,6 +116,15 @@ const statsConfig = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  
+  // Protect route: Only LISTER, PROPERTY_MANAGER, ADMIN can access
+  const { hasAccess } = useRequireRole(
+    ['lister', 'property_manager', 'admin'],
+    '/'
+  );
+  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
@@ -129,22 +141,56 @@ export default function DashboardPage() {
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   
-  // Get user from auth store
-  const { user } = useAuthStore();
-  
-  // Fetch dashboard data
+  // Debug logging - MUST be before any conditional returns
+  useEffect(() => {
+    console.log('[DASHBOARD] Auth state:', {
+      isAuthenticated,
+      authLoading,
+      userRole: user?.role,
+      hasAccess,
+      user: user ? { id: user.id, email: user.email, role: user.role } : null,
+    });
+  }, [isAuthenticated, authLoading, user, hasAccess]);
+
+  // Fetch dashboard data - MUST be before any conditional returns
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         
         // Fetch user's properties
-        const propertiesResponse = await propertyService.getProperties({}, 1, 3);
-        setRecentProperties(propertiesResponse.data);
-        
-        // TODO: Fetch stats from API when available
-        // const statsResponse = await dashboardService.getStats();
-        // setStats(statsResponse.data);
+        try {
+          const propertiesResponse = await propertyService.getMyListings(1, 100); // Get all properties for stats
+          console.log("Dashboard - Properties response:", propertiesResponse);
+          console.log("Dashboard - Properties data:", propertiesResponse.data);
+          const allProperties = propertiesResponse.data || [];
+          const recentProps = allProperties.slice(0, 3); // Show only first 3 as recent
+          setRecentProperties(recentProps);
+          
+          // Use total from meta if available, otherwise use array length
+          const totalPropertiesCount = propertiesResponse.meta?.total || allProperties.length;
+          
+          // Calculate stats from properties
+          const totalViews = allProperties.reduce((sum, p) => sum + (p.views || 0), 0);
+          const totalLeads = allProperties.reduce((sum, p) => sum + (p.leads || 0), 0);
+          const revenue = allProperties
+            .filter(p => p.status === 'sold' || p.status === 'rented')
+            .reduce((sum, p) => sum + (p.price || 0), 0);
+          
+          setStats({
+            totalProperties: totalPropertiesCount,
+            totalViews: totalViews,
+            totalMessages: totalLeads, // Using leads as messages for now
+            revenue: revenue,
+            propertyChange: "0",
+            viewsChange: "0%",
+            messagesChange: "0",
+            revenueChange: "0%",
+          });
+        } catch (error) {
+          console.error("Failed to fetch user properties:", error);
+          setRecentProperties([]);
+        }
         
         // TODO: Fetch activities from API when available
         // const activitiesResponse = await dashboardService.getActivities();
@@ -161,8 +207,31 @@ export default function DashboardPage() {
       }
     };
 
-    fetchDashboardData();
-  }, []);
+    // Only fetch if user has access
+    if (isAuthenticated && !authLoading && hasAccess) {
+      fetchDashboardData();
+    }
+  }, [isAuthenticated, authLoading, hasAccess]);
+
+  // Refresh when page becomes visible (after navigation back)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Only refresh if user has access
+      if (isAuthenticated && hasAccess) {
+        propertyService.getMyListings(1, 3)
+          .then((response) => {
+            console.log("Dashboard focus refresh - Properties:", response.data);
+            setRecentProperties(response.data || []);
+          })
+          .catch((error) => {
+            console.error("Failed to refresh on focus:", error);
+          });
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [isAuthenticated, hasAccess]);
 
   // Display name from user or fallback
   const displayName = user ? `${user.firstName} ${user.lastName}` : "User";
@@ -170,6 +239,47 @@ export default function DashboardPage() {
   const userInitials = user 
     ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase()
     : "U";
+
+  // NOW we can do conditional returns - all hooks are called above
+  // Show loading or redirect if user doesn't have access
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !hasAccess) {
+    console.warn('[DASHBOARD] Access denied:', {
+      isAuthenticated,
+      hasAccess,
+      userRole: user?.role,
+      allowedRoles: ['lister', 'property_manager', 'admin'],
+    });
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-8 max-w-md">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-center mb-2">Access Denied</h2>
+          <p className="text-slate-600 text-center mb-6">
+            You need to be a property lister, property manager, or admin to access the dashboard.
+            {user && (
+              <span className="block mt-2 text-sm">
+                Your current role: <strong>{user.role}</strong>
+              </span>
+            )}
+          </p>
+          <Button onClick={() => router.push('/')} className="w-full">
+            Go to Home
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -343,7 +453,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="divide-y">
-                  {recentProperties.length > 0 ? (
+                  {recentProperties && recentProperties.length > 0 ? (
                     recentProperties.map((property) => (
                     <div key={property.id} className="p-4 hover:bg-slate-50 transition">
                       <div className="flex gap-4">

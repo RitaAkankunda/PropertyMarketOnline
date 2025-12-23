@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRole } from './enums/user-role.enum';
 
 export interface CreateOAuthUserDto {
@@ -66,4 +67,37 @@ export class UsersService {
   async findByRoles(roles: UserRole[]): Promise<User[]> {
     return await this.userRepository.find({ where: { role: roles as any } });
   }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findOneById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    
+    // Don't allow updating email or role through this endpoint
+    const { email, role, ...updateData } = updateUserDto;
+    
+    Object.assign(user, updateData);
+    return await this.userRepository.save(user);
+  }
+
+  async updateRole(id: string, role: UserRole): Promise<User> {
+    const user = await this.findOneById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    user.role = role;
+    return await this.userRepository.save(user);
+  }
+
+  async updateOAuthProvider(id: string, provider: string, providerId: string): Promise<User> {
+    const user = await this.findOneById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    user.provider = provider;
+    user.providerId = providerId;
+    return await this.userRepository.save(user);
+  }
+
 }

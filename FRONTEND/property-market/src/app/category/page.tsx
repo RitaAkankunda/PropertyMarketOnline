@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { propertyService } from "@/services/property.service";
 import { Button } from "@/components/ui";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 import type { Property, PropertyType, ListingType, User } from "@/types";
 
@@ -68,40 +66,6 @@ export default function CategoryPage() {
               mockupImage: MOCKUP_IMAGES[index % MOCKUP_IMAGES.length],
             }));
 
-          // Fill with mockup data if not enough real properties
-          while (typeProperties.length < 4) {
-            const index = typeProperties.length;
-            typeProperties.push({
-              id: `mock-${pt.type}-${index + 1}`,
-              title: `${pt.label} #${index + 1}`,
-              description: `Beautiful ${pt.label.toLowerCase()} property`,
-              price: 150000 + index * 50000,
-              currency: "UGX",
-              propertyType: pt.type,
-              listingType: "sale",
-              status: "active",
-              images: [],
-              location: {
-                address: "",
-                city: "",
-                country: "",
-              },
-              features: {
-                area: 1000,
-                areaUnit: "sqft",
-              },
-              amenities: [],
-              owner: {} as User,
-              views: 0,
-              leads: 0,
-              isVerified: false,
-              isFeatured: false,
-              createdAt: "",
-              updatedAt: "",
-              mockupImage: MOCKUP_IMAGES[index % MOCKUP_IMAGES.length],
-            });
-          }
-
           grouped[pt.type] = typeProperties;
         });
 
@@ -117,7 +81,6 @@ export default function CategoryPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
       {/* Banner */}
       <div className="bg-gradient-to-br from-blue-900 to-blue-600 py-12 text-center text-white">
         <h1 className="text-4xl font-bold mb-2 capitalize">{type} Properties</h1>
@@ -206,8 +169,6 @@ export default function CategoryPage() {
           </div>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

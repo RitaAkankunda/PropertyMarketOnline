@@ -26,15 +26,19 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
         try {
           const response = await authService.login(credentials);
+          console.log("[AUTH STORE] Login response:", response);
           if (typeof window !== "undefined") {
             localStorage.setItem("token", response.token);
           }
-          set({
+          const authState = {
             user: response.user,
             token: response.token,
             isAuthenticated: true,
             isLoading: false,
-          });
+          };
+          console.log("[AUTH STORE] Setting auth state:", authState);
+          set(authState);
+          return response; // Return response so login page can access user data
         } catch (error) {
           set({ isLoading: false });
           throw error;
