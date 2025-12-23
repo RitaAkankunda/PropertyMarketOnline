@@ -73,7 +73,7 @@ export default function VerificationsPage() {
             completedJobs: 0,
             isKycVerified: false,
             pricing: { type: "hourly", hourlyRate: 50000, currency: "UGX" },
-            availability: { days: ["mon", "tue"], startTime: "08:00", endTime: "17:00" },
+            availability: { days: ["mon", "tue"], startTime: "08:00", endTime: "17:00", isAvailable: true },
             location: { city: "Kampala", serviceRadius: 10 },
             user: {
               id: "u1",
@@ -108,7 +108,7 @@ export default function VerificationsPage() {
             completedJobs: 0,
             isKycVerified: false,
             pricing: { type: "fixed", minimumCharge: 80000, currency: "UGX" },
-            availability: { days: ["mon", "tue", "wed"], startTime: "09:00", endTime: "18:00" },
+            availability: { days: ["mon", "tue", "wed"], startTime: "09:00", endTime: "18:00", isAvailable: true },
             location: { city: "Kampala", district: "Nakawa", serviceRadius: 15 },
             user: {
               id: "u2",
