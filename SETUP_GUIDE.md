@@ -35,6 +35,13 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
 
+# Cloudflare R2 (Required for image uploads)
+R2_ACCOUNT_ID=your_r2_account_id
+R2_ACCESS_KEY_ID=your_r2_access_key_id
+R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
+R2_BUCKET_NAME=your_bucket_name
+R2_PUBLIC_URL=https://pub-xxxxx.r2.dev
+
 # Frontend URL
 FRONTEND_URL=http://localhost:3000
 
@@ -51,6 +58,66 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 NEXT_PUBLIC_ADMIN_SEED_TOKEN=your_secure_seed_token_here
 ```
 
+### 2.5. Cloudflare R2 Setup (Required for Image Uploads)
+
+**⚠️ IMPORTANT:** Image uploads will NOT work without R2 configuration!
+
+#### Option A: Use Shared R2 Bucket (Recommended for Team)
+Ask your team lead for the shared R2 credentials:
+- `R2_ACCOUNT_ID`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET_NAME`
+- `R2_PUBLIC_URL`
+
+Add these to your `backend/.env` file.
+
+#### Option B: Create Your Own R2 Bucket
+
+1. **Create Cloudflare R2 Bucket:**
+   - Go to [Cloudflare Dashboard](https://dash.cloudflare.com/)
+   - Navigate to R2 → Create Bucket
+   - Name your bucket (e.g., `property-market-dev`)
+
+2. **Get R2 Credentials:**
+   - Go to R2 → Manage R2 API Tokens
+   - Create API Token with "Object Read & Write" permissions
+   - Copy: `Account ID`, `Access Key ID`, `Secret Access Key`
+
+3. **Set Up Public Access:**
+   - In your R2 bucket, go to Settings → Public Access
+   - Enable Public Access
+   - Copy the Public URL (e.g., `https://pub-xxxxx.r2.dev`)
+
+4. **Add to Backend `.env`:**
+   ```env
+   R2_ACCOUNT_ID=your_account_id
+   R2_ACCESS_KEY_ID=your_access_key_id
+   R2_SECRET_ACCESS_KEY=your_secret_access_key
+   R2_BUCKET_NAME=your_bucket_name
+   R2_PUBLIC_URL=https://pub-xxxxx.r2.dev
+   ```
+
+5. **Update Frontend Configuration:**
+
+   **Option A: Using Environment Variable (Recommended)**
+   Add to `FRONTEND/property-market/.env.local`:
+   ```env
+   NEXT_PUBLIC_R2_HOSTNAME=pub-xxxxx.r2.dev
+   NEXT_PUBLIC_R2_ACCOUNT_HOSTNAME=your-account-id.r2.cloudflarestorage.com
+   ```
+
+   **Option B: Direct Edit**
+   Open `FRONTEND/property-market/next.config.ts` and update the hostname values:
+   ```typescript
+   const R2_PUBLIC_HOSTNAME = 'pub-xxxxx.r2.dev'; // Your R2 public URL
+   const R2_ACCOUNT_HOSTNAME = 'your-account-id.r2.cloudflarestorage.com'; // Your account hostname
+   ```
+
+**After updating, restart the frontend server!**
+
+See `R2_PUBLIC_ACCESS_SETUP.md` for detailed R2 setup instructions.
+
 ### 3. Database Setup
 
 #### Step 1: Run Database Migrations
@@ -66,11 +133,24 @@ This will:
 - Create the `properties_listingtype_enum` type
 - Add the `listingType` column to the `properties` table
 
-#### Step 2: Verify Database Schema
+#### Step 2: Run Additional Migrations
+
+Run these scripts to set up the complete database schema:
+
+```bash
+cd backend
+# Add isVerified column to users table
+npm run add-isverified
+
+# Fix price precision for large property values
+npm run fix-price-precision
+```
+
+#### Step 3: Verify Database Schema
 
 Make sure your database has:
-- `users` table
-- `properties` table with `listingType` column
+- `users` table with `isVerified` column
+- `properties` table with `listingType` column and `price` as `numeric(18,2)`
 - All required enums
 
 ### 4. Google OAuth Setup (For Google Sign-In)
@@ -134,7 +214,12 @@ npm run dev
 - [ ] Pull latest code from repository
 - [ ] Copy `.env` file to `backend/` directory and fill in values
 - [ ] Copy `.env.local` file to `FRONTEND/property-market/` directory
-- [ ] Run database migration: `cd backend && node scripts/add-listing-type.js`
+- [ ] Run database migrations:
+  - `cd backend && node scripts/add-listing-type.js`
+  - `cd backend && npm run add-isverified`
+  - `cd backend && npm run fix-price-precision`
+- [ ] Set up Cloudflare R2 for image uploads (see section 2.5)
+- [ ] Update `next.config.ts` with your R2 public URL
 - [ ] Set up Google OAuth credentials (if using Google sign-in)
 - [ ] Install dependencies: `npm install` in both backend and frontend
 - [ ] Start backend: `cd backend && npm run start:dev`
@@ -165,6 +250,19 @@ npm run dev
 
 ### "column property.listingType does not exist"
 - Run the migration: `cd backend && node scripts/add-listing-type.js`
+
+### "column User.isVerified does not exist"
+- Run: `cd backend && npm run add-isverified`
+
+### "numeric field overflow" when creating properties
+- Run: `cd backend && npm run fix-price-precision`
+
+### Images not uploading or displaying
+- **Check R2 configuration:** Verify all R2 environment variables are set in `backend/.env`
+- **Check `next.config.ts`:** Make sure your R2 public URL is in `remotePatterns`
+- **Restart frontend:** After updating `next.config.ts`, restart the Next.js dev server
+- **Check R2 bucket:** Verify files are being uploaded to your R2 bucket
+- **Public access:** Ensure your R2 bucket has public access enabled
 
 ### Google OAuth not working
 - Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set
