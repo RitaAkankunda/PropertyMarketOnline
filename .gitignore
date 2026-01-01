@@ -37,6 +37,10 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 
+# Shared credentials (keep secure)
+SHARED_CREDENTIALS_TEMPLATE.md
+SHARED_CREDENTIALS.md
+
 # Uploads
 backend/uploads/
 FRONTEND/property-market/public/uploads/
