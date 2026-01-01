@@ -16,6 +16,8 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+# But allow .env.example files (templates for team setup)
+!.env.example
 
 # Logs
 npm-debug.log*
@@ -38,7 +40,8 @@ Thumbs.db
 docker-compose.override.yml
 
 # Shared credentials (keep secure)
-SHARED_CREDENTIALS_TEMPLATE.md
+# Note: SHARED_CREDENTIALS_TEMPLATE.md is allowed (it's a template)
+# SHARED_CREDENTIALS.md (actual credentials file - should be gitignored)
 SHARED_CREDENTIALS.md
 
 # Uploads
