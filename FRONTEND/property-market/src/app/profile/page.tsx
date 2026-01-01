@@ -24,7 +24,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const router = useRouter();
   const { user, isAuthenticated, updateUser } = useAuth();
-  const { toast } = useToast();
+  const { success, error } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -70,17 +70,10 @@ export default function ProfilePage() {
       const updatedUser = await authService.updateProfile(data);
       updateUser(updatedUser);
       
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-      });
+      success("Your profile has been updated successfully.");
     } catch (error: any) {
       console.error("Failed to update profile:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
+      error(error.message || "Failed to update profile. Please try again.");
     } finally {
       setIsSaving(false);
     }

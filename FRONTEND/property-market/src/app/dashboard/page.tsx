@@ -16,6 +16,7 @@ import {
   Search,
   Eye,
   TrendingUp,
+  TrendingDown,
   Calendar,
   DollarSign,
   Users,
@@ -29,10 +30,11 @@ import {
   FileText,
   BadgeCheck,
   AlertCircle,
+  Shield,
 } from "lucide-react";
 import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
-import { propertyService, authService } from "@/services";
+import { propertyService, authService, dashboardService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
 import type { Property, User as UserType } from "@/types";
@@ -66,8 +68,8 @@ interface Appointment {
   time: string;
 }
 
-// Navigation items
-const navigation = [
+// Base navigation items (always shown)
+const baseNavigation = [
   { name: "Overview", href: "/dashboard", icon: Home, current: true },
   { name: "My Properties", href: "/dashboard/properties", icon: Building2, current: false },
   { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: 0, current: false },
@@ -77,6 +79,14 @@ const navigation = [
   { name: "Documents", href: "/dashboard/documents", icon: FileText, current: false },
   { name: "Settings", href: "/dashboard/settings", icon: Settings, current: false },
 ];
+
+// Admin navigation item (only shown to admins)
+const adminNavigationItem = { 
+  name: "Admin Dashboard", 
+  href: "/admin", 
+  icon: Shield, 
+  current: false 
+};
 
 
 // Stats configuration
@@ -119,9 +129,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
   
-  // Protect route: Only LISTER, PROPERTY_MANAGER, ADMIN can access
+  // Protect route: Only LISTER, PROPERTY_MANAGER can access
   const { hasAccess } = useRequireRole(
-    ['lister', 'property_manager', 'admin'],
+    ['lister', 'property_manager'],
     '/'
   );
   
@@ -192,13 +202,23 @@ export default function DashboardPage() {
           setRecentProperties([]);
         }
         
-        // TODO: Fetch activities from API when available
-        // const activitiesResponse = await dashboardService.getActivities();
-        // setRecentActivities(activitiesResponse.data);
+        // Fetch activities from API
+        try {
+          const activitiesResponse = await dashboardService.getActivities();
+          setRecentActivities(activitiesResponse || []);
+        } catch (error) {
+          console.error("Failed to fetch activities:", error);
+          setRecentActivities([]);
+        }
         
-        // TODO: Fetch appointments from API when available
-        // const appointmentsResponse = await dashboardService.getAppointments();
-        // setAppointments(appointmentsResponse.data);
+        // Fetch appointments from API
+        try {
+          const appointmentsResponse = await dashboardService.getAppointments();
+          setAppointments(appointmentsResponse || []);
+        } catch (error) {
+          console.error("Failed to fetch appointments:", error);
+          setAppointments([]);
+        }
         
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -306,7 +326,7 @@ export default function DashboardPage() {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {navigation.map((item) => (
+            {baseNavigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
@@ -326,6 +346,19 @@ export default function DashboardPage() {
                 )}
               </Link>
             ))}
+            {/* Admin Panel Link - Only visible to admins */}
+            {user?.role === "admin" && (
+              <Link
+                href={adminNavigationItem.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition border-t border-slate-200 mt-2 pt-4",
+                  "text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                <adminNavigationItem.icon className="w-5 h-5" />
+                {adminNavigationItem.name}
+              </Link>
+            )}
           </nav>
 
           {/* User Profile */}
@@ -359,6 +392,14 @@ export default function DashboardPage() {
                   type="text"
                   placeholder="Search properties, messages..."
                   className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const query = (e.target as HTMLInputElement).value;
+                      if (query.trim()) {
+                        router.push(`/properties?search=${encodeURIComponent(query)}`);
+                      }
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -367,9 +408,11 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3 ml-4">
               <Button variant="outline" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  4
-                </span>
+                {stats.totalMessages > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {stats.totalMessages > 9 ? '9+' : stats.totalMessages}
+                  </span>
+                )}
               </Button>
               <Link
                 href="/listings/create"
@@ -394,44 +437,69 @@ export default function DashboardPage() {
             </p>
           </div>
 
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {statsConfig.map((statConfig) => (
-              <Card key={statConfig.name} className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center",
-                      statConfig.color === "blue" && "bg-blue-100",
-                      statConfig.color === "green" && "bg-green-100",
-                      statConfig.color === "purple" && "bg-purple-100",
-                      statConfig.color === "orange" && "bg-orange-100"
-                    )}
-                  >
-                    <statConfig.icon
+            {statsConfig.map((statConfig) => {
+              const value = stats[statConfig.key];
+              const change = stats[statConfig.changeKey];
+              const hasPositiveChange = change && !change.includes('-') && change !== '0' && change !== '0%';
+              
+              return (
+                <Card key={statConfig.name} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div
                       className={cn(
-                        "w-6 h-6",
-                        statConfig.color === "blue" && "text-blue-600",
-                        statConfig.color === "green" && "text-green-600",
-                        statConfig.color === "purple" && "text-purple-600",
-                        statConfig.color === "orange" && "text-orange-600"
+                        "w-12 h-12 rounded-xl flex items-center justify-center",
+                        statConfig.color === "blue" && "bg-blue-100",
+                        statConfig.color === "green" && "bg-green-100",
+                        statConfig.color === "purple" && "bg-purple-100",
+                        statConfig.color === "orange" && "bg-orange-100"
                       )}
-                    />
+                    >
+                      <statConfig.icon
+                        className={cn(
+                          "w-6 h-6",
+                          statConfig.color === "blue" && "text-blue-600",
+                          statConfig.color === "green" && "text-green-600",
+                          statConfig.color === "purple" && "text-purple-600",
+                          statConfig.color === "orange" && "text-orange-600"
+                        )}
+                      />
+                    </div>
+                    {change && change !== '0' && change !== '0%' && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs border bg-opacity-50",
+                          hasPositiveChange
+                            ? "text-green-600 border-green-200 bg-green-50"
+                            : "text-red-600 border-red-200 bg-red-50"
+                        )}
+                      >
+                        {hasPositiveChange ? (
+                          <TrendingUp className="w-3 h-3 mr-1" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 mr-1" />
+                        )}
+                        {change}
+                      </Badge>
+                    )}
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="text-xs text-green-600 border-green-200 bg-green-50"
-                  >
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    {stats[statConfig.changeKey]}
-                  </Badge>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 mb-1">
-                  {statConfig.format(stats[statConfig.key])}
-                </p>
-                <p className="text-sm text-slate-500">{statConfig.name}</p>
-              </Card>
-            ))}
+                  <p className="text-2xl font-bold text-slate-900 mb-1">
+                    {statConfig.format(value)}
+                  </p>
+                  <p className="text-sm text-slate-500">{statConfig.name}</p>
+                  {value === 0 && statConfig.name !== "Revenue" && (
+                    <p className="text-xs text-slate-400 mt-2">
+                      {statConfig.name === "Total Properties" && "Start by listing your first property"}
+                      {statConfig.name === "Total Views" && "Views will appear once you have listings"}
+                      {statConfig.name === "Messages" && "Messages from buyers will appear here"}
+                    </p>
+                  )}
+                </Card>
+              );
+            })}
           </div>
 
           {/* Main Grid */}
@@ -533,42 +601,6 @@ export default function DashboardPage() {
                   )}
                 </div>
               </Card>
-
-              {/* Quick Actions */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Link href="/listings/create">
-                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
-                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-3">
-                      <Plus className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <p className="font-medium text-slate-900 text-sm">Add Property</p>
-                  </Card>
-                </Link>
-                <Link href="/dashboard/messages">
-                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
-                    <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mb-3">
-                      <MessageSquare className="w-5 h-5 text-green-600" />
-                    </div>
-                    <p className="font-medium text-slate-900 text-sm">Messages</p>
-                  </Card>
-                </Link>
-                <Link href="/providers">
-                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
-                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mb-3">
-                      <Users className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <p className="font-medium text-slate-900 text-sm">Find Providers</p>
-                  </Card>
-                </Link>
-                <Link href="/dashboard/analytics">
-                  <Card className="p-4 hover:shadow-md transition cursor-pointer">
-                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mb-3">
-                      <BarChart3 className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <p className="font-medium text-slate-900 text-sm">Analytics</p>
-                  </Card>
-                </Link>
-              </div>
             </div>
 
             {/* Sidebar */}
@@ -619,7 +651,15 @@ export default function DashboardPage() {
                   ) : (
                     <div className="p-8 text-center">
                       <Bell className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-sm text-slate-500">No recent activity</p>
+                      <p className="text-sm text-slate-500 mb-2">No recent activity</p>
+                      <p className="text-xs text-slate-400 mb-4">
+                        Your property views, inquiries, and updates will appear here
+                      </p>
+                      <Link href="/dashboard/properties">
+                        <Button variant="outline" size="sm">
+                          View Properties
+                        </Button>
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -657,7 +697,17 @@ export default function DashboardPage() {
                   ) : (
                     <div className="p-8 text-center">
                       <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-sm text-slate-500">No upcoming appointments</p>
+                      <p className="text-sm text-slate-500 mb-2">No upcoming appointments</p>
+                      <p className="text-xs text-slate-400 mb-4">
+                        Schedule property viewings and meetings with potential buyers
+                      </p>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        // TODO: Open appointment scheduling modal
+                        console.log("Schedule appointment");
+                      }}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Schedule Now
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -669,23 +719,29 @@ export default function DashboardPage() {
                 </div>
               </Card>
 
-              {/* Verification Reminder */}
-              <Card className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+              {/* Verification Reminder - Only show if user is not verified */}
+              {user && !user.isVerified && (
+                <Card className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900 mb-1">Complete Verification</h3>
+                      <p className="text-sm text-slate-600 mb-3">
+                        Verify your account to unlock all features and build trust with buyers.
+                      </p>
+                      <Button 
+                        size="sm" 
+                        className="bg-yellow-600 hover:bg-yellow-700"
+                        onClick={() => router.push('/dashboard/settings')}
+                      >
+                        Verify Now
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium text-slate-900 mb-1">Complete Verification</h3>
-                    <p className="text-sm text-slate-600 mb-3">
-                      Verify your account to unlock all features and build trust with buyers.
-                    </p>
-                    <Button size="sm" className="bg-yellow-600 hover:bg-yellow-700">
-                      Verify Now
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              )}
             </div>
           </div>
         </main>

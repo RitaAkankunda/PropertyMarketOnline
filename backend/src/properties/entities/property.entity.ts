@@ -37,7 +37,7 @@ export class Property {
   @Column('text')
   description: string;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 18, scale: 2 })
   price: number;
 
   @Column({

@@ -35,7 +35,7 @@ export function PropertyCard({
     // Handle case where images might be strings (legacy format)
     if (typeof property.images[0] === 'string') {
       const url = property.images[0];
-      return url ? { url, isPrimary: true } : null;
+      return url ? { url, isPrimary: true, alt: undefined } : null;
     }
     
     // Find primary image or use first one

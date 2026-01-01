@@ -44,6 +44,9 @@ export class User {
   @Column({ nullable: true })
   providerId?: string;
 
+  @Column({ default: false })
+  isVerified: boolean;
+
   @OneToMany(() => Property, (property) => property.owner)
   properties: Property[];
 

@@ -39,7 +39,7 @@ interface VerificationRequest {
 
 export default function VerificationsPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
@@ -47,96 +47,31 @@ export default function VerificationsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
-    // Check if user is admin
-    if (!user || user.role !== "admin") {
+    // Wait for auth to load before checking
+    if (authLoading) {
+      return;
+    }
+
+    // Check if user is authenticated and is admin
+    if (!isAuthenticated || !user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    if (user.role !== "admin") {
       router.push("/dashboard");
       return;
     }
 
     fetchVerifications();
-  }, [user, router, filter]);
+  }, [user, isAuthenticated, authLoading, router, filter]);
 
   const fetchVerifications = async () => {
     try {
       setLoading(true);
-      // Mock data - replace with actual API call
-      const mockRequests: VerificationRequest[] = [
-        {
-          id: "1",
-          provider: {
-            id: "p1",
-            businessName: "John's Electrical Services",
-            serviceTypes: ["electrician"],
-            description: "Professional electrical services with 10 years experience",
-            rating: 0,
-            reviewCount: 0,
-            completedJobs: 0,
-            isKycVerified: false,
-            pricing: { type: "hourly", hourlyRate: 50000, currency: "UGX" },
-            availability: { days: ["mon", "tue"], startTime: "08:00", endTime: "17:00", isAvailable: true },
-            location: { city: "Kampala", serviceRadius: 10 },
-            user: {
-              id: "u1",
-              email: "john@example.com",
-              firstName: "John",
-              lastName: "Doe",
-              phone: "+256700000001",
-              role: "lister",
-              isVerified: false,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          status: "pending",
-          submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          documents: {
-            idDocument: "/docs/id1.pdf",
-            businessLicense: "/docs/license1.pdf",
-          },
-        },
-        {
-          id: "2",
-          provider: {
-            id: "p2",
-            businessName: "Smith Plumbing",
-            serviceTypes: ["plumber"],
-            description: "Expert plumbing solutions for residential and commercial",
-            rating: 0,
-            reviewCount: 0,
-            completedJobs: 0,
-            isKycVerified: false,
-            pricing: { type: "fixed", minimumCharge: 80000, currency: "UGX" },
-            availability: { days: ["mon", "tue", "wed"], startTime: "09:00", endTime: "18:00", isAvailable: true },
-            location: { city: "Kampala", district: "Nakawa", serviceRadius: 15 },
-            user: {
-              id: "u2",
-              email: "smith@example.com",
-              firstName: "Sarah",
-              lastName: "Smith",
-              phone: "+256700000002",
-              role: "lister",
-              isVerified: false,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          status: "pending",
-          submittedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          documents: {
-            idDocument: "/docs/id2.pdf",
-          },
-        },
-      ];
-
-      const filtered = filter === "all" 
-        ? mockRequests 
-        : mockRequests.filter(r => r.status === filter);
-      
-      setRequests(filtered);
+      // TODO: Replace with actual API call when verification system is implemented
+      // For now, return empty array - no verifications yet
+      setRequests([]);
     } catch (error) {
       console.error("Failed to fetch verifications:", error);
     } finally {
@@ -184,7 +119,20 @@ export default function VerificationsPage() {
     }
   };
 
-  if (!user || user.role !== "admin") {
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">
+            {authLoading ? "Checking authentication..." : "Loading verifications..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user || user.role !== "admin") {
     return null;
   }
 

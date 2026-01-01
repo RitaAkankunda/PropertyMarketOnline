@@ -10,10 +10,9 @@ import {
   Edit,
   Trash2,
   Eye,
-  MoreVertical,
   Loader2,
   Search,
-  Filter,
+  AlertTriangle,
 } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -21,14 +20,13 @@ import { propertyService } from "@/services/property.service";
 import { useAuth } from "@/hooks";
 import { useRequireRole } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle } from "lucide-react";
 import type { Property } from "@/types";
 import Image from "next/image";
 
 export default function MyPropertiesPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const { error, success } = useToast();
   
   // Protect route: Only LISTER, PROPERTY_MANAGER, ADMIN can access
   const { hasAccess } = useRequireRole(
@@ -39,7 +37,40 @@ export default function MyPropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // All hooks must be called before any conditional returns
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      router.push("/auth/login");
+      return;
+    }
+
+    if (!hasAccess) {
+      return;
+    }
+
+    async function fetchMyProperties() {
+      try {
+        setIsLoading(true);
+        const response = await propertyService.getMyListings();
+        setProperties(response.data || []);
+      } catch (error: any) {
+        console.error("Failed to fetch properties:", error);
+        error(error.message || "Failed to load your properties.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchMyProperties();
+  }, [isAuthenticated, authLoading, hasAccess, router, error]);
 
   // Show loading or redirect if user doesn't have access
   if (authLoading) {
@@ -55,72 +86,45 @@ export default function MyPropertiesPage() {
 
   if (!isAuthenticated || !hasAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Card className="p-8 max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-center mb-2">Access Denied</h2>
-          <p className="text-slate-600 text-center mb-6">
-            You need to be a property lister to view your properties.
-          </p>
-          <Button onClick={() => router.push('/')} className="w-full">
-            Go to Home
-          </Button>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-slate-600">Loading...</p>
       </div>
     );
   }
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-      return;
-    }
-
-    async function fetchMyProperties() {
-      try {
-        setIsLoading(true);
-        const response = await propertyService.getMyListings();
-        setProperties(response.data || []);
-      } catch (error: any) {
-        console.error("Failed to fetch properties:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to load your properties.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchMyProperties();
-  }, [isAuthenticated, router, toast]);
 
   const filteredProperties = properties.filter((property) => {
     const matchesSearch =
       property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       property.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === "all" || property.propertyType === filterType;
-    return matchesSearch && matchesType;
+    return matchesSearch;
   });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this property?")) return;
+  const handleDeleteClick = (property: Property) => {
+    setPropertyToDelete(property);
+    setShowDeleteConfirm(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setPropertyToDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!propertyToDelete) return;
 
     try {
-      await propertyService.deleteProperty(id);
-      setProperties(properties.filter((p) => p.id !== id));
-      toast({
-        title: "Success",
-        description: "Property deleted successfully.",
-      });
+      setIsDeleting(true);
+      await propertyService.deleteProperty(propertyToDelete.id);
+      setProperties(properties.filter((p) => p.id !== propertyToDelete.id));
+      success("Property deleted successfully.");
+      setShowDeleteConfirm(false);
+      setPropertyToDelete(null);
     } catch (error: any) {
       console.error("Failed to delete property:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete property.",
-        variant: "destructive",
-      });
+      error(error.message || "Failed to delete property.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -159,9 +163,9 @@ export default function MyPropertiesPage() {
             </Link>
           </div>
 
-          {/* Search and Filter */}
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1 relative">
+          {/* Search */}
+          <div className="mb-6">
+            <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search properties..."
@@ -169,22 +173,6 @@ export default function MyPropertiesPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
-            </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="h-10 px-10 pr-8 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="all">All Types</option>
-                <option value="house">House</option>
-                <option value="apartment">Apartment</option>
-                <option value="villa">Villa</option>
-                <option value="land">Land</option>
-                <option value="commercial">Commercial</option>
-                <option value="office">Office</option>
-              </select>
             </div>
           </div>
         </div>
@@ -268,11 +256,8 @@ export default function MyPropertiesPage() {
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                      {property.features?.bedrooms && (
-                        <span>{property.features.bedrooms} Beds</span>
-                      )}
-                      {property.features?.bathrooms && (
-                        <span>{property.features.bathrooms} Baths</span>
+                      {property.features?.bedrooms && property.features?.bathrooms && (
+                        <span>{property.features.bedrooms} bed • {property.features.bathrooms} bath</span>
                       )}
                       {property.features?.area && (
                         <span>{property.features.area} {property.features.areaUnit || "sqft"}</span>
@@ -283,10 +268,6 @@ export default function MyPropertiesPage() {
                       <p className="text-xl font-bold text-primary">
                         {formatCurrency(property.price, property.currency)}
                       </p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Eye className="w-4 h-4" />
-                        <span>{property.views || 0}</span>
-                      </div>
                     </div>
 
                     {/* Actions */}
@@ -311,8 +292,8 @@ export default function MyPropertiesPage() {
                       </Link>
                       <Button
                         variant="outline"
-                        onClick={() => handleDelete(property.id)}
-                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteClick(property)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -327,7 +308,7 @@ export default function MyPropertiesPage() {
         {/* Stats */}
         {properties.length > 0 && (
           <Card className="mt-6 p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Total Properties</p>
                 <p className="text-2xl font-bold">{properties.length}</p>
@@ -344,14 +325,89 @@ export default function MyPropertiesPage() {
                   {properties.reduce((sum, p) => sum + (p.views || 0), 0)}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Leads</p>
-                <p className="text-2xl font-bold">
-                  {properties.reduce((sum, p) => sum + (p.leads || 0), 0)}
-                </p>
-              </div>
             </div>
           </Card>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && propertyToDelete && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in-0 zoom-in-95 duration-200">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                    Delete Property
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    This action cannot be undone. All property data, images, and related information will be permanently deleted.
+                  </p>
+                </div>
+              </div>
+
+              {/* Property Details */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
+                <div className="flex items-start gap-3">
+                  {propertyToDelete.images && propertyToDelete.images.length > 0 && (
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                      <img
+                        src={typeof propertyToDelete.images[0] === 'string' 
+                          ? propertyToDelete.images[0] 
+                          : propertyToDelete.images[0]?.url}
+                        alt={propertyToDelete.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">
+                      {propertyToDelete.title}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {propertyToDelete.location?.city && propertyToDelete.location?.district
+                        ? `${propertyToDelete.location.district}, ${propertyToDelete.location.city}`
+                        : propertyToDelete.location?.city || propertyToDelete.location?.district || 'Location not specified'}
+                    </p>
+                    <p className="text-sm font-medium text-primary mt-1">
+                      {formatCurrency(propertyToDelete.price, propertyToDelete.currency)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={cancelDelete}
+                  variant="outline"
+                  className="flex-1"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  variant="destructive"
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Property
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

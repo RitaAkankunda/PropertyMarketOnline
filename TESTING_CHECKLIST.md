@@ -91,47 +91,86 @@ npm run dev
 
 ---
 
-### 3. **ListingType Filtering Tests**
+### 3. **ADMIN Role - Full Access Tests**
 
-#### Test 3.1: Filter by Sale
+#### Test 3.1: Admin Dashboard Access
+- [ ] Login as an ADMIN user
+- [ ] Access `/admin`
+- [ ] **Expected**: Can see admin dashboard with stats (users, properties, etc.)
+- [ ] **Expected**: Can see admin-specific metrics
+
+#### Test 3.2: User Management
+- [ ] While logged in as ADMIN
+- [ ] Go to `/admin/users`
+- [ ] **Expected**: Can view all users
+- [ ] **Expected**: Can edit user roles
+- [ ] **Expected**: Can delete users
+
+#### Test 3.3: Property Management
+- [ ] Go to `/admin/properties`
+- [ ] **Expected**: Can view all properties
+- [ ] **Expected**: Can edit any property
+- [ ] **Expected**: Can delete any property
+
+#### Test 3.4: Verifications Management
+- [ ] Go to `/admin/verifications`
+- [ ] **Expected**: Can view pending verifications
+- [ ] **Expected**: Can approve/reject verifications
+
+#### Test 3.5: Reports and Analytics
+- [ ] Go to `/admin/analytics` or `/admin/reports`
+- [ ] **Expected**: Can view system analytics
+- [ ] **Expected**: Can generate reports
+
+#### Test 3.6: Dashboard Access Denied
+- [ ] While logged in as ADMIN
+- [ ] Try to access `/dashboard`
+- [ ] **Expected**: See "Access Denied" message
+- [ ] **Expected**: Cannot see dashboard content
+
+---
+
+### 4. **ListingType Filtering Tests**
+
+#### Test 4.1: Filter by Sale
 - [ ] Go to `/properties`
 - [ ] In filters, select "For Sale" listing type
 - [ ] **Expected**: Only properties with `listingType: "sale"` are shown
 
-#### Test 3.2: Filter by Rent
+#### Test 4.2: Filter by Rent
 - [ ] In filters, select "For Rent" listing type
 - [ ] **Expected**: Only properties with `listingType: "rent"` are shown
 
-#### Test 3.3: Filter by Lease
+#### Test 4.3: Filter by Lease
 - [ ] In filters, select "For Lease" listing type
 - [ ] **Expected**: Only properties with `listingType: "lease"` are shown
 
-#### Test 3.4: Filter by Property Type + Listing Type
+#### Test 4.4: Filter by Property Type + Listing Type
 - [ ] Select property type: "apartment"
 - [ ] Select listing type: "rent"
 - [ ] **Expected**: Only apartments for rent are shown
 
 ---
 
-### 4. **Property Display Tests**
+### 5. **Property Display Tests**
 
-#### Test 4.1: Property Card Badge
+#### Test 5.1: Property Card Badge
 - [ ] View any property card
 - [ ] **Expected**: See colored badge showing listing type:
   - Green: "For Sale"
   - Blue: "For Rent"
   - Purple: "For Lease"
 
-#### Test 4.2: Property Detail Page
+#### Test 5.2: Property Detail Page
 - [ ] Click on a property
 - [ ] **Expected**: Property detail page shows listing type
 - [ ] **Expected**: Listing type is clearly displayed
 
 ---
 
-### 5. **Database Verification**
+### 6. **Database Verification**
 
-#### Test 5.1: Check Database
+#### Test 6.1: Check Database
 - [ ] Connect to PostgreSQL database
 - [ ] Run: `SELECT id, title, "listingType", "propertyType" FROM properties;`
 - [ ] **Expected**: All properties have `listingType` column

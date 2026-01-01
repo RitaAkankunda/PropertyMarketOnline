@@ -48,6 +48,7 @@ export class PropertiesController {
         return this.r2Service.uploadFile(file, folder);
       })
     );
+    console.log('[PropertiesController] Uploaded files, returning URLs:', urls);
     return { urls };
   }
 

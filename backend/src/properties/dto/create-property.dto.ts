@@ -6,6 +6,7 @@ import {
   IsArray,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PropertyType, ListingType } from '../entities/property.entity';
 
 export class CreatePropertyDto {
@@ -17,6 +18,7 @@ export class CreatePropertyDto {
 
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   price: number;
 
   @IsEnum(PropertyType)
@@ -28,12 +30,15 @@ export class CreatePropertyDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   bedrooms?: number;
 
   @IsNumber()
+  @Type(() => Number)
   latitude: number;
 
   @IsNumber()
+  @Type(() => Number)
   longitude: number;
 
   @IsOptional()

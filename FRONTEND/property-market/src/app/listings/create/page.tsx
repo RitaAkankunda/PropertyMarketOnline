@@ -155,6 +155,17 @@ export default function CreateListingPage() {
 
     setIsSubmitting(true);
     try {
+      // Upload images first if any exist
+      let uploadedImageUrls: string[] = [];
+      if (formData.images.length > 0) {
+        const filesToUpload = formData.images.map(img => img.file).filter(Boolean) as File[];
+        if (filesToUpload.length > 0) {
+          console.log(`Uploading ${filesToUpload.length} images...`);
+          uploadedImageUrls = await propertyService.uploadImages(filesToUpload);
+          console.log("Images uploaded successfully:", uploadedImageUrls);
+        }
+      }
+
       // Prepare data for API
       const propertyData = {
         title: formData.title,
@@ -181,7 +192,7 @@ export default function CreateListingPage() {
           yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
         },
         amenities: formData.amenities,
-        images: formData.images.map(img => img.url).filter(url => url.startsWith('http')), // Only include uploaded URLs
+        images: uploadedImageUrls, // Use the uploaded image URLs
       };
 
       const createdProperty = await propertyService.createProperty(propertyData);

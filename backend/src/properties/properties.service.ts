@@ -154,4 +154,14 @@ export class PropertiesService {
 
     return { message: 'Property deleted successfully' };
   }
+
+  async getTotalCount(): Promise<number> {
+    return await this.propertyRepository.count();
+  }
+
+  async getActiveListingsCount(): Promise<number> {
+    // For now, all properties are considered active
+    // In the future, you might add a status field
+    return await this.propertyRepository.count();
+  }
 }

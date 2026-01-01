@@ -138,9 +138,20 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
         .map(img => img.url);
       const imageUrls = [...existingImageUrls, ...uploadedImageUrls];
 
-      // Get latitude and longitude from property location
-      const latitude = property.location?.latitude || property.location?.coordinates?.lat || 0.3476;
-      const longitude = property.location?.longitude || property.location?.coordinates?.lng || 32.5825;
+      // Get latitude and longitude - check multiple possible locations in the property object
+      // Backend stores them as direct properties, frontend may have them in location object
+      const latitude = (property as any).latitude || 
+                       property.location?.latitude || 
+                       property.location?.coordinates?.lat || 
+                       0.3476; // Default to Kampala
+      const longitude = (property as any).longitude || 
+                        property.location?.longitude || 
+                        property.location?.coordinates?.lng || 
+                        32.5825; // Default to Kampala
+
+      // Ensure they are numbers
+      const latNum = typeof latitude === 'number' ? latitude : parseFloat(String(latitude)) || 0.3476;
+      const lngNum = typeof longitude === 'number' ? longitude : parseFloat(String(longitude)) || 32.5825;
 
       // Update property
       const updatedProperty = await propertyService.updateProperty(id, {
@@ -151,8 +162,8 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
         images: imageUrls,
         location: {
           ...property.location,
-          latitude,
-          longitude,
+          latitude: latNum,
+          longitude: lngNum,
         },
         features: property.features,
         amenities: property.amenities || [],

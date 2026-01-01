@@ -26,7 +26,7 @@ export interface CreatePropertyData {
     bedrooms?: number;
     bathrooms?: number;
     parkingSpaces?: number;
-    area: number;
+    area?: number;
     areaUnit: string;
     yearBuilt?: number;
     floors?: number;
@@ -95,7 +95,7 @@ export const propertyService = {
           const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
         })
-        .map((url: string, index: number) => {
+        .map((url: any, index: number) => {
           const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return {
             id: `img-${index}`,
@@ -158,7 +158,7 @@ export const propertyService = {
           const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
         })
-        .map((url: string, index: number) => {
+        .map((url: any, index: number) => {
           const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return {
             id: `img-${index}`,
@@ -216,10 +216,22 @@ export const propertyService = {
     if (data.features?.bedrooms !== undefined) backendData.bedrooms = data.features.bedrooms;
     
     // Get latitude and longitude - required by backend
-    const latitude = data.location?.latitude || data.location?.coordinates?.lat || 0.3476;
-    const longitude = data.location?.longitude || data.location?.coordinates?.lng || 32.5825;
-    backendData.latitude = latitude;
-    backendData.longitude = longitude;
+    // Check multiple possible locations and ensure they are numbers
+    const latitude = data.location?.latitude || 
+                     data.location?.coordinates?.lat || 
+                     (data as any).latitude || 
+                     0.3476; // Default to Kampala
+    const longitude = data.location?.longitude || 
+                      data.location?.coordinates?.lng || 
+                      (data as any).longitude || 
+                      32.5825; // Default to Kampala
+    
+    // Ensure they are valid numbers
+    const latNum = typeof latitude === 'number' ? latitude : parseFloat(String(latitude)) || 0.3476;
+    const lngNum = typeof longitude === 'number' ? longitude : parseFloat(String(longitude)) || 32.5825;
+    
+    backendData.latitude = latNum;
+    backendData.longitude = lngNum;
     
     // Only include images if provided (must be valid URLs)
     if ((data as any).images !== undefined) {
@@ -261,7 +273,7 @@ export const propertyService = {
           const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
         })
-        .map((url: string, index: number) => {
+        .map((url: any, index: number) => {
           const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return {
             id: `img-${index}`,
@@ -314,25 +326,6 @@ export const propertyService = {
   // Delete property listing
   async deleteProperty(id: string): Promise<void> {
     await api.delete(`/properties/${id}`);
-  },
-
-  // Upload property images
-  async uploadImages(files: File[]): Promise<string[]> {
-    if (!files || files.length === 0) {
-      return [];
-    }
-    
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
-
-    const response = await api.post<{ urls: string[] }>(
-      "/properties/upload",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
-    return response.data.urls || [];
   },
 
   // Delete property image
@@ -403,7 +396,7 @@ export const propertyService = {
           const urlStr = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return urlStr.length > 0 && (urlStr.startsWith('http') || urlStr.startsWith('https') || urlStr.startsWith('blob:'));
         })
-        .map((url: string, index: number) => {
+        .map((url: any, index: number) => {
           const imageUrl = typeof url === 'string' ? url.trim() : (url?.url || String(url));
           return {
             id: `img-${index}`,

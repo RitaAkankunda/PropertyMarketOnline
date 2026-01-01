@@ -27,6 +27,9 @@ DB_DATABASE=propertymarket
 JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRES_IN=24h
 
+# Admin Management
+ADMIN_SEED_TOKEN=your_secure_seed_token_here
+
 # Google OAuth (Required for Google sign-in)
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
@@ -45,6 +48,7 @@ Create a `.env.local` file in the `FRONTEND/property-market/` directory with:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_ADMIN_SEED_TOKEN=your_secure_seed_token_here
 ```
 
 ### 3. Database Setup

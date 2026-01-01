@@ -20,7 +20,10 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "fix:enum": "node scripts/add-office-enum-simple.js",
     "fix:listing-type": "node scripts/add-listing-type.js",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "create-admin-user": "node scripts/create-admin-user.js",
+    "add-isverified": "node scripts/add-isverified-column.js",
+    "fix-price-precision": "node scripts/fix-price-precision.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.956.0",

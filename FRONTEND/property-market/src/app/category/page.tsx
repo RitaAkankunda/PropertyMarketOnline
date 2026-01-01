@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { propertyService } from "@/services/property.service";
 import { Button } from "@/components/ui";
@@ -31,6 +31,14 @@ interface PropertyWithMockup extends Partial<Property> {
 }
 
 export default function CategoryPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CategoryPageContent />
+    </Suspense>
+  );
+}
+
+function CategoryPageContent() {
   const searchParams = useSearchParams();
   const [propertiesByType, setPropertiesByType] = useState<
     Record<PropertyType, PropertyWithMockup[]>

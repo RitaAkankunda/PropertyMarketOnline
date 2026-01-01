@@ -259,6 +259,8 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         setIsLoading(true);
         const data = await propertyService.getProperty(id);
         console.log('Fetched property data:', data);
+        console.log('Property images:', data.images);
+        console.log('Property image URLs:', data.images?.map(img => typeof img === 'string' ? img : img.url));
         console.log('Property owner:', data.owner);
         console.log('Property ownerId:', (data as any).ownerId);
         setProperty(data);
@@ -376,6 +378,19 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 src={propertyImages[currentImageIndex]}
                 alt={`${property.title} - Image ${currentImageIndex + 1}`}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Image failed to load:', propertyImages[currentImageIndex]);
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  // Show error message
+                  const errorDiv = document.createElement('div');
+                  errorDiv.className = 'w-full h-full flex items-center justify-center text-white bg-red-500/20';
+                  errorDiv.innerHTML = '<p>Image failed to load</p>';
+                  target.parentElement?.appendChild(errorDiv);
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully:', propertyImages[currentImageIndex]);
+                }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-white">
@@ -434,6 +449,11 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                     src={image}
                     alt={`Thumbnail ${index + 1}`}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Thumbnail failed to load:', image);
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImage%3C/text%3E%3C/svg%3E';
+                    }}
                   />
                 </button>
               ))}

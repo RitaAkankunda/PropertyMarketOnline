@@ -63,7 +63,7 @@ api.interceptors.response.use(
           type: "html_error", 
           apiUrl: API_BASE_URL,
           requestUrl: response.config.url,
-          fullUrl: response.config.baseURL + response.config.url
+          fullUrl: (response.config.baseURL || API_BASE_URL) + (response.config.url || "")
         });
         localStorage.setItem("api_logs", JSON.stringify(logs.slice(-20)));
       }

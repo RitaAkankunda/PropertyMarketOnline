@@ -1,19 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 /**
- * Google OAuth Callback Page
+ * Google OAuth Callback Component
  * 
- * This page handles the callback from Google OAuth.
+ * This component handles the callback from Google OAuth.
  * It immediately forwards the authorization code to the backend without showing any UI.
- * 
- * IMPORTANT: In Google Cloud Console, set the callback URL to:
- * - Development: http://localhost:3000/auth/google/callback
- * - Production: https://yourdomain.com/auth/google/callback
  */
-export default function GoogleCallbackPage() {
+function GoogleCallbackContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -42,5 +38,23 @@ export default function GoogleCallbackPage() {
 
   // Return null - no UI, just immediate redirect
   return null;
+}
+
+/**
+ * Google OAuth Callback Page
+ * 
+ * This page handles the callback from Google OAuth.
+ * It immediately forwards the authorization code to the backend without showing any UI.
+ * 
+ * IMPORTANT: In Google Cloud Console, set the callback URL to:
+ * - Development: http://localhost:3000/auth/google/callback
+ * - Production: https://yourdomain.com/auth/google/callback
+ */
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense fallback={null}>
+      <GoogleCallbackContent />
+    </Suspense>
+  );
 }
 

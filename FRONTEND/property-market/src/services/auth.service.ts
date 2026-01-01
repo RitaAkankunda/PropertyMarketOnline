@@ -12,7 +12,7 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   phone?: string;
-  role: "buyer" | "lister" | "property_manager";
+  role: "buyer" | "renter" | "lister" | "property_manager";
 }
 
 export interface AuthResponse {

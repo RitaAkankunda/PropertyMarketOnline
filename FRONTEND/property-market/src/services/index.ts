@@ -3,4 +3,7 @@ export { propertyService } from "./property.service";
 export { providerService } from "./provider.service";
 export { paymentService } from "./payment.service";
 export { messageService } from "./message.service";
+export { userService } from "./user.service";
+export { adminService } from "./admin.service";
+export { dashboardService } from "./dashboard.service";
 export { default as api } from "./api";

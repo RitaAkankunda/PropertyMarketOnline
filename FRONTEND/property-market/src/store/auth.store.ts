@@ -6,7 +6,7 @@ import type { User, AuthState } from "@/types";
 import { authService, type LoginCredentials, type RegisterData } from "@/services/auth.service";
 
 interface AuthStore extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<{ user: User; token: string }>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: Partial<User>) => void;

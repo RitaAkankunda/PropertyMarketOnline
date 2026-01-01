@@ -36,3 +36,7 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Uploads
+backend/uploads/
+FRONTEND/property-market/public/uploads/

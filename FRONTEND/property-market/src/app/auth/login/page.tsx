@@ -65,7 +65,9 @@ export default function LoginPage() {
       
       // Small delay to ensure state is updated before redirect
       setTimeout(() => {
-        router.push("/dashboard");
+        // Redirect based on user role
+        const redirectUrl = loginResponse?.user?.role === 'admin' ? '/admin' : '/dashboard';
+        router.push(redirectUrl);
       }, 100);
     } catch (err: unknown) {
       // Capture full error details
