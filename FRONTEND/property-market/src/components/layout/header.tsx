@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Settings } from "lucide-react";
+import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
@@ -56,31 +56,18 @@ export function Header() {
               </Link>
             ))}
             {isAuthenticated &&
-              authNavLinks
-                .filter((link) => !(user?.role === 'admin' && link.href === '/dashboard'))
-                .map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                      pathname === link.href && "bg-accent text-accent-foreground"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-            {isAuthenticated && user?.role === 'admin' && (
-              <Link
-                href="/admin"
-                className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                  pathname === '/admin' && "bg-accent text-accent-foreground"
-                )}
-              >
-                Admin
-              </Link>
-            )}
+              authNavLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                    pathname === link.href && "bg-accent text-accent-foreground"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
           </nav>
 
           {/* Desktop Actions */}
@@ -180,35 +167,20 @@ export function Header() {
                 </Link>
               ))}
               {isAuthenticated &&
-                authNavLinks
-                  .filter((link) => !(user?.role === 'admin' && link.href === '/dashboard'))
-                  .map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
-                        pathname === link.href && "bg-accent"
-                      )}
-                    >
-                      <link.icon className="h-5 w-5" />
-                      <span>{link.label}</span>
-                    </Link>
-                  ))}
-              {isAuthenticated && user?.role === 'admin' && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
-                    pathname === '/admin' && "bg-accent"
-                  )}
-                >
-                  <Settings className="h-5 w-5" />
-                  <span>Admin</span>
-                </Link>
-              )}
+                authNavLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
+                      pathname === link.href && "bg-accent"
+                    )}
+                  >
+                    <link.icon className="h-5 w-5" />
+                    <span>{link.label}</span>
+                  </Link>
+                ))}
               <hr className="my-2" />
               {isAuthenticated ? (
                 <>

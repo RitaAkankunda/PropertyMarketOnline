@@ -26,6 +26,7 @@ const footerLinks = {
   ],
   services: [
     { href: "/providers", label: "Find Service Providers" },
+    { href: "/providers/movers", label: "Movers / Relocation" },
     { href: "/providers/register", label: "Become a Provider" },
     { href: "/maintenance", label: "Maintenance Services" },
     { href: "/valuation", label: "Property Valuation" },
