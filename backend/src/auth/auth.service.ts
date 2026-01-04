@@ -4,6 +4,7 @@ import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from 'src/users/enums/user-role.enum';
+import { User } from 'src/users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 
 export interface OAuthUserData {
@@ -123,5 +124,10 @@ export class AuthService {
       accessToken,
       user: result,
     };
+  }
+
+  async generateAccessToken(user: User) {
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    return this.jwtService.signAsync(payload);
   }
 }

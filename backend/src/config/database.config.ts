@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
+import { Job } from '../jobs/entities/job.entity';
+import { MaintenanceTicket } from '../maintenance-tickets/entities/maintenance-ticket.entity';
+import { Provider } from '../providers/entities/provider.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -19,7 +22,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       username: this.configService.get<string>('DB_USERNAME', 'postgres'),
       password: this.configService.get<string>('DB_PASSWORD', 'postgres'),
       database: this.configService.get<string>('DB_DATABASE', 'propertymarket'),
-      entities: [User, Property],
+      entities: [User, Property, Job, MaintenanceTicket, Provider],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development',
@@ -31,6 +34,9 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
     };
   }
 }
+
+
+
 
 
 
