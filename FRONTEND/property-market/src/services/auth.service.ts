@@ -63,7 +63,7 @@ export const authService = {
       } else if (error.response?.status >= 500) {
         throw new Error("Server error. Please try again later.");
       } else if (error.message?.includes("Backend server not responding")) {
-        throw new Error("Cannot connect to the server. Please ensure the backend is running on port 3001.");
+        throw new Error("Cannot connect to the server. Please ensure the backend is running on port 3002.");
       } else if (error.message?.includes("Network Error") || error.code === "ECONNREFUSED") {
         throw new Error("Cannot connect to the server. Please check your internet connection and ensure the backend is running.");
       }

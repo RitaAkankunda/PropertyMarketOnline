@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,11 +20,21 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  // Check for return URL or message from query params
+  useEffect(() => {
+    const message = searchParams.get("message");
+    if (message) {
+      setInfoMessage(message);
+    }
+  }, [searchParams]);
 
   const {
     register,
@@ -65,9 +75,16 @@ export default function LoginPage() {
       
       // Small delay to ensure state is updated before redirect
       setTimeout(() => {
-        // Redirect based on user role
-        const redirectUrl = loginResponse?.user?.role === 'admin' ? '/admin' : '/dashboard';
-        router.push(redirectUrl);
+        // Check for return URL in localStorage (set by protected pages)
+        const returnUrl = localStorage.getItem("returnUrl");
+        if (returnUrl) {
+          localStorage.removeItem("returnUrl");
+          router.push(returnUrl);
+        } else {
+          // Redirect based on user role
+          const redirectUrl = loginResponse?.user?.role === 'admin' ? '/admin' : '/dashboard';
+          router.push(redirectUrl);
+        }
       }, 100);
     } catch (err: unknown) {
       // Capture full error details
@@ -144,6 +161,19 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {infoMessage && (
+                <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
+                  <p className="text-orange-800 text-sm font-medium mb-2">{infoMessage}</p>
+                  <p className="text-orange-700 text-xs">
+                    Don't have an account yet?{" "}
+                    <Link href="/auth/register" className="font-semibold underline hover:text-orange-900">
+                      Sign up first
+                    </Link>
+                    , then come back here to login and complete your provider registration.
+                  </p>
+                </div>
+              )}
+              
               {error && (
                 <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
                   <div className="flex items-start justify-between">

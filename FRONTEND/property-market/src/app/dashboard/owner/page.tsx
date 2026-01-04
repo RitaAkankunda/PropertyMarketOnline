@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { maintenanceTicketsService } from "@/services";
+import type { MaintenanceTicket as ApiMaintenanceTicket } from "@/services/maintenance-tickets.service";
 import {
   Home,
   Building,
@@ -429,26 +431,69 @@ function ReleasePaymentModal({
 // =============================================
 export default function OwnerDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const [tickets, setTickets] = useState(DUMMY_TICKETS);
+  const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showReleaseModal, setShowReleaseModal] = useState(false);
   const [ticketFilter, setTicketFilter] = useState<TicketStatus | "all">("all");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleAssignProvider = (ticketId: string, provider: { id: string; name: string; phone: string; rating: number }) => {
-    setTickets(tickets.map(t => 
-      t.id === ticketId 
-        ? { ...t, status: "assigned" as TicketStatus, assignedProvider: provider, escrowAmount: 150000 }
-        : t
-    ));
+  // Fetch maintenance tickets from backend
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const status = ticketFilter === "all" ? undefined : ticketFilter;
+        const response = await maintenanceTicketsService.getTickets(
+          { status },
+          1,
+          100
+        );
+        
+        // Format tickets for display
+        const formattedTickets = response.data.map(formatTicketForDisplay);
+        setTickets(formattedTickets);
+      } catch (err) {
+        console.error("Error fetching tickets:", err);
+        setError(err instanceof Error ? err.message : "Failed to load maintenance tickets");
+        setTickets([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, [ticketFilter]);
+
+  const handleAssignProvider = async (ticketId: string, provider: { id: string; name: string; phone: string; rating: number }) => {
+    try {
+      await maintenanceTicketsService.assignProvider(ticketId, provider.id);
+      setTickets(tickets.map(t => 
+        t.id === ticketId 
+          ? { ...t, status: "assigned" as TicketStatus, assignedProvider: provider, escrowAmount: 150000 }
+          : t
+      ));
+    } catch (err) {
+      console.error("Error assigning provider:", err);
+      alert(err instanceof Error ? err.message : "Failed to assign provider");
+    }
   };
 
-  const handleReleasePayment = (ticketId: string) => {
-    setTickets(tickets.map(t => 
-      t.id === ticketId 
-        ? { ...t, status: "completed" as TicketStatus }
-        : t
-    ));
+  const handleReleasePayment = async (ticketId: string) => {
+    try {
+      await maintenanceTicketsService.updateStatus(ticketId, "completed");
+      setTickets(tickets.map(t => 
+        t.id === ticketId 
+          ? { ...t, status: "completed" as TicketStatus }
+          : t
+      ));
+    } catch (err) {
+      console.error("Error releasing payment:", err);
+      alert(err instanceof Error ? err.message : "Failed to release payment");
+    }
   };
 
   const pendingTickets = tickets.filter(t => t.status === "pending").length;

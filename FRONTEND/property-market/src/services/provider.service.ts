@@ -54,10 +54,25 @@ export interface ProviderFilters {
   sortBy?: "rating" | "price" | "reviews" | "distance";
 }
 
+export interface RegisterProviderCompleteData extends RegisterProviderData {
+  // Account creation fields
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
 export const providerService = {
-  // Register as a service provider
+  // Register as a service provider (requires authentication)
   async register(data: RegisterProviderData): Promise<ServiceProvider> {
     const response = await api.post<ServiceProvider>("/providers/register", data);
+    return response.data;
+  },
+
+  // Register as a provider directly - creates account and provider in one step
+  async registerComplete(data: RegisterProviderCompleteData): Promise<{ user: any; accessToken: string }> {
+    const response = await api.post<{ user: any; accessToken: string }>("/providers/register-complete", data);
     return response.data;
   },
 
@@ -191,14 +206,14 @@ export const providerService = {
         (value as File[]).forEach((file) => formData.append("images", file));
       } else if (key === "location") {
         formData.append(key, JSON.stringify(value));
-      } else if (value !== undefined) {
+      } else if (value !== undefined && value !== null) {
         formData.append(key, String(value));
       }
     });
 
-    const response = await api.post<Job>("/jobs/create", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    // Don't set Content-Type manually - axios will set it with the boundary for FormData
+    // The Authorization header will be added by the interceptor automatically
+    const response = await api.post<Job>("/jobs/create", formData);
     return response.data;
   },
 

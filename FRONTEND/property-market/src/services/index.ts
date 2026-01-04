@@ -6,4 +6,5 @@ export { messageService } from "./message.service";
 export { userService } from "./user.service";
 export { adminService } from "./admin.service";
 export { dashboardService } from "./dashboard.service";
+export { maintenanceTicketsService } from "./maintenance-tickets.service";
 export { default as api } from "./api";

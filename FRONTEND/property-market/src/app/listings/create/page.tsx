@@ -236,7 +236,7 @@ export default function CreateListingPage() {
           err.message?.includes("Cannot connect to backend") ||
           err.code === "ECONNREFUSED" ||
           err.message?.includes("Network Error")) {
-        errorMessage = "Backend server is not running. Please start the backend server on port 3001 and try again.";
+        errorMessage = "Backend server is not running. Please start the backend server on port 3002 and try again.";
       } else if (err.response) {
         // API returned an error response
         const status = err.response.status;
@@ -261,7 +261,7 @@ export default function CreateListingPage() {
         }
       } else if (err.request) {
         // Request was made but no response received
-        errorMessage = "Unable to connect to server. Please check if the backend is running on port 3001.";
+        errorMessage = "Unable to connect to server. Please check if the backend is running on port 3002.";
       }
       
       showError(errorMessage, 8000);

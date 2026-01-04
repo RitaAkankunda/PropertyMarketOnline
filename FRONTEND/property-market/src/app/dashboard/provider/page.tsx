@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { providerService } from "@/services";
+import type { Job as ApiJob, JobStatus as ApiJobStatus } from "@/types";
 import {
   Briefcase,
   Clock,
@@ -30,7 +32,8 @@ import {
 type JobStatus = "pending" | "accepted" | "in_progress" | "completed" | "cancelled";
 type TabType = "jobs" | "earnings" | "messages" | "ratings" | "withdraw";
 
-interface Job {
+// DisplayJob type (for UI display)
+type DisplayJob = {
   id: string;
   clientName: string;
   clientPhone: string;
@@ -43,7 +46,9 @@ interface Job {
   amount: number;
   createdAt: string;
   images?: string[];
-}
+  rating?: number;
+  review?: string;
+};
 
 interface Message {
   id: string;
@@ -63,98 +68,31 @@ interface Transaction {
   status: "completed" | "pending" | "failed";
 }
 
-// =============================================
-// DUMMY DATA
-// =============================================
-const DUMMY_JOBS: Job[] = [
-  {
-    id: "JOB001",
-    clientName: "Sarah Nambi",
-    clientPhone: "+256 772 123 456",
-    serviceType: "Electrical Installation",
-    description: "Need to install new electrical outlets in 3 rooms and fix the main circuit breaker.",
-    location: "Kampala, Nakawa",
-    scheduledDate: "2026-01-05",
-    scheduledTime: "Morning (8AM - 12PM)",
-    status: "pending",
-    amount: 350000,
-    createdAt: "2026-01-03T10:30:00",
-  },
-  {
-    id: "JOB002",
-    clientName: "Peter Okello",
-    clientPhone: "+256 701 234 567",
-    serviceType: "Wiring Repair",
-    description: "Faulty wiring in kitchen causing power trips. Urgent fix needed.",
-    location: "Kampala, Makindye",
-    scheduledDate: "2026-01-04",
-    scheduledTime: "Afternoon (12PM - 4PM)",
-    status: "accepted",
-    amount: 180000,
-    createdAt: "2026-01-02T14:00:00",
-  },
-  {
-    id: "JOB003",
-    clientName: "Grace Achieng",
-    clientPhone: "+256 782 345 678",
-    serviceType: "Solar Panel Installation",
-    description: "Install 4 solar panels on rooftop with battery backup system.",
-    location: "Entebbe",
-    scheduledDate: "2026-01-06",
-    scheduledTime: "Morning (8AM - 12PM)",
-    status: "in_progress",
-    amount: 2500000,
-    createdAt: "2026-01-01T09:00:00",
-  },
-  {
-    id: "JOB004",
-    clientName: "John Mukasa",
-    clientPhone: "+256 755 456 789",
-    serviceType: "Inspection",
-    description: "Full electrical inspection for property sale certification.",
-    location: "Wakiso",
-    scheduledDate: "2026-01-02",
-    scheduledTime: "Morning (8AM - 12PM)",
-    status: "completed",
-    amount: 250000,
-    createdAt: "2025-12-30T11:00:00",
-  },
-  {
-    id: "JOB005",
-    clientName: "Mary Nalwoga",
-    clientPhone: "+256 776 567 890",
-    serviceType: "Emergency Repair",
-    description: "Power outage in entire house after storm.",
-    location: "Kampala, Rubaga",
-    scheduledDate: "2026-01-01",
-    scheduledTime: "Evening (4PM - 7PM)",
-    status: "completed",
-    amount: 200000,
-    createdAt: "2025-12-31T16:00:00",
-  },
-];
+// Helper function to format Job from API to display format
+function formatJobForDisplay(job: ApiJob): DisplayJob {
+  return {
+    id: job.id,
+    clientName: `${job.client?.firstName || ''} ${job.client?.lastName || ''}`.trim() || 'Unknown Client',
+    clientPhone: job.client?.phone || "N/A",
+    serviceType: job.serviceType,
+    description: job.description,
+    location: job.location.address || `${job.location.city}${job.location.latitude ? ` (${job.location.latitude}, ${job.location.longitude})` : ""}`,
+    scheduledDate: job.scheduledDate,
+    scheduledTime: job.scheduledTime,
+    status: job.status,
+    amount: job.price || 0,
+    createdAt: job.createdAt,
+    images: job.images,
+    title: job.title,
+    currency: job.currency,
+    depositPaid: job.depositPaid,
+    completedAt: job.completedAt,
+    rating: job.rating,
+    review: job.review,
+  };
+}
 
-const DUMMY_MESSAGES: Message[] = [
-  { id: "MSG001", clientName: "Sarah Nambi", lastMessage: "When can you arrive?", timestamp: "10 min ago", unread: true, jobId: "JOB001" },
-  { id: "MSG002", clientName: "Peter Okello", lastMessage: "Thanks, see you tomorrow!", timestamp: "2 hours ago", unread: false, jobId: "JOB002" },
-  { id: "MSG003", clientName: "Grace Achieng", lastMessage: "Please bring extra cables", timestamp: "Yesterday", unread: true, jobId: "JOB003" },
-  { id: "MSG004", clientName: "John Mukasa", lastMessage: "Great work, thank you!", timestamp: "2 days ago", unread: false, jobId: "JOB004" },
-];
-
-const DUMMY_TRANSACTIONS: Transaction[] = [
-  { id: "TXN001", type: "earning", amount: 250000, description: "Job #JOB004 - Inspection", date: "2026-01-02", status: "completed" },
-  { id: "TXN002", type: "earning", amount: 200000, description: "Job #JOB005 - Emergency Repair", date: "2026-01-01", status: "completed" },
-  { id: "TXN003", type: "commission", amount: -22500, description: "Platform fee (5%)", date: "2026-01-02", status: "completed" },
-  { id: "TXN004", type: "withdrawal", amount: -400000, description: "MTN Mobile Money", date: "2025-12-30", status: "completed" },
-  { id: "TXN005", type: "earning", amount: 180000, description: "Job #JOB006 - Maintenance", date: "2025-12-28", status: "completed" },
-];
-
-const DUMMY_RATINGS = [
-  { id: 1, clientName: "John Mukasa", rating: 5, comment: "Excellent work! Very professional and arrived on time.", date: "2026-01-02", jobType: "Inspection" },
-  { id: 2, clientName: "Mary Nalwoga", rating: 5, comment: "Fixed our power issue quickly. Highly recommend!", date: "2026-01-01", jobType: "Emergency Repair" },
-  { id: 3, clientName: "David Ssempijja", rating: 4, comment: "Good service, but was slightly late.", date: "2025-12-28", jobType: "Installation" },
-  { id: 4, clientName: "Christine Auma", rating: 5, comment: "Very knowledgeable and explained everything clearly.", date: "2025-12-25", jobType: "Wiring" },
-];
+// Ratings will be fetched from completed jobs with reviews
 
 // =============================================
 // STATUS BADGE COMPONENT
@@ -589,29 +527,83 @@ function ChatModal({
 export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("jobs");
   const [jobFilter, setJobFilter] = useState<JobStatus | "all">("all");
-  const [jobs, setJobs] = useState(DUMMY_JOBS);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobs, setJobs] = useState<DisplayJob[]>([]);
+  const [selectedJob, setSelectedJob] = useState<DisplayJob | null>(null);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [messages] = useState<Message[]>([]); // TODO: Implement real messages API
+  const [transactions] = useState<Transaction[]>([]); // TODO: Implement real transactions API
+
+  // Fetch jobs from backend
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setIsLoadingJobs(true);
+        setJobsError(null);
+        
+        const status = jobFilter === "all" ? undefined : jobFilter;
+        const response = await providerService.getProviderJobs(status, 1, 100);
+        
+        // Format jobs for display
+        const formattedJobs = response.data.map(formatJobForDisplay);
+        setJobs(formattedJobs);
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+        setJobsError(err instanceof Error ? err.message : "Failed to load jobs");
+        setJobs([]);
+      } finally {
+        setIsLoadingJobs(false);
+      }
+    };
+
+    fetchJobs();
+  }, [jobFilter]);
   const [selectedChat, setSelectedChat] = useState<Message | null>(null);
   const [showWithdraw, setShowWithdraw] = useState(false);
   
-  // Calculate stats
+  // Calculate stats from real data
+  const completedJobs = jobs.filter(j => j.status === "completed");
+  const jobsWithRatings = completedJobs.filter(j => j.rating !== undefined);
+  const averageRating = jobsWithRatings.length > 0
+    ? jobsWithRatings.reduce((sum, j) => sum + (j.rating || 0), 0) / jobsWithRatings.length
+    : 0;
+  
+  const totalEarnings = completedJobs.reduce((sum, j) => sum + j.amount, 0);
+  const pendingPayments = jobs.filter(j => j.status === "accepted" || j.status === "in_progress")
+    .reduce((sum, j) => sum + j.amount, 0);
+  
   const stats = {
-    totalEarnings: 1580000,
-    pendingPayments: 350000,
-    availableBalance: 427500,
-    completedJobs: jobs.filter(j => j.status === "completed").length,
+    totalEarnings,
+    pendingPayments,
+    availableBalance: totalEarnings - pendingPayments, // Simplified calculation
+    completedJobs: completedJobs.length,
     pendingJobs: jobs.filter(j => j.status === "pending").length,
     activeJobs: jobs.filter(j => j.status === "in_progress" || j.status === "accepted").length,
-    rating: 4.8,
-    totalReviews: DUMMY_RATINGS.length,
+    rating: averageRating,
+    totalReviews: jobsWithRatings.length,
   };
 
   const filteredJobs = jobFilter === "all" 
     ? jobs 
     : jobs.filter(j => j.status === jobFilter);
 
-  const handleUpdateStatus = (jobId: string, newStatus: JobStatus) => {
-    setJobs(jobs.map(j => j.id === jobId ? { ...j, status: newStatus } : j));
+  const handleUpdateStatus = async (jobId: string, newStatus: JobStatus) => {
+    try {
+      // Update job status via API
+      if (newStatus === "accepted") {
+        await providerService.acceptJob(jobId);
+      } else if (newStatus === "cancelled") {
+        await providerService.rejectJob(jobId, "Cancelled by provider");
+      } else {
+        await providerService.updateJobStatus(jobId, newStatus as "in_progress" | "completed");
+      }
+      
+      // Update local state
+      setJobs(jobs.map(j => j.id === jobId ? { ...j, status: newStatus } : j));
+    } catch (err) {
+      console.error("Error updating job status:", err);
+      alert(err instanceof Error ? err.message : "Failed to update job status");
+    }
   };
 
   const handleWithdraw = (amount: number, method: string, phone: string) => {
@@ -773,36 +765,59 @@ export default function ProviderDashboard() {
 
             {/* Job Cards */}
             <div className="space-y-3">
-              {filteredJobs.map((job) => (
-                <div 
-                  key={job.id}
-                  onClick={() => setSelectedJob(job)}
-                  className="bg-white rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-gray-400">#{job.id}</span>
-                        <StatusBadge status={job.status} />
-                      </div>
-                      <h3 className="font-semibold text-gray-900">{job.serviceType}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{job.clientName}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-orange-600">UGX {job.amount.toLocaleString()}</p>
-                      <p className="text-xs text-gray-400">{new Date(job.scheduledDate).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" /> {job.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" /> {job.scheduledTime}
-                    </span>
-                  </div>
+              {isLoadingJobs ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading jobs...</p>
                 </div>
-              ))}
+              ) : jobsError ? (
+                <div className="text-center py-12 bg-red-50 rounded-xl">
+                  <p className="text-red-600 mb-4">{jobsError}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredJobs.length > 0 ? (
+                filteredJobs.map((job) => (
+                  <div 
+                    key={job.id}
+                    onClick={() => setSelectedJob(job)}
+                    className="bg-white rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-400">#{job.id}</span>
+                          <StatusBadge status={job.status} />
+                        </div>
+                        <h3 className="font-semibold text-gray-900">{job.serviceType}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{job.clientName}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-orange-600">UGX {job.amount.toLocaleString()}</p>
+                        <p className="text-xs text-gray-400">{new Date(job.scheduledDate).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3 pt-3 border-t text-sm text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" /> {job.location}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" /> {job.scheduledTime}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 bg-white rounded-xl">
+                  <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">No jobs found</p>
+                  <p className="text-sm text-gray-500 mt-2">Jobs will appear here when customers request your services</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -835,7 +850,7 @@ export default function ProviderDashboard() {
                 <h3 className="font-semibold text-gray-900">Transaction History</h3>
               </div>
               <div className="divide-y">
-                {DUMMY_TRANSACTIONS.map((txn) => (
+                {transactions.length > 0 ? transactions.map((txn) => (
                   <div key={txn.id} className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -855,7 +870,11 @@ export default function ProviderDashboard() {
                       {txn.amount > 0 ? "+" : ""}UGX {Math.abs(txn.amount).toLocaleString()}
                     </span>
                   </div>
-                ))}
+                )) : (
+                  <div className="p-8 text-center text-gray-500">
+                    <p>No transactions yet</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -864,7 +883,7 @@ export default function ProviderDashboard() {
         {/* MESSAGES TAB */}
         {activeTab === "messages" && (
           <div className="bg-white rounded-xl shadow-sm divide-y">
-            {DUMMY_MESSAGES.map((msg) => (
+            {messages.length > 0 ? messages.map((msg) => (
               <div 
                 key={msg.id}
                 onClick={() => setSelectedChat(msg)}
@@ -889,7 +908,12 @@ export default function ProviderDashboard() {
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </div>
-            ))}
+            )) : (
+              <div className="p-8 text-center text-gray-500">
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p>No messages yet</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -912,25 +936,29 @@ export default function ProviderDashboard() {
 
             {/* Reviews List */}
             <div className="space-y-3">
-              {DUMMY_RATINGS.map((review) => (
-                <div key={review.id} className="bg-white rounded-xl p-4 shadow-sm">
+              {jobsWithRatings.length > 0 ? jobsWithRatings.map((job) => (
+                <div key={job.id} className="bg-white rounded-xl p-4 shadow-sm">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="font-medium text-gray-900">{review.clientName}</p>
-                      <p className="text-xs text-gray-500">{review.jobType} • {review.date}</p>
+                      <p className="font-medium text-gray-900">{job.clientName}</p>
+                      <p className="text-xs text-gray-500">{job.serviceType} • {new Date(job.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star 
                           key={star} 
-                          className={`w-4 h-4 ${star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} 
+                          className={`w-4 h-4 ${star <= (job.rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} 
                         />
                       ))}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600">{review.comment}</p>
+                  {job.review && <p className="text-sm text-gray-600">{job.review}</p>}
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No reviews yet</p>
+                </div>
+              )}
             </div>
           </div>
         )}

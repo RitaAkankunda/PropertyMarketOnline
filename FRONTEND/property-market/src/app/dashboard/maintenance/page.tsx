@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { maintenanceTicketsService } from "@/services";
+import type { MaintenanceTicket as ApiMaintenanceTicket, TicketCategory, TicketPriority, TicketStatus } from "@/services/maintenance-tickets.service";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -31,10 +33,9 @@ import {
 // =============================================
 // TYPES
 // =============================================
-type TicketStatus = "pending" | "assigned" | "in_progress" | "completed" | "rejected";
-type TicketPriority = "low" | "medium" | "high" | "urgent";
-type IssueCategory = "electrical" | "plumbing" | "hvac" | "security" | "structural" | "appliance" | "internet" | "other";
+type IssueCategory = TicketCategory;
 
+// Display format for maintenance ticket
 interface MaintenanceTicket {
   id: string;
   title: string;
@@ -69,6 +70,38 @@ interface MaintenanceTicket {
     date: string;
     note?: string;
   }>;
+}
+
+// Helper function to format API ticket to display format
+function formatTicketForDisplay(ticket: ApiMaintenanceTicket): MaintenanceTicket {
+  return {
+    id: ticket.id,
+    title: ticket.title,
+    description: ticket.description,
+    category: ticket.category,
+    priority: ticket.priority,
+    status: ticket.status,
+    location: ticket.location,
+    unit: ticket.unit,
+    images: ticket.images || [],
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.updatedAt,
+    assignedProvider: ticket.assignedProvider
+      ? {
+          name: ticket.assignedProvider.businessName || `${ticket.assignedProvider.firstName} ${ticket.assignedProvider.lastName}`,
+          phone: ticket.assignedProvider.phone || "N/A",
+          rating: 0, // TODO: Get from provider profile
+          serviceType: "Service Provider",
+        }
+      : undefined,
+    suggestedProviders: [], // TODO: Implement provider suggestions
+    propertyOwner: ticket.owner
+      ? {
+          name: `${ticket.owner.firstName} ${ticket.owner.lastName}`,
+          decision: "pending" as const, // TODO: Get from ticket status
+        }
+      : undefined,
+  };
 }
 
 // =============================================
@@ -562,17 +595,65 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
 // MAIN MAINTENANCE DASHBOARD
 // =============================================
 export default function MaintenanceDashboard() {
-  const [tickets, setTickets] = useState(DUMMY_TICKETS);
+  const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch maintenance tickets from backend
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const status = statusFilter === "all" ? undefined : statusFilter;
+        const response = await maintenanceTicketsService.getTickets(
+          { status },
+          1,
+          100
+        );
+        
+        // Format tickets for display
+        const formattedTickets = response.data.map(formatTicketForDisplay);
+        setTickets(formattedTickets);
+      } catch (err) {
+        console.error("Error fetching tickets:", err);
+        setError(err instanceof Error ? err.message : "Failed to load maintenance tickets");
+        setTickets([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, [statusFilter]);
 
   const filteredTickets = statusFilter === "all" 
     ? tickets 
     : tickets.filter(t => t.status === statusFilter);
 
-  const handleCreateTicket = (data: Partial<MaintenanceTicket>) => {
-    setTickets([data as MaintenanceTicket, ...tickets]);
+  const handleCreateTicket = async (data: Partial<MaintenanceTicket>) => {
+    try {
+      const newTicket = await maintenanceTicketsService.create({
+        title: data.title || "",
+        description: data.description || "",
+        category: data.category as IssueCategory,
+        priority: data.priority || "medium",
+        property: "My Property", // TODO: Get from user context
+        unit: data.unit || "",
+        location: data.location || "",
+        images: data.images,
+      });
+      
+      const formattedTicket = formatTicketForDisplay(newTicket);
+      setTickets([formattedTicket, ...tickets]);
+    } catch (err) {
+      console.error("Error creating ticket:", err);
+      alert(err instanceof Error ? err.message : "Failed to create ticket");
+    }
   };
 
   return (
@@ -686,7 +767,23 @@ export default function MaintenanceDashboard() {
 
         {/* Ticket List */}
         <div className="space-y-3">
-          {filteredTickets.map((ticket) => (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading tickets...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 bg-red-50 rounded-xl">
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+              >
+                Retry
+              </button>
+            </div>
+          ) : filteredTickets.length > 0 ? (
+            filteredTickets.map((ticket) => (
             <div
               key={ticket.id}
               onClick={() => setSelectedTicket(ticket)}
@@ -719,9 +816,8 @@ export default function MaintenanceDashboard() {
                 </div>
               )}
             </div>
-          ))}
-
-          {filteredTickets.length === 0 && (
+            ))
+          ) : (
             <div className="text-center py-12 bg-white rounded-xl">
               <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>

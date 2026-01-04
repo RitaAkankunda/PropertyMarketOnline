@@ -13,8 +13,6 @@ After pulling the code, your colleagues will have access to:
 
 ### 1. Backend Environment Variables
 
-**Quick Start:** Copy `backend/.env.example` to `backend/.env` and fill in the values.
-
 Create a `.env` file in the `backend/` directory with:
 
 ```env
@@ -53,8 +51,6 @@ PORT=3001
 
 ### 2. Frontend Environment Variables
 
-**Quick Start:** Copy `FRONTEND/property-market/.env.example` to `FRONTEND/property-market/.env.local` and fill in the values.
-
 Create a `.env.local` file in the `FRONTEND/property-market/` directory with:
 
 ```env
@@ -66,28 +62,17 @@ NEXT_PUBLIC_ADMIN_SEED_TOKEN=your_secure_seed_token_here
 
 **⚠️ IMPORTANT:** Image uploads will NOT work without R2 configuration!
 
-**✅ We use SHARED R2 credentials for the team** - Everyone uses the same R2 bucket so we can all see the same images and work together.
-
-#### Getting the Shared R2 Credentials
-
-**Ask your team lead for the shared R2 credentials:**
+#### Option A: Use Shared R2 Bucket (Recommended for Team)
+Ask your team lead for the shared R2 credentials:
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 - `R2_BUCKET_NAME`
 - `R2_PUBLIC_URL`
 
-Add these to your `backend/.env` file. The `next.config.ts` is already configured to use the shared bucket, so you don't need to change anything in the frontend!
+Add these to your `backend/.env` file.
 
-**Why shared?**
-- ✅ Everyone sees the same images
-- ✅ No need to set up individual buckets
-- ✅ Easier collaboration
-- ✅ Consistent development environment
-
-#### Alternative: Create Your Own R2 Bucket (Not Recommended)
-
-Only do this if you need to work independently:
+#### Option B: Create Your Own R2 Bucket
 
 1. **Create Cloudflare R2 Bucket:**
    - Go to [Cloudflare Dashboard](https://dash.cloudflare.com/)
@@ -294,15 +279,13 @@ npm run dev
 **DO NOT commit `.env` files to git!** (They're already in `.gitignore`)
 
 ### For Team Members:
-**Ask your team lead for the shared credentials:**
-- Google OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-- Cloudflare R2: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
+**Ask your team lead for the shared Google OAuth credentials:**
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 
 These are the same credentials used by the entire team for development.
 
 ### For Team Leads:
-**Use `SHARED_CREDENTIALS_TEMPLATE.md` as a guide for sharing credentials.**
-
 **How to share the shared credentials:**
 
 1. **Password Manager** (Recommended)

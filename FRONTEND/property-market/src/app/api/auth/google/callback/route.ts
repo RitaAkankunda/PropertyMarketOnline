@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
 
   // Get the backend API URL
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
   
   if (error) {
     // If there's an error from Google, redirect to frontend callback with error

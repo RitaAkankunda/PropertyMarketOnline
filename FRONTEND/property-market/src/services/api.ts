@@ -68,7 +68,7 @@ api.interceptors.response.use(
         localStorage.setItem("api_logs", JSON.stringify(logs.slice(-20)));
       }
       
-      return Promise.reject(new Error(`Backend server not responding correctly. Please ensure the backend is running on port 3001. Current API URL: ${API_BASE_URL}`));
+      return Promise.reject(new Error(`Backend server not responding correctly. Please ensure the backend is running on port 3002. Current API URL: ${API_BASE_URL}`));
     }
     return response;
   },
@@ -77,14 +77,14 @@ api.interceptors.response.use(
     if (error.response?.headers['content-type']?.includes('text/html')) {
       const htmlErrorLog = `[API RESPONSE HTML ERROR] ${new Date().toISOString()}\nBackend error: Received HTML response\nAPI Base URL: ${API_BASE_URL}\nRequest URL: ${error.config?.url}`;
       console.error("%c" + htmlErrorLog, "background: #1a1a1a; color: #ff6b6b; padding: 5px; font-size: 12px; font-weight: bold;");
-      error.message = `Backend server not responding correctly. Please ensure the backend is running on port 3001. Current API URL: ${API_BASE_URL}`;
+      error.message = `Backend server not responding correctly. Please ensure the backend is running on port 3002. Current API URL: ${API_BASE_URL}`;
     }
     
     // Network errors (backend not running)
     if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
       const networkErrorLog = `[API NETWORK ERROR] ${new Date().toISOString()}\nCannot connect to backend\nAPI URL: ${API_BASE_URL}\nError Code: ${error.code}`;
       console.error("%c" + networkErrorLog, "background: #1a1a1a; color: #ff6b6b; padding: 5px; font-size: 12px; font-weight: bold;");
-      error.message = `Cannot connect to backend server. Please ensure the backend is running on port 3001. API URL: ${API_BASE_URL}`;
+      error.message = `Cannot connect to backend server. Please ensure the backend is running on port 3002. API URL: ${API_BASE_URL}`;
     }
     
     // Log all errors persistently
@@ -104,10 +104,20 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      // Clear token and redirect to login if unauthorized
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        window.location.href = "/auth/login";
+      // Don't auto-redirect for provider registration - let the component handle it
+      const isProviderRegistration = error.config?.url?.includes('/providers/register');
+      
+      if (isProviderRegistration) {
+        // Let the component handle the error display
+        // Don't remove token - let the component decide what to do
+        error.message = error.response?.data?.message || "Authentication required. Please login to continue.";
+        console.log("[API] 401 error on provider registration - letting component handle it");
+      } else {
+        // Auto-redirect for other endpoints
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token");
+          window.location.href = "/auth/login";
+        }
       }
     }
     return Promise.reject(error);

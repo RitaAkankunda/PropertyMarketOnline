@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { providerService } from "@/services";
+import type { Job as ApiJob } from "@/types";
 import {
   Home,
   Briefcase,
@@ -54,74 +56,69 @@ interface Notification {
   read: boolean;
 }
 
-// =============================================
-// DUMMY DATA
-// =============================================
-const DUMMY_REQUESTS: ServiceRequest[] = [
-  {
-    id: "REQ001",
-    providerName: "ElectroPro Services",
-    providerPhone: "+256 772 123 456",
-    serviceType: "Electrical Installation",
-    description: "Install new electrical outlets in 3 rooms",
-    location: "Kampala, Nakawa",
-    scheduledDate: "2026-01-05",
-    scheduledTime: "Morning (8AM - 12PM)",
-    status: "accepted",
-    amount: 350000,
-    createdAt: "2026-01-03T10:30:00",
-    providerRating: 4.9,
-  },
-  {
-    id: "REQ002",
-    providerName: "Quick Movers Uganda",
-    providerPhone: "+256 701 234 567",
-    serviceType: "House Moving",
-    description: "Move from Nakawa to Makindye, 2 bedroom apartment",
-    location: "Kampala",
-    scheduledDate: "2026-01-10",
-    scheduledTime: "Morning (8AM - 12PM)",
-    status: "pending",
-    amount: 450000,
-    createdAt: "2026-01-02T14:00:00",
-    providerRating: 4.8,
-  },
-  {
-    id: "REQ003",
-    providerName: "Master Plumbers Ltd",
-    providerPhone: "+256 782 345 678",
-    serviceType: "Plumbing Repair",
-    description: "Fix leaking pipes in bathroom",
-    location: "Kampala, Makindye",
-    scheduledDate: "2026-01-04",
-    scheduledTime: "Afternoon (12PM - 4PM)",
-    status: "in_progress",
-    amount: 180000,
-    createdAt: "2026-01-01T09:00:00",
-    providerRating: 4.8,
-  },
-  {
-    id: "REQ004",
-    providerName: "Spotless Cleaning",
-    providerPhone: "+256 755 456 789",
-    serviceType: "Deep Cleaning",
-    description: "Post-construction cleaning for 3 bedroom house",
-    location: "Entebbe",
-    scheduledDate: "2025-12-28",
-    scheduledTime: "Morning (8AM - 12PM)",
-    status: "completed",
-    amount: 250000,
-    createdAt: "2025-12-25T11:00:00",
-    providerRating: 4.6,
-  },
-];
+// Helper function to format Job from API to ServiceRequest display format
+function formatJobToServiceRequest(job: ApiJob): ServiceRequest {
+  const providerName = job.provider?.businessName || job.provider?.user?.firstName 
+    ? `${job.provider.user?.firstName || ''} ${job.provider.user?.lastName || ''}`.trim() 
+    : 'Unknown Provider';
+  const providerPhone = job.provider?.user?.phone || "N/A";
+  const locationStr = job.location.address || `${job.location.city}${job.location.latitude ? ` (${job.location.latitude}, ${job.location.longitude})` : ""}`;
 
-const DUMMY_NOTIFICATIONS: Notification[] = [
-  { id: "N1", title: "Request Accepted", message: "ElectroPro Services accepted your service request", type: "success", timestamp: "2 hours ago", read: false },
-  { id: "N2", title: "Job Started", message: "Master Plumbers Ltd has started working on your request", type: "info", timestamp: "5 hours ago", read: false },
-  { id: "N3", title: "Payment Required", message: "Please complete payment for cleaning service", type: "warning", timestamp: "1 day ago", read: true },
-  { id: "N4", title: "Job Completed", message: "Spotless Cleaning has completed your request", type: "success", timestamp: "3 days ago", read: true },
-];
+  return {
+    id: job.id,
+    providerName,
+    providerPhone,
+    serviceType: job.serviceType,
+    description: job.description,
+    location: locationStr,
+    scheduledDate: job.scheduledDate,
+    scheduledTime: job.scheduledTime,
+    status: job.status as RequestStatus,
+    amount: job.price || 0,
+    createdAt: job.createdAt,
+    providerRating: job.provider?.rating,
+  };
+}
+
+// Helper function to generate notifications from job status changes
+function generateNotificationsFromJobs(jobs: ApiJob[]): Notification[] {
+  const notifications: Notification[] = [];
+  
+  jobs.forEach((job) => {
+    if (job.status === "accepted") {
+      notifications.push({
+        id: `notif-${job.id}-accepted`,
+        title: "Request Accepted",
+        message: `${job.provider?.businessName || 'Provider'} accepted your service request`,
+        type: "success" as const,
+        timestamp: new Date(job.updatedAt || job.createdAt).toLocaleString(),
+        read: false,
+      });
+    } else if (job.status === "in_progress") {
+      notifications.push({
+        id: `notif-${job.id}-started`,
+        title: "Job Started",
+        message: `${job.provider?.businessName || 'Provider'} has started working on your request`,
+        type: "info" as const,
+        timestamp: new Date(job.updatedAt || job.createdAt).toLocaleString(),
+        read: false,
+      });
+    } else if (job.status === "completed") {
+      notifications.push({
+        id: `notif-${job.id}-completed`,
+        title: "Job Completed",
+        message: `${job.provider?.businessName || 'Provider'} has completed your request`,
+        type: "success" as const,
+        timestamp: new Date(job.completedAt || job.updatedAt || job.createdAt).toLocaleString(),
+        read: false,
+      });
+    }
+  });
+
+  return notifications.sort((a, b) => 
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+}
 
 const DUMMY_CONVERSATIONS = [
   { id: "C1", providerName: "ElectroPro Services", lastMessage: "I'll arrive around 9 AM tomorrow", timestamp: "30 min ago", unread: true, requestId: "REQ001" },
@@ -381,18 +378,56 @@ function ChatModal({
 // =============================================
 export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("requests");
-  const [requests, setRequests] = useState(DUMMY_REQUESTS);
-  const [notifications] = useState(DUMMY_NOTIFICATIONS);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [selectedChat, setSelectedChat] = useState<typeof DUMMY_CONVERSATIONS[0] | null>(null);
   const [statusFilter, setStatusFilter] = useState<RequestStatus | "all">("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch user's jobs from backend
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const status = statusFilter === "all" ? undefined : statusFilter;
+        const response = await providerService.getMyJobs(status, 1, 100);
+        
+        // Format jobs to service requests
+        const formattedRequests = response.data.map(formatJobToServiceRequest);
+        setRequests(formattedRequests);
+        
+        // Generate notifications from jobs
+        const generatedNotifications = generateNotificationsFromJobs(response.data);
+        setNotifications(generatedNotifications);
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+        setError(err instanceof Error ? err.message : "Failed to load service requests");
+        setRequests([]);
+        setNotifications([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, [statusFilter]);
 
   const filteredRequests = statusFilter === "all" 
     ? requests 
     : requests.filter(r => r.status === statusFilter);
 
-  const handleCancelRequest = (id: string) => {
-    setRequests(requests.map(r => r.id === id ? { ...r, status: "cancelled" as RequestStatus } : r));
+  const handleCancelRequest = async (id: string) => {
+    try {
+      await providerService.cancelJob(id, "Cancelled by user");
+      setRequests(requests.map(r => r.id === id ? { ...r, status: "cancelled" as RequestStatus } : r));
+    } catch (err) {
+      console.error("Error cancelling request:", err);
+      alert(err instanceof Error ? err.message : "Failed to cancel request");
+    }
   };
 
   const handleRateService = (id: string, rating: number) => {
@@ -561,7 +596,23 @@ export default function UserDashboard() {
 
             {/* Request Cards */}
             <div className="space-y-3">
-              {filteredRequests.map((request) => (
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading requests...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12 bg-red-50 rounded-xl">
+                  <p className="text-red-600 mb-4">{error}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredRequests.length > 0 ? (
+                filteredRequests.map((request) => (
                 <div 
                   key={request.id}
                   onClick={() => setSelectedRequest(request)}
@@ -590,9 +641,8 @@ export default function UserDashboard() {
                     </span>
                   </div>
                 </div>
-              ))}
-
-              {filteredRequests.length === 0 && (
+              ))
+              ) : (
                 <div className="text-center py-12 bg-white rounded-xl">
                   <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No requests found</h3>

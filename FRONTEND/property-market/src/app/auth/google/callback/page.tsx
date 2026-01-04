@@ -29,7 +29,7 @@ function GoogleCallbackContent() {
     }
 
     // Immediately forward the code to backend - no loading screen
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
     const backendCallbackUrl = `${backendUrl}/auth/google/callback?code=${encodeURIComponent(code)}`;
 
     // Redirect to backend callback - backend will handle OAuth and redirect to /auth/callback
