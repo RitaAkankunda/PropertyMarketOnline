@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { providerService } from "@/services";
 import type { ServiceProvider } from "@/types";
 import {
@@ -1162,9 +1163,11 @@ export default function ServiceProvidersPage() {
           <p className="text-gray-400 mb-6">
             Join our platform and connect with property owners
           </p>
-          <button className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
-            Register as Provider
-          </button>
+          <Link href="/auth/register/provider">
+            <button className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+              Register as Provider
+            </button>
+          </Link>
         </div>
       </div>
     </div>
