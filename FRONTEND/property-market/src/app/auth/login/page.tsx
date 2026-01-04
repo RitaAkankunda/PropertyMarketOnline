@@ -82,8 +82,13 @@ export default function LoginPage() {
           router.push(returnUrl);
         } else {
           // Redirect based on user role
-          const redirectUrl = loginResponse?.user?.role === 'admin' ? '/admin' : '/dashboard';
-          router.push(redirectUrl);
+          if (loginResponse?.user?.role === 'admin') {
+            router.push('/admin');
+          } else if (loginResponse?.user?.role === 'service_provider') {
+            router.push('/dashboard/provider');
+          } else {
+            router.push('/dashboard');
+          }
         }
       }, 100);
     } catch (err: unknown) {

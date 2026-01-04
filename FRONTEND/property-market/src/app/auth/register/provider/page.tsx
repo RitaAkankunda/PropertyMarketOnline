@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { providerService } from "@/services";
+import { useAuthStore } from "@/store";
 import {
   User,
   Mail,
@@ -84,10 +87,13 @@ const LOCATIONS = [
 // MAIN REGISTRATION COMPONENT
 // =============================================
 export default function ProviderRegistration() {
+  const router = useRouter();
+  const { user, refreshProfile } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -177,12 +183,54 @@ export default function ProviderRegistration() {
     }
   };
 
-  const handleSubmit = () => {
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      // Prepare provider registration data
+      const providerData = {
+        businessName: formData.businessName,
+        serviceTypes: formData.serviceTypes,
+        description: formData.description,
+        pricing: {
+          type: formData.pricingType,
+          hourlyRateUGX: formData.hourlyRateUGX ? parseFloat(formData.hourlyRateUGX) : undefined,
+          hourlyRateUSD: formData.hourlyRateUSD ? parseFloat(formData.hourlyRateUSD) : undefined,
+          minimumChargeUGX: formData.minimumChargeUGX ? parseFloat(formData.minimumChargeUGX) : undefined,
+          minimumChargeUSD: formData.minimumChargeUSD ? parseFloat(formData.minimumChargeUSD) : undefined,
+          currency: formData.currency,
+        },
+        availability: {
+          days: formData.availableDays,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+        },
+        location: {
+          city: formData.locations[0] || "Kampala",
+          district: formData.locations[1],
+          serviceRadius: 10, // Default 10km radius
+        },
+      };
+
+      // Call backend API to register provider
+      await providerService.register(providerData);
+      
+      // Refresh user profile to get updated role
+      await refreshProfile();
+      
+      // Show success screen
       setIsSuccess(true);
-    }, 2000);
+      
+      // Redirect to provider dashboard after 2 seconds
+      setTimeout(() => {
+        router.push('/dashboard/provider');
+      }, 2000);
+    } catch (err: any) {
+      console.error("Provider registration error:", err);
+      setError(err.response?.data?.message || err.message || "Failed to register as provider. Please try again.");
+      setIsSubmitting(false);
+    }
   };
 
   const totalSteps = 5;
@@ -196,23 +244,24 @@ export default function ProviderRegistration() {
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Registration Submitted!</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Registration Successful!</h1>
           <p className="text-gray-600 mb-6">
-            Your provider application has been submitted successfully. Our team will review your documents and verify your account within 24-48 hours.
+            You are now registered as a service provider! Redirecting you to your provider dashboard...
           </p>
           <div className="bg-orange-50 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-medium text-orange-800 mb-2">What happens next?</h3>
+            <h3 className="font-medium text-orange-800 mb-2">Next Steps:</h3>
             <ul className="text-sm text-orange-700 space-y-1">
-              <li>• We&apos;ll verify your ID and certifications</li>
-              <li>• You&apos;ll receive an email once approved</li>
-              <li>• Start receiving job requests!</li>
+              <li>• Complete your profile with photos and certifications</li>
+              <li>• Start receiving job requests from clients</li>
+              <li>• Build your reputation with great service!</li>
             </ul>
           </div>
-          <Link href="/dashboard/provider">
-            <button className="w-full py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
-              Go to Dashboard
-            </button>
-          </Link>
+          <button
+            onClick={() => router.push('/dashboard/provider')}
+            className="w-full py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+          >
+            Go to Provider Dashboard
+          </button>
         </div>
       </div>
     );
@@ -851,31 +900,42 @@ export default function ProviderRegistration() {
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex gap-3 mt-6">
-          {currentStep > 1 && (
-            <button
-              onClick={() => setCurrentStep(currentStep - 1)}
-              className="flex-1 py-3 border border-gray-300 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50"
-            >
-              <ChevronLeft className="w-5 h-5" /> Back
-            </button>
+        <div className="space-y-3 mt-6">
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
           )}
-          {currentStep < totalSteps ? (
-            <button
-              onClick={() => setCurrentStep(currentStep + 1)}
-              className="flex-1 py-3 bg-orange-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600"
-            >
-              Continue <ChevronRight className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={!formData.agreeTerms || !formData.agreeKYC || isSubmitting}
-              className="flex-1 py-3 bg-orange-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Submitting..." : "Submit Application"}
-            </button>
-          )}
+          
+          <div className="flex gap-3">
+            {currentStep > 1 && (
+              <button
+                onClick={() => setCurrentStep(currentStep - 1)}
+                disabled={isSubmitting}
+                className="flex-1 py-3 border border-gray-300 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-5 h-5" /> Back
+              </button>
+            )}
+            {currentStep < totalSteps ? (
+              <button
+                onClick={() => setCurrentStep(currentStep + 1)}
+                className="flex-1 py-3 bg-orange-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600"
+              >
+                Continue <ChevronRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={!formData.agreeTerms || !formData.agreeKYC || isSubmitting}
+                className="flex-1 py-3 bg-orange-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Submitting..." : "Submit Application"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

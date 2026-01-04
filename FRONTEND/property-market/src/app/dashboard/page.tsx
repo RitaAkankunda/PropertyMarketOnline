@@ -129,31 +129,13 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
   
-  // Check if user is a service provider and redirect them
+  // Redirect service providers to their specific dashboard
   useEffect(() => {
     if (!authLoading && isAuthenticated && user) {
-      // Check if user has a provider profile by trying to get their provider jobs
-      // This is a more efficient way to check if they're a provider
-      const checkProviderProfile = async () => {
-        try {
-          // Try to get provider jobs - if this succeeds, user is a provider
-          await providerService.getProviderJobs(undefined, 1, 1);
-          // If we get here, user is a provider, redirect them
-          console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
-          router.replace('/dashboard/provider');
-        } catch (error: any) {
-          // If 404 or 403, user is not a provider, continue with normal dashboard
-          if (error?.response?.status === 404 || error?.response?.status === 403) {
-            console.log('[DASHBOARD] User is not a service provider, showing property dashboard');
-            // User is not a provider, continue with normal flow
-          } else {
-            console.error('[DASHBOARD] Error checking provider profile:', error);
-            // Continue with normal flow if check fails
-          }
-        }
-      };
-      
-      checkProviderProfile();
+      if (user.role === 'service_provider') {
+        console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
+        router.replace('/dashboard/provider');
+      }
     }
   }, [authLoading, isAuthenticated, user, router]);
   

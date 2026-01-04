@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,22 @@ export function Header() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    if (profileMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [profileMenuOpen]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -86,32 +102,43 @@ export function Header() {
                 >
                   <MessageSquare className="h-5 w-5" />
                 </Link>
-                <div className="relative group">
-                  <button className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors">
+                <div className="relative" ref={profileMenuRef}>
+                  <button 
+                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
                     <User className="h-5 w-5" />
                     <span className="text-sm">{user?.firstName}</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", profileMenuOpen && "rotate-180")} />
                   </button>
-                  <div className="absolute right-0 mt-2 w-48 py-2 bg-background rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                    <Link
-                      href="/profile"
-                      className="block px-4 py-2 text-sm hover:bg-accent"
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      href="/settings"
-                      className="block px-4 py-2 text-sm hover:bg-accent"
-                    >
-                      Settings
-                    </Link>
-                    <hr className="my-2" />
-                    <button
-                      onClick={() => logout()}
-                      className="block w-full text-left px-4 py-2 text-sm text-destructive hover:bg-accent"
-                    >
-                      Logout
-                    </button>
-                  </div>
+                  {profileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 py-2 bg-background rounded-lg shadow-lg border z-50">
+                      <Link
+                        href="/profile"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="block px-4 py-2 text-sm hover:bg-accent"
+                      >
+                        Profile
+                      </Link>
+                      <Link
+                        href="/settings"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="block px-4 py-2 text-sm hover:bg-accent"
+                      >
+                        Settings
+                      </Link>
+                      <hr className="my-2" />
+                      <button
+                        onClick={() => {
+                          logout();
+                          setProfileMenuOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-destructive hover:bg-accent"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

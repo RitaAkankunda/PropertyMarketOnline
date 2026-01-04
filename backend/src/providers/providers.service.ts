@@ -145,11 +145,10 @@ export class ProvidersService {
         return providerWithUser || updatedProvider;
       }
 
-      // Update user role to PROPERTY_MANAGER if not already a provider
-      // Note: LISTER role can also be a provider, so we don't change their role
-      if (user.role !== UserRole.PROPERTY_MANAGER && user.role !== UserRole.LISTER) {
+      // Update user role to SERVICE_PROVIDER when they register as a provider
+      if (user.role !== UserRole.SERVICE_PROVIDER) {
         try {
-          await this.usersService.updateRole(userId, UserRole.PROPERTY_MANAGER);
+          await this.usersService.updateRole(userId, UserRole.SERVICE_PROVIDER);
         } catch (roleError) {
           console.warn('[PROVIDERS] Failed to update user role, continuing with provider creation:', roleError.message);
           // Continue with provider creation even if role update fails

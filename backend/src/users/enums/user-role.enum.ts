@@ -3,5 +3,6 @@ export enum UserRole {
   RENTER = 'renter',
   LISTER = 'lister',
   PROPERTY_MANAGER = 'property_manager',
+  SERVICE_PROVIDER = 'service_provider',
   ADMIN = 'admin',
 }

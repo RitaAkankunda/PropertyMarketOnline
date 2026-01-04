@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { providerService } from "@/services";
+import { useAuthStore } from "@/store";
+import { useRequireRole } from "@/hooks/use-auth";
 import type { Job as ApiJob, JobStatus as ApiJobStatus } from "@/types";
 import {
   Briefcase,
@@ -525,6 +528,22 @@ function ChatModal({
 // MAIN DASHBOARD COMPONENT
 // =============================================
 export default function ProviderDashboard() {
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  
+  // Protect route: Only SERVICE_PROVIDER can access
+  const { hasAccess } = useRequireRole(['service_provider'], '/dashboard');
+  
+  // Redirect non-providers to regular dashboard
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user) {
+      if (user.role !== 'service_provider') {
+        console.log('[PROVIDER DASHBOARD] User is not a service provider, redirecting to regular dashboard');
+        router.replace('/dashboard');
+      }
+    }
+  }, [authLoading, isAuthenticated, user, router]);
+  
   const [activeTab, setActiveTab] = useState<TabType>("jobs");
   const [jobFilter, setJobFilter] = useState<JobStatus | "all">("all");
   const [jobs, setJobs] = useState<DisplayJob[]>([]);
