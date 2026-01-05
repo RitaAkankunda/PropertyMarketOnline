@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { User, Mail, Phone, Building2, Save, ArrowLeft } from "lucide-react";
+import { User, Mail, Phone, Building2, Save, ArrowLeft, Camera, Upload } from "lucide-react";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { authService } from "@/services/auth.service";
@@ -27,6 +27,9 @@ export default function ProfilePage() {
   const { success, error } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -52,6 +55,10 @@ export default function ProfilePage() {
         email: user.email || "",
         phone: user.phone || "",
       });
+      // Set avatar preview if user has one
+      if (user.avatar) {
+        setAvatarPreview(user.avatar);
+      }
     }
   }, [user, reset]);
 
@@ -62,12 +69,50 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, router]);
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        error("Please select an image file");
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        error("Image size must be less than 5MB");
+        return;
+      }
+      
+      setAvatarFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const onSubmit = async (data: ProfileFormData) => {
     if (!user) return;
 
     setIsSaving(true);
     try {
-      const updatedUser = await authService.updateProfile(data);
+      // TODO: Upload avatar file if changed
+      // For now, we'll just update the text fields
+      // In a real implementation, you would:
+      // 1. Upload the image to Cloudflare R2 or your storage
+      // 2. Get the URL back
+      // 3. Include it in the update
+      
+      const updateData = {
+        ...data,
+        // avatar: uploadedImageUrl (if avatar was changed)
+      };
+      
+      const updatedUser = await authService.updateProfile(updateData);
       updateUser(updatedUser);
       
       success("Your profile has been updated successfully.");
@@ -121,7 +166,50 @@ export default function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Profile Picture Upload */}
+                <div className="flex flex-col items-center space-y-4 pb-6 border-b">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-2xl font-medium overflow-hidden">
+                      {avatarPreview ? (
+                        <img 
+                          src={avatarPreview} 
+                          alt="Profile" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors shadow-lg"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Upload Profile Picture
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1">
+                      JPG, PNG or GIF (max 5MB)
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="First Name"

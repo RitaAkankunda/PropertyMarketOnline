@@ -107,7 +107,18 @@ export function Header() {
                     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                     className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
-                    <User className="h-5 w-5" />
+                    {/* Profile Picture Circle */}
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
+                      {user?.avatar ? (
+                        <img 
+                          src={user.avatar} 
+                          alt={user.firstName || "User"} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+                      )}
+                    </div>
                     <span className="text-sm">{user?.firstName}</span>
                     <ChevronDown className={cn("h-4 w-4 transition-transform", profileMenuOpen && "rotate-180")} />
                   </button>
@@ -214,9 +225,20 @@ export function Header() {
                   <Link
                     href="/profile"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium hover:bg-accent"
+                    className="flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-accent"
                   >
-                    <User className="h-5 w-5" />
+                    {/* Profile Picture Circle */}
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-medium overflow-hidden flex-shrink-0">
+                      {user?.avatar ? (
+                        <img 
+                          src={user.avatar} 
+                          alt={user.firstName || "User"} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+                      )}
+                    </div>
                     <span>Profile</span>
                   </Link>
                   <button
