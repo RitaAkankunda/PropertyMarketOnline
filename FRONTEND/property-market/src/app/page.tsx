@@ -538,7 +538,7 @@ export default function HomePage() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
                 <Link
-                  href="/providers/register"
+                  href="/auth/register/provider"
                   className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   Become a Provider
