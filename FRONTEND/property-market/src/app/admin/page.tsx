@@ -13,51 +13,91 @@ import {
   FileText,
   Shield,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { useAuthStore } from "@/store";
 import { useRouter } from "next/navigation";
-
-interface DashboardStats {
-  totalUsers: number;
-  totalProviders: number;
-  pendingVerifications: number;
-  totalProperties: number;
-  revenue: number;
-  activeListings: number;
-}
+import { adminService } from "@/services";
+import type { AdminStats } from "@/services/admin.service";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [stats] = useState<DashboardStats>({
-    totalUsers: 1234,
-    totalProviders: 156,
-    pendingVerifications: 23,
-    totalProperties: 892,
-    revenue: 45000000,
-    activeListings: 734,
-  });
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await adminService.getStats();
+      setStats(data);
+    } catch (err: any) {
+      console.error("Failed to fetch admin stats:", err);
+      setError(err.message || "Failed to load statistics");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Check if user is admin
     if (!user || user.role !== "admin") {
       router.push("/dashboard");
+      return;
     }
+    
+    // Fetch stats on mount
+    fetchStats();
+    
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    
+    return () => clearInterval(interval);
   }, [user, router]);
+
+  if (!user || user.role !== "admin") {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-semibold mb-2">Failed to Load Dashboard</h2>
+          <p className="text-muted-foreground mb-4">{error || "Something went wrong"}</p>
+          <Button onClick={fetchStats}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
 
   const statCards = [
     {
       title: "Total Users",
       value: stats.totalUsers.toLocaleString(),
-      change: "+12.5%",
+      change: "",
       icon: Users,
       color: "blue",
     },
     {
       title: "Service Providers",
       value: stats.totalProviders.toLocaleString(),
-      change: "+8.2%",
+      change: "",
       icon: BadgeCheck,
       color: "green",
     },
@@ -71,7 +111,7 @@ export default function AdminDashboardPage() {
     {
       title: "Total Properties",
       value: stats.totalProperties.toLocaleString(),
-      change: "+15.3%",
+      change: "",
       icon: Building2,
       color: "purple",
     },
@@ -173,9 +213,20 @@ export default function AdminDashboardPage() {
                 Manage and monitor your platform
               </p>
             </div>
-            <Link href="/dashboard">
-              <Button variant="outline">Back to Dashboard</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={fetchStats}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Link href="/dashboard">
+                <Button variant="outline">Back to Dashboard</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

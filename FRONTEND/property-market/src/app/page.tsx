@@ -39,14 +39,6 @@ const heroCategories = [
   { id: "list", label: "List Property", icon: TrendingUp, href: "/listings/create" },
 ];
 
-// Stats - Will be fetched from API
-const stats = [
-  { value: "-", label: "Properties Listed" },
-  { value: "-", label: "Happy Customers" },
-  { value: "-", label: "Service Providers" },
-  { value: "-", label: "Satisfaction Rate" },
-];
-
 // Features
 const features = [
   {
@@ -168,6 +160,36 @@ const whyChooseUs = [
 export default function HomePage() {
   const [propertiesByType, setPropertiesByType] = useState<Record<PropertyType, Property[]>>({} as Record<PropertyType, Property[]>);
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState([
+    { value: "-", label: "Properties Listed" },
+    { value: "-", label: "Happy Customers" },
+    { value: "-", label: "Service Providers" },
+    { value: "-", label: "Satisfaction Rate" },
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Fetch properties count
+        const propertiesResponse = await propertyService.getProperties({}, 1, 1);
+        const totalProperties = propertiesResponse.meta?.total || 0;
+        
+        // Fetch providers count (this would need an API endpoint)
+        // For now, we'll use a placeholder
+        
+        setStats([
+          { value: totalProperties.toLocaleString(), label: "Properties Listed" },
+          { value: "-", label: "Happy Customers" },
+          { value: "-", label: "Service Providers" },
+          { value: "-", label: "Satisfaction Rate" },
+        ]);
+      } catch (error) {
+        console.error('[HOME PAGE] Failed to fetch stats:', error);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   useEffect(() => {
     const fetchProperties = async () => {

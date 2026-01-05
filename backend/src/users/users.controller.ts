@@ -73,6 +73,7 @@ export class UsersController {
     const totalUsers = await this.usersService.getTotalUsersCount();
     const totalListers = await this.usersService.getUsersByRole(UserRole.LISTER);
     const totalPropertyManagers = await this.usersService.getUsersByRole(UserRole.PROPERTY_MANAGER);
+    const totalServiceProviders = await this.usersService.getUsersByRole(UserRole.SERVICE_PROVIDER);
     const totalBuyers = await this.usersService.getUsersByRole(UserRole.BUYER);
     const totalRenters = await this.usersService.getUsersByRole(UserRole.RENTER);
 
@@ -82,13 +83,14 @@ export class UsersController {
 
     return {
       totalUsers,
-      totalProviders: totalListers + totalPropertyManagers, // Service providers are listers + property managers
+      totalProviders: totalServiceProviders, // Service providers with dedicated role
       pendingVerifications: 0, // TODO: Implement verification system
       totalProperties,
       revenue: 0, // TODO: Implement revenue tracking
       activeListings,
       totalListers,
       totalPropertyManagers,
+      totalServiceProviders,
       totalBuyers,
       totalRenters,
     };

@@ -9,6 +9,7 @@ export interface AdminStats {
   activeListings: number;
   totalListers: number;
   totalPropertyManagers: number;
+  totalServiceProviders: number;
   totalBuyers: number;
   totalRenters: number;
 }
