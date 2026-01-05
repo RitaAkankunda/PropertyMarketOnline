@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { providerService } from "@/services";
+import { providerService, authService } from "@/services";
 import { useAuthStore } from "@/store";
 import {
   User,
@@ -188,7 +188,36 @@ export default function ProviderRegistration() {
       setIsSubmitting(true);
       setError(null);
       
-      // Prepare provider registration data
+      // Step 1: Create user account (if not already logged in)
+      if (!user) {
+        // Validate account fields
+        if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
+          throw new Error("Please fill in all required account information");
+        }
+        
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error("Passwords do not match");
+        }
+        
+        if (formData.password.length < 8) {
+          throw new Error("Password must be at least 8 characters long");
+        }
+        
+        // Create account
+        const { user: newUser, token } = await authService.register({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          role: "buyer", // Default role, will be changed to service_provider
+        });
+        
+        // Store auth token
+        useAuthStore.getState().setAuth(newUser, token);
+      }
+      
+      // Step 2: Register as provider
       const providerData = {
         businessName: formData.businessName,
         serviceTypes: formData.serviceTypes,
@@ -216,7 +245,7 @@ export default function ProviderRegistration() {
       // Call backend API to register provider
       await providerService.register(providerData);
       
-      // Refresh user profile to get updated role
+      // Step 3: Refresh user profile to get updated role
       await refreshProfile();
       
       // Show success screen
@@ -686,98 +715,108 @@ export default function ProviderRegistration() {
 
               {/* Rate Input */}
               {formData.pricingType === "hourly" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate (UGX) *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">UGX</span>
-                      <input
-                        type="number"
-                        value={formData.hourlyRateUGX}
-                        onChange={(e) => updateForm("hourlyRateUGX", e.target.value)}
-                        placeholder="50,000"
-                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">/hr</span>
+                <div>
+                  {formData.currency === "UGX" ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">UGX</span>
+                        <input
+                          type="number"
+                          value={formData.hourlyRateUGX}
+                          onChange={(e) => updateForm("hourlyRateUGX", e.target.value)}
+                          placeholder="50,000"
+                          className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">/hr</span>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate (USD) <span className="text-gray-400 text-xs">(Optional)</span></label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                      <input
-                        type="number"
-                        value={formData.hourlyRateUSD}
-                        onChange={(e) => updateForm("hourlyRateUSD", e.target.value)}
-                        placeholder="15"
-                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">/hr</span>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <input
+                          type="number"
+                          value={formData.hourlyRateUSD}
+                          onChange={(e) => updateForm("hourlyRateUSD", e.target.value)}
+                          placeholder="15"
+                          className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">/hr</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               {formData.pricingType === "fixed" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Starting Rate (UGX) *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">From UGX</span>
-                      <input
-                        type="number"
-                        value={formData.minimumChargeUGX}
-                        onChange={(e) => updateForm("minimumChargeUGX", e.target.value)}
-                        placeholder="100,000"
-                        className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      />
+                <div>
+                  {formData.currency === "UGX" ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Starting Rate *</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">From UGX</span>
+                        <input
+                          type="number"
+                          value={formData.minimumChargeUGX}
+                          onChange={(e) => updateForm("minimumChargeUGX", e.target.value)}
+                          placeholder="100,000"
+                          className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Starting Rate (USD) <span className="text-gray-400 text-xs">(Optional)</span></label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">From $</span>
-                      <input
-                        type="number"
-                        value={formData.minimumChargeUSD}
-                        onChange={(e) => updateForm("minimumChargeUSD", e.target.value)}
-                        placeholder="30"
-                        className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      />
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Starting Rate *</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">From $</span>
+                        <input
+                          type="number"
+                          value={formData.minimumChargeUSD}
+                          onChange={(e) => updateForm("minimumChargeUSD", e.target.value)}
+                          placeholder="30"
+                          className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               {/* Minimum Charge */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Charge (UGX)</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">UGX</span>
-                    <input
-                      type="number"
-                      value={formData.minimumChargeUGX}
-                      onChange={(e) => updateForm("minimumChargeUGX", e.target.value)}
-                      placeholder="50,000"
-                      className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    />
+              <div>
+                {formData.currency === "UGX" ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Charge</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">UGX</span>
+                      <input
+                        type="number"
+                        value={formData.minimumChargeUGX}
+                        onChange={(e) => updateForm("minimumChargeUGX", e.target.value)}
+                        placeholder="50,000"
+                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Minimum amount for any job</p>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Charge (USD) <span className="text-gray-400 text-xs">(Optional)</span></label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      value={formData.minimumChargeUSD}
-                      onChange={(e) => updateForm("minimumChargeUSD", e.target.value)}
-                      placeholder="15"
-                      className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    />
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Charge</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="number"
+                        value={formData.minimumChargeUSD}
+                        onChange={(e) => updateForm("minimumChargeUSD", e.target.value)}
+                        placeholder="15"
+                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Minimum amount for any job</p>
                   </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Minimum amount for any job</p>
+                )}
               </div>
 
               {/* Commission Info */}
