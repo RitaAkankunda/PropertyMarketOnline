@@ -86,9 +86,16 @@ export const useAuthStore = create<AuthStore>()(
 
       refreshProfile: async () => {
         try {
+          console.log('[AUTH STORE] Refreshing user profile...');
           const user = await authService.getProfile();
+          console.log('[AUTH STORE] Profile refreshed:', {
+            id: user?.id,
+            email: user?.email,
+            role: user?.role,
+          });
           set({ user });
         } catch (error) {
+          console.error('[AUTH STORE] Failed to refresh profile:', error);
           // If profile fetch fails, logout
           get().logout();
         }

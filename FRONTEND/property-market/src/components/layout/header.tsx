@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck, ChevronDown } from "lucide-react";
+import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck, ChevronDown, Briefcase, Wallet, Settings } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
@@ -24,12 +24,40 @@ const authNavLinks = [
   { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
+const adminNavLinks = [
+  { href: "/admin", label: "Admin Dashboard", icon: Home },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
+];
+
+const providerNavLinks = [
+  { href: "/dashboard/provider", label: "Provider Dashboard", icon: Briefcase },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
+];
+
 export function Header() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Check if user is a service provider
+  const isServiceProvider = user?.role === 'service_provider' || user?.role === 'property_manager';
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
+  
+  // Get role badge info
+  const getRoleBadge = () => {
+    if (isAdmin) {
+      return { label: 'Admin', color: 'bg-purple-100 text-purple-700 border-purple-200' };
+    }
+    if (isServiceProvider) {
+      return { label: 'Provider', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    }
+    return { label: 'Lister', color: 'bg-green-100 text-green-700 border-green-200' };
+  };
+  
+  const roleBadge = getRoleBadge();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -71,25 +99,64 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            {isAuthenticated &&
-              authNavLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                    pathname === link.href && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {isAuthenticated && (
+                isAdmin ? (
+                  adminNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        pathname === link.href && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  ))
+                ) : isServiceProvider ? (
+                  // Show only provider links for service providers
+                  providerNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        pathname === link.href && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  ))
+                ) : (
+                  // Show lister links for regular users
+                  authNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        pathname === link.href && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  ))
+                )
+              )}
           </nav>
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
+                {/* Role Badge */}
+                <div className={cn(
+                  "px-2.5 py-1 rounded-md text-xs font-medium border",
+                  roleBadge.color
+                )}>
+                  {roleBadge.label}
+                </div>
+                
                 <Link
                   href="/notifications"
                   className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -119,25 +186,101 @@ export function Header() {
                         <span>{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
                       )}
                     </div>
-                    <span className="text-sm">{user?.firstName}</span>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-medium">{user?.firstName}</span>
+                      <span className="text-xs text-muted-foreground">{user?.email}</span>
+                    </div>
                     <ChevronDown className={cn("h-4 w-4 transition-transform", profileMenuOpen && "rotate-180")} />
                   </button>
                   {profileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 py-2 bg-background rounded-lg shadow-lg border z-50">
-                      <Link
-                        href="/profile"
-                        onClick={() => setProfileMenuOpen(false)}
-                        className="block px-4 py-2 text-sm hover:bg-accent"
-                      >
-                        Profile
-                      </Link>
-                      <Link
-                        href="/settings"
-                        onClick={() => setProfileMenuOpen(false)}
-                        className="block px-4 py-2 text-sm hover:bg-accent"
-                      >
-                        Settings
-                      </Link>
+                    <div className="absolute right-0 mt-2 w-56 py-2 bg-background rounded-lg shadow-lg border z-50">
+                      {isAdmin ? (
+                        <>
+                          <Link
+                            href="/admin"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                          >
+                            <Home className="h-4 w-4" />
+                            Admin Dashboard
+                          </Link>
+                          <hr className="my-2" />
+                          <Link
+                            href="/profile"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent"
+                          >
+                            Profile
+                          </Link>
+                          <Link
+                            href="/settings"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent"
+                          >
+                            Settings
+                          </Link>
+                        </>
+                      ) : isServiceProvider ? (
+                        <>
+                          <Link
+                            href="/dashboard/provider"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                          >
+                            <Briefcase className="h-4 w-4" />
+                            Provider Dashboard
+                          </Link>
+                          <Link
+                            href="/dashboard/provider?tab=profile"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                          >
+                            <User className="h-4 w-4" />
+                            My Provider Profile
+                          </Link>
+                          <Link
+                            href="/dashboard/provider?tab=earnings"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                          >
+                            <Wallet className="h-4 w-4" />
+                            Earnings
+                          </Link>
+                          <hr className="my-2" />
+                          <Link
+                            href="/profile"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent"
+                          >
+                            Account Profile
+                          </Link>
+                          <Link
+                            href="/settings"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                          >
+                            <Settings className="h-4 w-4" />
+                            Settings
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            href="/profile"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent"
+                          >
+                            Profile
+                          </Link>
+                          <Link
+                            href="/settings"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="block px-4 py-2 text-sm hover:bg-accent"
+                          >
+                            Settings
+                          </Link>
+                        </>
+                      )}
                       <hr className="my-2" />
                       <button
                         onClick={() => {
@@ -204,21 +347,56 @@ export function Header() {
                   <span>{link.label}</span>
                 </Link>
               ))}
-              {isAuthenticated &&
-                authNavLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
-                      pathname === link.href && "bg-accent"
-                    )}
-                  >
-                    <link.icon className="h-5 w-5" />
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
+              {isAuthenticated && (
+                isAdmin ? (
+                  adminNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
+                        pathname === link.href && "bg-accent"
+                      )}
+                    >
+                      <link.icon className="h-5 w-5" />
+                      <span>{link.label}</span>
+                    </Link>
+                  ))
+                ) : isServiceProvider ? (
+                  // Show only provider links for service providers
+                  providerNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
+                        pathname === link.href && "bg-accent"
+                      )}
+                    >
+                      <link.icon className="h-5 w-5" />
+                      <span>{link.label}</span>
+                    </Link>
+                  ))
+                ) : (
+                  // Show lister links for regular users
+                  authNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
+                        pathname === link.href && "bg-accent"
+                      )}
+                    >
+                      <link.icon className="h-5 w-5" />
+                      <span>{link.label}</span>
+                    </Link>
+                  ))
+                )
+              )}
               <hr className="my-2" />
               {isAuthenticated ? (
                 <>

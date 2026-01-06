@@ -153,7 +153,32 @@ const CATEGORIES = [
 
 // Helper function to format provider data for display
 function formatProviderForDisplay(provider: ServiceProvider) {
-  const primaryService = provider.serviceTypes[0] || "other";
+  // Map database service type values back to category IDs for display
+  // This handles cases where registration mapped IDs to database values
+  const serviceTypeToCategoryMap: Record<string, string> = {
+    'security_services': 'security',
+    'appliance_repair': 'appliance_repair',
+    'interior_designer': 'interior_designer',
+    // Add other mappings as needed
+  };
+  
+  const rawServiceType = provider.serviceTypes && provider.serviceTypes.length > 0 
+    ? provider.serviceTypes[0] 
+    : "other";
+  
+  const primaryService = serviceTypeToCategoryMap[rawServiceType] || rawServiceType;
+  
+  // Debug logging for missing service types
+  if (rawServiceType === "other" || !CATEGORIES.find(c => c.id === primaryService)) {
+    console.warn('[PROVIDERS] Provider missing or unmapped service type:', {
+      businessName: provider.businessName,
+      serviceTypes: provider.serviceTypes,
+      rawServiceType,
+      primaryService,
+      hasCategory: !!CATEGORIES.find(c => c.id === primaryService),
+    });
+  }
+  
   const locationStr = provider.location.district 
     ? `${provider.location.city}, ${provider.location.district}`
     : provider.location.city;
@@ -813,6 +838,7 @@ function ProviderCard({
 }) {
   const category = CATEGORIES.find((c) => c.id === provider.category);
   const Icon = category?.icon || Users;
+  const categoryName = category?.name || provider.category || "Service Provider";
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg transition-shadow">
@@ -828,7 +854,7 @@ function ProviderCard({
               <CheckCircle className="w-4 h-4 text-green-500" />
             )}
           </div>
-          <p className="text-sm text-gray-500">{category?.name}</p>
+          <p className="text-sm text-gray-500">{categoryName}</p>
         </div>
       </div>
 

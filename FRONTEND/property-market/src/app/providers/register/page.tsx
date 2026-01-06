@@ -259,6 +259,7 @@ export default function ProviderRegisterPage() {
       isAuthenticated,
       authLoading,
       dataKeys: Object.keys(data),
+      formData: data,
     });
     
     setIsFormSubmitting(true);
@@ -273,12 +274,65 @@ export default function ProviderRegisterPage() {
 
     // If user is authenticated but form thinks they need account, use regular registration
     const shouldUseCompleteRegistration = !isAuthenticated && needsAccount;
+    
+    console.log('[PROVIDER REGISTRATION] Registration type:', {
+      shouldUseCompleteRegistration,
+      isAuthenticated,
+      needsAccount,
+    });
 
     try {
       if (shouldUseCompleteRegistration) {
         // User is not logged in - use complete registration endpoint
         const completeData = data as CompleteProviderFormData;
         console.log("[PROVIDER REGISTRATION] Creating account and provider profile...");
+        
+        // Validate required fields before sending
+        if (!completeData.email || !completeData.password || !completeData.firstName || !completeData.lastName) {
+          throw new Error("Please fill in all required account information");
+        }
+        
+        if (!completeData.businessName || !completeData.serviceTypes || completeData.serviceTypes.length === 0) {
+          throw new Error("Please provide business name and select at least one service type");
+        }
+        
+        if (!completeData.description || completeData.description.length < 50) {
+          throw new Error("Description must be at least 50 characters long");
+        }
+        
+        if (!completeData.availableDays || completeData.availableDays.length === 0) {
+          throw new Error("Please select at least one available day");
+        }
+        
+        if (!completeData.city) {
+          throw new Error("Please provide a city");
+        }
+        
+        if (!completeData.serviceRadius || completeData.serviceRadius < 1) {
+          throw new Error("Service radius must be at least 1 km");
+        }
+        
+        // Validate pricing based on type
+        if (completeData.pricingType === "hourly" && (!completeData.hourlyRate || completeData.hourlyRate <= 0)) {
+          throw new Error("Please provide an hourly rate when pricing type is hourly");
+        }
+        
+        if (completeData.pricingType === "fixed" && (!completeData.minimumCharge || completeData.minimumCharge <= 0)) {
+          throw new Error("Please provide a minimum charge when pricing type is fixed");
+        }
+        
+        console.log('[PROVIDER REGISTRATION] Sending registration data:', {
+          email: completeData.email,
+          businessName: completeData.businessName,
+          serviceTypes: completeData.serviceTypes,
+          descriptionLength: completeData.description?.length,
+          pricingType: completeData.pricingType,
+          hasHourlyRate: !!completeData.hourlyRate,
+          hasMinimumCharge: !!completeData.minimumCharge,
+          availableDays: completeData.availableDays,
+          city: completeData.city,
+          serviceRadius: completeData.serviceRadius,
+        });
         
         const result = await providerService.registerComplete({
           email: completeData.email,
@@ -388,17 +442,58 @@ export default function ProviderRegisterPage() {
           return;
         }
         
+        // Handle 409 Conflict (email already exists)
+        if (axiosError.response?.status === 409 || axiosError.response?.status === 400) {
+          // Safely extract error message - handle both string and object responses
+          let errorMessage: string = "";
+          if (axiosError.response?.data?.message) {
+            errorMessage = typeof axiosError.response.data.message === 'string' 
+              ? axiosError.response.data.message 
+              : JSON.stringify(axiosError.response.data.message);
+          } else if (axiosError.response?.data) {
+            // If data is an object/array, try to extract meaningful message
+            if (Array.isArray(axiosError.response.data)) {
+              errorMessage = axiosError.response.data.map((e: any) => 
+                typeof e === 'string' ? e : e.message || JSON.stringify(e)
+              ).join(', ');
+            } else if (typeof axiosError.response.data === 'object') {
+              errorMessage = axiosError.response.data.message || JSON.stringify(axiosError.response.data);
+            } else {
+              errorMessage = String(axiosError.response.data);
+            }
+          } else if (axiosError.message) {
+            errorMessage = typeof axiosError.message === 'string' ? axiosError.message : String(axiosError.message);
+          }
+          
+          // Check if error is about email/account
+          const errorLower = errorMessage.toLowerCase();
+          if (errorLower.includes('email') || errorLower.includes('already exists')) {
+            setError("An account with this email already exists. Please login instead, then complete your provider registration.");
+          } else {
+            setError(errorMessage || "Registration failed. Please check all fields and try again.");
+          }
+          return;
+        }
+        
         // Handle other HTTP errors
         if (axiosError.response?.data?.message) {
           setError(axiosError.response.data.message);
           return;
         }
+        
+        // Handle network errors
+        if (axiosError.code === 'ERR_NETWORK' || axiosError.message?.includes('Network Error')) {
+          setError("Cannot connect to server. Please check your internet connection and ensure the backend server is running.");
+          return;
+        }
       }
       
       if (err instanceof Error) {
+        console.error('[PROVIDER REGISTRATION] Error object:', err);
         setError(err.message || "Registration failed. Please try again.");
       } else {
-        setError("An error occurred. Please try again.");
+        console.error('[PROVIDER REGISTRATION] Unknown error:', err);
+        setError("An error occurred. Please try again. Check the console for details.");
       }
     }
   };

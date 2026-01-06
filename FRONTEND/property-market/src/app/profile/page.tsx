@@ -141,11 +141,18 @@ export default function ProfilePage() {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => router.back()}
+            onClick={() => {
+              // If admin, go back to admin dashboard, otherwise go back
+              if (user?.role === 'admin') {
+                router.push('/admin');
+              } else {
+                router.back();
+              }
+            }}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {user?.role === 'admin' ? 'Back to Admin Dashboard' : 'Back'}
           </Button>
           <h1 className="text-3xl font-bold text-slate-900">Profile Settings</h1>
           <p className="text-muted-foreground mt-2">

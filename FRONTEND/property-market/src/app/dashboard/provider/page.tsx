@@ -550,8 +550,26 @@ export default function ProviderDashboard() {
   const [selectedJob, setSelectedJob] = useState<DisplayJob | null>(null);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
+  const [providerProfile, setProviderProfile] = useState<{ businessName?: string } | null>(null);
   const [messages] = useState<Message[]>([]); // TODO: Implement real messages API
   const [transactions] = useState<Transaction[]>([]); // TODO: Implement real transactions API
+
+  // Fetch provider profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await providerService.getMyProfile();
+        setProviderProfile(profile);
+      } catch (err) {
+        console.error("Error fetching provider profile:", err);
+        // Don't show error, just use fallback
+      }
+    };
+    
+    if (isAuthenticated && user?.role === 'service_provider') {
+      fetchProfile();
+    }
+  }, [isAuthenticated, user]);
 
   // Fetch jobs from backend
   useEffect(() => {
@@ -656,12 +674,13 @@ export default function ProviderDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Provider Dashboard</h1>
-              <p className="text-orange-100">ElectroPro Services</p>
+              <p className="text-orange-100">
+                {providerProfile?.businessName || user?.firstName + ' ' + user?.lastName || 'Service Provider'}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <button className="p-2 bg-white/20 rounded-lg relative">
                 <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">3</span>
               </button>
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5" />
@@ -1024,31 +1043,33 @@ export default function ProviderDashboard() {
               </div>
             </div>
 
-            {/* Recent Withdrawals */}
-            <div className="bg-white rounded-xl shadow-sm">
-              <div className="p-4 border-b">
-                <h3 className="font-semibold text-gray-900">Recent Withdrawals</h3>
-              </div>
-              <div className="divide-y">
-                {DUMMY_TRANSACTIONS.filter(t => t.type === "withdrawal").map((txn) => (
-                  <div key={txn.id} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                        <ArrowUpRight className="w-5 h-5 text-orange-600" />
+            {/* Recent Withdrawals - Only show if there are transactions */}
+            {transactions.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm">
+                <div className="p-4 border-b">
+                  <h3 className="font-semibold text-gray-900">Recent Withdrawals</h3>
+                </div>
+                <div className="divide-y">
+                  {transactions.filter(t => t.type === "withdrawal").map((txn) => (
+                    <div key={txn.id} className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                          <ArrowUpRight className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{txn.description}</p>
+                          <p className="text-xs text-gray-500">{txn.date}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{txn.description}</p>
-                        <p className="text-xs text-gray-500">{txn.date}</p>
+                      <div className="text-right">
+                        <span className="font-bold text-gray-900">UGX {Math.abs(txn.amount).toLocaleString()}</span>
+                        <p className="text-xs text-green-600">Completed</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold text-gray-900">UGX {Math.abs(txn.amount).toLocaleString()}</span>
-                      <p className="text-xs text-green-600">Completed</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

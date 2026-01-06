@@ -129,17 +129,30 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
   
-  // Redirect service providers to their specific dashboard
+  // Check if user has a provider profile and sync role if needed
   useEffect(() => {
-    if (!authLoading && isAuthenticated && user) {
-      if (user.role === 'service_provider') {
-        console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
-        router.replace('/dashboard/provider');
+    const checkAndSyncRole = async () => {
+      if (!authLoading && isAuthenticated && user) {
+        // If user is admin, redirect to admin dashboard
+        if (user.role === 'admin') {
+          console.log('[DASHBOARD] User is an admin, redirecting to admin dashboard');
+          router.replace('/admin');
+          return;
+        }
+        
+        // If role is already service_provider, redirect to provider dashboard
+        if (user.role === 'service_provider') {
+          console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
+          router.replace('/dashboard/provider');
+          return;
+        }
       }
-    }
+    };
+    
+    checkAndSyncRole();
   }, [authLoading, isAuthenticated, user, router]);
   
-  // Protect route: Only LISTER, PROPERTY_MANAGER can access
+  // Protect route: Only LISTER, PROPERTY_MANAGER can access (admins and service_providers are redirected above)
   const { hasAccess } = useRequireRole(
     ['lister', 'property_manager'],
     '/'

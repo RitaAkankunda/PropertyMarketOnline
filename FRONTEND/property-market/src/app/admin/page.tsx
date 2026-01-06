@@ -7,7 +7,6 @@ import {
   Building2,
   BadgeCheck,
   AlertCircle,
-  TrendingUp,
   Settings,
   BarChart3,
   FileText,
@@ -19,23 +18,38 @@ import { Button, Card, Badge } from "@/components/ui";
 import { useAuthStore } from "@/store";
 import { useRouter } from "next/navigation";
 import { adminService } from "@/services";
-import type { AdminStats } from "@/services/admin.service";
+import type { AdminStats, AdminActivity } from "@/services/admin.service";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [activities, setActivities] = useState<AdminActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Debug: Log user role on mount
+  useEffect(() => {
+    console.log('[ADMIN PAGE] User state:', {
+      hasUser: !!user,
+      userRole: user?.role,
+      userEmail: user?.email,
+      fullUser: user,
+    });
+  }, [user]);
 
   const fetchStats = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await adminService.getStats();
-      setStats(data);
+      const [statsData, activitiesData] = await Promise.all([
+        adminService.getStats(),
+        adminService.getActivities(),
+      ]);
+      setStats(statsData);
+      setActivities(activitiesData);
     } catch (err: any) {
-      console.error("Failed to fetch admin stats:", err);
+      console.error("Failed to fetch admin data:", err);
       setError(err.message || "Failed to load statistics");
     } finally {
       setIsLoading(false);
@@ -43,8 +57,15 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
+    // Wait for user to load
+    if (!user) {
+      console.log('[ADMIN PAGE] User not loaded yet');
+      return;
+    }
+
     // Check if user is admin
-    if (!user || user.role !== "admin") {
+    if (user.role !== "admin") {
+      console.log('[ADMIN PAGE] User is not admin. Role:', user.role, 'User:', user);
       router.push("/dashboard");
       return;
     }
@@ -57,6 +78,18 @@ export default function AdminDashboardPage() {
     
     return () => clearInterval(interval);
   }, [user, router]);
+
+  // Show loading state while checking auth
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user || user.role !== "admin") {
     return null;
@@ -163,36 +196,6 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  const recentActivity = [
-    {
-      id: 1,
-      type: "verification",
-      message: "New provider verification request from John's Electrical",
-      time: "5 minutes ago",
-      status: "pending",
-    },
-    {
-      id: 2,
-      type: "property",
-      message: "New property listing in Kampala",
-      time: "15 minutes ago",
-      status: "active",
-    },
-    {
-      id: 3,
-      type: "user",
-      message: "New user registration",
-      time: "1 hour ago",
-      status: "active",
-    },
-    {
-      id: 4,
-      type: "verification",
-      message: "Provider verification approved for Smith Plumbing",
-      time: "2 hours ago",
-      status: "approved",
-    },
-  ];
 
   if (!user || user.role !== "admin") {
     return null;
@@ -318,54 +321,60 @@ export default function AdminDashboardPage() {
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
                 <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="flex items-start gap-3 pb-4 border-b last:border-0"
-                    >
+                  {activities.length > 0 ? (
+                    activities.map((activity) => (
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          activity.type === "verification"
-                            ? "bg-orange-100"
-                            : activity.type === "property"
-                            ? "bg-purple-100"
-                            : "bg-blue-100"
-                        }`}
+                        key={activity.id}
+                        className="flex items-start gap-3 pb-4 border-b last:border-0"
                       >
-                        {activity.type === "verification" && (
-                          <BadgeCheck className="w-5 h-5 text-orange-500" />
-                        )}
-                        {activity.type === "property" && (
-                          <Building2 className="w-5 h-5 text-purple-500" />
-                        )}
-                        {activity.type === "user" && (
-                          <Users className="w-5 h-5 text-blue-500" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium mb-1">
-                          {activity.message}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {activity.time}
-                          </span>
-                          <Badge
-                            variant={
-                              activity.status === "pending"
-                                ? "secondary"
-                                : activity.status === "approved"
-                                ? "default"
-                                : "outline"
-                            }
-                            className="text-xs"
-                          >
-                            {activity.status}
-                          </Badge>
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            activity.type === "verification"
+                              ? "bg-orange-100"
+                              : activity.type === "property"
+                              ? "bg-purple-100"
+                              : "bg-blue-100"
+                          }`}
+                        >
+                          {activity.type === "verification" && (
+                            <BadgeCheck className="w-5 h-5 text-orange-500" />
+                          )}
+                          {activity.type === "property" && (
+                            <Building2 className="w-5 h-5 text-purple-500" />
+                          )}
+                          {activity.type === "user" && (
+                            <Users className="w-5 h-5 text-blue-500" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium mb-1">
+                            {activity.message}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {activity.time}
+                            </span>
+                            <Badge
+                              variant={
+                                activity.status === "pending"
+                                  ? "secondary"
+                                  : activity.status === "approved"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="text-xs"
+                            >
+                              {activity.status}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No recent activity
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -373,71 +382,26 @@ export default function AdminDashboardPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Platform Health */}
-            <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Platform Health</h2>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">
-                        Active Users
-                      </span>
-                      <span className="text-sm font-medium">87%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                      <div className="bg-green-500 h-2 w-[87%]" />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">
-                        Verified Providers
-                      </span>
-                      <span className="text-sm font-medium">72%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                      <div className="bg-blue-500 h-2 w-[72%]" />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">
-                        System Uptime
-                      </span>
-                      <span className="text-sm font-medium">99.9%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                      <div className="bg-green-500 h-2 w-[99.9%]" />
+            {/* Revenue Overview - Only show if revenue tracking is implemented */}
+            {stats.revenue > 0 && (
+              <Card>
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold mb-4">Revenue Overview</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        This Month
+                      </p>
+                      <p className="text-2xl font-bold">
+                        UGX {stats.revenue.toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            )}
 
-            {/* Revenue Overview */}
-            <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Revenue Overview</h2>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      This Month
-                    </p>
-                    <p className="text-2xl font-bold">
-                      UGX {stats.revenue.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <TrendingUp className="w-4 h-4 text-green-500" />
-                    <span className="text-green-500 font-medium">+18.2%</span>
-                    <span className="text-muted-foreground">vs last month</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Pending Tasks */}
+            {/* Pending Tasks - Only show real data */}
             <Card>
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Pending Tasks</h2>
@@ -448,20 +412,6 @@ export default function AdminDashboardPage() {
                       <span className="text-sm">Verifications</span>
                     </div>
                     <Badge variant="destructive">{stats.pendingVerifications}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm">Reports</span>
-                    </div>
-                    <Badge variant="secondary">5</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-500" />
-                      <span className="text-sm">Flagged Content</span>
-                    </div>
-                    <Badge variant="secondary">3</Badge>
                   </div>
                 </div>
               </div>

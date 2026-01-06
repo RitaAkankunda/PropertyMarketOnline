@@ -76,6 +76,12 @@ export const providerService = {
     return response.data;
   },
 
+  // Sync user role - ensures user role matches their provider status
+  async syncRole(): Promise<{ success: boolean; message: string; user?: any }> {
+    const response = await api.post<{ success: boolean; message: string; user?: any }>("/providers/sync-role");
+    return response.data;
+  },
+
   // Get all providers with filters
   async getProviders(
     filters?: ProviderFilters,
@@ -104,6 +110,18 @@ export const providerService = {
   // Get single provider by ID
   async getProvider(id: string): Promise<ServiceProvider> {
     const response = await api.get<ServiceProvider>(`/providers/${id}`);
+    return response.data;
+  },
+
+  // Get current provider's profile
+  async getMyProfile(): Promise<ServiceProvider> {
+    const response = await api.get<ServiceProvider>('/providers/profile');
+    return response.data;
+  },
+
+  // Deactivate provider profile and revert to lister
+  async deactivateProfile(): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<{ success: boolean; message: string }>('/providers/deactivate');
     return response.data;
   },
 

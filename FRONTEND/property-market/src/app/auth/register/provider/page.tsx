@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { providerService, authService } from "@/services";
@@ -88,12 +88,26 @@ const LOCATIONS = [
 // =============================================
 export default function ProviderRegistration() {
   const router = useRouter();
-  const { user, refreshProfile } = useAuthStore();
+  const { user, refreshProfile, isAuthenticated, isLoading: authLoading } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize step based on auth status
+  useEffect(() => {
+    if (!authLoading) {
+      // If user is logged in, start at step 1 (Business Info), otherwise step 0 (Personal Info)
+      const startingStep = isAuthenticated && user ? 1 : 0;
+      setCurrentStep(startingStep);
+      console.log("[PROVIDER REGISTRATION] Initialized step:", startingStep, {
+        isAuthenticated,
+        hasUser: !!user,
+        userEmail: user?.email,
+      });
+    }
+  }, [authLoading, isAuthenticated, user]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -203,50 +217,275 @@ export default function ProviderRegistration() {
           throw new Error("Password must be at least 8 characters long");
         }
         
-        // Create account
-        const { user: newUser, token } = await authService.register({
+        // Use complete registration endpoint (creates account + provider in one step)
+        // This ensures the user gets the correct role immediately
+        const hourlyRate = formData.currency === 'UGX' 
+          ? (formData.hourlyRateUGX ? parseFloat(formData.hourlyRateUGX) : undefined)
+          : (formData.hourlyRateUSD ? parseFloat(formData.hourlyRateUSD) : undefined);
+        
+        const minimumCharge = formData.currency === 'UGX'
+          ? (formData.minimumChargeUGX ? parseFloat(formData.minimumChargeUGX) : undefined)
+          : (formData.minimumChargeUSD ? parseFloat(formData.minimumChargeUSD) : undefined);
+        
+        // Map form service IDs to database service type values
+        const serviceTypeMap: Record<string, string> = {
+          'electrician': 'electrician',
+          'plumber': 'plumber',
+          'carpenter': 'carpenter',
+          'mason': 'mason',
+          'cleaner': 'cleaner',
+          'security': 'security_services',
+          'surveyor': 'surveyor',
+          'valuer': 'valuer',
+          'mover': 'mover',
+          'painter': 'painter',
+          'appliance': 'appliance_repair',
+          'roofing': 'roofing',
+          'interior': 'interior_designer',
+          'landscaper': 'landscaper',
+          'lawyer': 'lawyer',
+        };
+        
+        const mappedServiceTypes = formData.serviceTypes.map(id => serviceTypeMap[id] || id);
+        
+        // Validate provider data
+        if (!formData.businessName || formData.businessName.length < 3) {
+          throw new Error("Business name must be at least 3 characters");
+        }
+        
+        if (!formData.description || formData.description.length < 50) {
+          throw new Error("Description must be at least 50 characters");
+        }
+        
+        if (!mappedServiceTypes || mappedServiceTypes.length === 0) {
+          throw new Error("Please select at least one service type");
+        }
+        
+        if (!formData.availableDays || formData.availableDays.length === 0) {
+          throw new Error("Please select at least one available day");
+        }
+        
+        const completeRegistrationData = {
           email: formData.email,
           password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
           phone: formData.phone,
-          role: "buyer", // Default role, will be changed to service_provider
+          businessName: formData.businessName,
+          serviceTypes: mappedServiceTypes,
+          description: formData.description,
+          pricing: {
+            type: formData.pricingType,
+            hourlyRate: hourlyRate,
+            minimumCharge: minimumCharge,
+            currency: formData.currency || "UGX",
+          },
+          availability: {
+            days: formData.availableDays.map(day => {
+              const dayMap: Record<string, string> = {
+                'mon': 'monday',
+                'tue': 'tuesday',
+                'wed': 'wednesday',
+                'thu': 'thursday',
+                'fri': 'friday',
+                'sat': 'saturday',
+                'sun': 'sunday',
+              };
+              return dayMap[day.toLowerCase()] || day;
+            }),
+            startTime: formData.startTime,
+            endTime: formData.endTime,
+          },
+          location: {
+            city: (() => {
+              if (formData.locations.length === 0) return "Kampala";
+              const location = formData.locations[0];
+              if (location.includes(" - ")) {
+                return location.split(" - ")[0].trim();
+              }
+              if (location.toLowerCase().includes("kampala")) {
+                return "Kampala";
+              }
+              return location.split(" ")[0] || "Kampala";
+            })(),
+            district: (() => {
+              if (formData.locations.length === 0) return undefined;
+              const location = formData.locations[0];
+              if (location.includes(" - ")) {
+                return location.split(" - ")[1].trim();
+              }
+              if (location.toLowerCase().includes("central")) {
+                return "Central";
+              }
+              const parts = location.split(" ");
+              if (parts.length > 1) {
+                return parts.slice(1).join(" ");
+              }
+              return undefined;
+            })(),
+            serviceRadius: 10,
+          },
+        };
+        
+        console.log('[PROVIDER REGISTRATION] Using complete registration endpoint...');
+        const result = await providerService.registerComplete(completeRegistrationData);
+        console.log('[PROVIDER REGISTRATION] Account and provider created successfully:', result);
+        
+        // Store auth token and update auth state
+        if (typeof window !== "undefined") {
+          localStorage.setItem("token", result.accessToken);
+        }
+        useAuthStore.setState({
+          user: result.user,
+          token: result.accessToken,
+          isAuthenticated: true,
+          isLoading: false,
         });
         
-        // Store auth token
-        useAuthStore.getState().setAuth(newUser, token);
+        // Show success screen
+        setIsSuccess(true);
+        
+        // Redirect to provider dashboard after 2 seconds
+        setTimeout(() => {
+          router.push('/dashboard/provider');
+        }, 2000);
+        return; // Exit early since we're done
       }
       
-      // Step 2: Register as provider
+      // Step 2: Register as provider (user is already logged in)
+      // Determine which rate to use based on currency
+      const hourlyRate = formData.currency === 'UGX' 
+        ? (formData.hourlyRateUGX ? parseFloat(formData.hourlyRateUGX) : undefined)
+        : (formData.hourlyRateUSD ? parseFloat(formData.hourlyRateUSD) : undefined);
+      
+      const minimumCharge = formData.currency === 'UGX'
+        ? (formData.minimumChargeUGX ? parseFloat(formData.minimumChargeUGX) : undefined)
+        : (formData.minimumChargeUSD ? parseFloat(formData.minimumChargeUSD) : undefined);
+      
+      // Map form service IDs to database service type values
+      const serviceTypeMap: Record<string, string> = {
+        'electrician': 'electrician',
+        'plumber': 'plumber',
+        'carpenter': 'carpenter',
+        'mason': 'mason',
+        'cleaner': 'cleaner',
+        'security': 'security_services',
+        'surveyor': 'surveyor',
+        'valuer': 'valuer',
+        'mover': 'mover',
+        'painter': 'painter',
+        'appliance': 'appliance_repair',
+        'roofing': 'roofing',
+        'interior': 'interior_designer',
+        'landscaper': 'landscaper',
+        'lawyer': 'lawyer',
+      };
+      
+      // Convert service type IDs to database values
+      const mappedServiceTypes = formData.serviceTypes.map(id => serviceTypeMap[id] || id);
+      
       const providerData = {
         businessName: formData.businessName,
-        serviceTypes: formData.serviceTypes,
+        serviceTypes: mappedServiceTypes,
         description: formData.description,
         pricing: {
           type: formData.pricingType,
-          hourlyRateUGX: formData.hourlyRateUGX ? parseFloat(formData.hourlyRateUGX) : undefined,
-          hourlyRateUSD: formData.hourlyRateUSD ? parseFloat(formData.hourlyRateUSD) : undefined,
-          minimumChargeUGX: formData.minimumChargeUGX ? parseFloat(formData.minimumChargeUGX) : undefined,
-          minimumChargeUSD: formData.minimumChargeUSD ? parseFloat(formData.minimumChargeUSD) : undefined,
-          currency: formData.currency,
+          hourlyRate: hourlyRate,
+          minimumCharge: minimumCharge,
+          currency: formData.currency || "UGX",
         },
         availability: {
-          days: formData.availableDays,
+          // Convert short day codes to full day names
+          days: formData.availableDays.map(day => {
+            const dayMap: Record<string, string> = {
+              'mon': 'monday',
+              'tue': 'tuesday',
+              'wed': 'wednesday',
+              'thu': 'thursday',
+              'fri': 'friday',
+              'sat': 'saturday',
+              'sun': 'sunday',
+            };
+            return dayMap[day.toLowerCase()] || day;
+          }),
           startTime: formData.startTime,
           endTime: formData.endTime,
         },
         location: {
-          city: formData.locations[0] || "Kampala",
-          district: formData.locations[1],
+          // Parse location string to extract city and district
+          // Format: "Kampala Central" or "Kampala - Makindye"
+          city: (() => {
+            if (formData.locations.length === 0) return "Kampala";
+            const location = formData.locations[0];
+            // If location contains " - ", split it (e.g., "Kampala - Makindye")
+            if (location.includes(" - ")) {
+              return location.split(" - ")[0].trim();
+            }
+            // If location contains "Central", "Makindye", etc., extract city
+            if (location.toLowerCase().includes("kampala")) {
+              return "Kampala";
+            }
+            // Default to first location or "Kampala"
+            return location.split(" ")[0] || "Kampala";
+          })(),
+          district: (() => {
+            if (formData.locations.length === 0) return undefined;
+            const location = formData.locations[0];
+            // If location contains " - ", use the part after " - " as district
+            if (location.includes(" - ")) {
+              return location.split(" - ")[1].trim();
+            }
+            // If location is just "Kampala Central", use "Central" as district
+            if (location.toLowerCase().includes("central")) {
+              return "Central";
+            }
+            // Otherwise, try to extract district from location name
+            const parts = location.split(" ");
+            if (parts.length > 1) {
+              return parts.slice(1).join(" ");
+            }
+            return undefined;
+          })(),
           serviceRadius: 10, // Default 10km radius
         },
       };
+      
+      console.log('[PROVIDER REGISTRATION] Sending provider data:', {
+        businessName: providerData.businessName,
+        serviceTypes: providerData.serviceTypes,
+        descriptionLength: providerData.description?.length,
+        pricing: providerData.pricing,
+        availability: providerData.availability,
+        location: providerData.location,
+      });
 
       // Call backend API to register provider
-      await providerService.register(providerData);
+      const result = await providerService.register(providerData);
+      console.log('[PROVIDER REGISTRATION] Provider registered successfully:', result);
       
-      // Step 3: Refresh user profile to get updated role
+      // Step 3: Wait a moment for backend to commit role update, then refresh user profile
+      console.log('[PROVIDER REGISTRATION] Waiting for role update to commit...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to ensure DB commit
+      
+      // Refresh user profile to get updated role
+      console.log('[PROVIDER REGISTRATION] Refreshing user profile...');
       await refreshProfile();
+      
+      // Double-check the role was updated
+      const updatedUser = useAuthStore.getState().user;
+      console.log('[PROVIDER REGISTRATION] User after refresh:', {
+        id: updatedUser?.id,
+        email: updatedUser?.email,
+        role: updatedUser?.role,
+      });
+      
+      if (updatedUser?.role !== 'service_provider') {
+        console.warn('[PROVIDER REGISTRATION] Role not updated yet, refreshing again...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await refreshProfile();
+        const finalUser = useAuthStore.getState().user;
+        console.log('[PROVIDER REGISTRATION] Final user role:', finalUser?.role);
+      }
       
       // Show success screen
       setIsSuccess(true);
@@ -257,13 +496,61 @@ export default function ProviderRegistration() {
       }, 2000);
     } catch (err: any) {
       console.error("Provider registration error:", err);
-      setError(err.response?.data?.message || err.message || "Failed to register as provider. Please try again.");
+      console.error("Error details:", {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message,
+      });
+      
+      // Handle specific error cases
+      if (err.response?.status === 409 || err.response?.status === 400) {
+        // Safely extract error message - handle both string and object responses
+        let errorMessage: string = "";
+        if (err.response?.data?.message) {
+          errorMessage = typeof err.response.data.message === 'string' 
+            ? err.response.data.message 
+            : JSON.stringify(err.response.data.message);
+        } else if (err.response?.data) {
+          // If data is an object/array, try to extract meaningful message
+          if (Array.isArray(err.response.data)) {
+            errorMessage = err.response.data.map((e: any) => 
+              typeof e === 'string' ? e : e.message || JSON.stringify(e)
+            ).join(', ');
+          } else if (typeof err.response.data === 'object') {
+            errorMessage = err.response.data.message || JSON.stringify(err.response.data);
+          } else {
+            errorMessage = String(err.response.data);
+          }
+        } else if (err.message) {
+          errorMessage = typeof err.message === 'string' ? err.message : String(err.message);
+        }
+        
+        // Check if error is about email/account
+        const errorLower = errorMessage.toLowerCase();
+        if (errorLower.includes('email') || errorLower.includes('already exists')) {
+          setError("An account with this email already exists. Please login instead, then register as a provider from your dashboard.");
+        } else {
+          setError(errorMessage || "Registration failed. Please check all fields and try again.");
+        }
+      } else {
+        // Handle other errors
+        const errorMessage = err.response?.data?.message 
+          ? (typeof err.response.data.message === 'string' ? err.response.data.message : JSON.stringify(err.response.data.message))
+          : (err.message || "Failed to register as provider. Please try again.");
+        setError(errorMessage);
+      }
+      
       setIsSubmitting(false);
     }
   };
 
-  const totalSteps = 5;
-  const progress = (currentStep / totalSteps) * 100;
+  // Adjust total steps based on whether user is logged in
+  const totalSteps = isAuthenticated && user ? 4 : 5;
+  // Calculate progress: if logged in, steps are 1-4 (0-3 in array), if not, steps are 0-4
+  const progress = isAuthenticated && user 
+    ? ((currentStep) / 4) * 100 
+    : ((currentStep + 1) / 5) * 100;
 
   // Success Screen
   if (isSuccess) {
@@ -316,7 +603,9 @@ export default function ProviderRegistration() {
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Step {currentStep} of {totalSteps}</span>
+            <span className="text-sm font-medium text-gray-700">
+              Step {isAuthenticated && user ? currentStep : currentStep + 1} of {totalSteps}
+            </span>
             <span className="text-sm text-gray-500">{Math.round(progress)}% Complete</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -326,21 +615,40 @@ export default function ProviderRegistration() {
             />
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-500">
-            <span className={currentStep >= 1 ? "text-orange-600 font-medium" : ""}>Personal</span>
-            <span className={currentStep >= 2 ? "text-orange-600 font-medium" : ""}>Business</span>
-            <span className={currentStep >= 3 ? "text-orange-600 font-medium" : ""}>Documents</span>
-            <span className={currentStep >= 4 ? "text-orange-600 font-medium" : ""}>Pricing</span>
-            <span className={currentStep >= 5 ? "text-orange-600 font-medium" : ""}>Availability</span>
+            {!isAuthenticated && (
+              <span className={currentStep >= 0 ? "text-orange-600 font-medium" : ""}>Personal</span>
+            )}
+            <span className={currentStep >= 1 ? "text-orange-600 font-medium" : ""}>Business</span>
+            <span className={currentStep >= 2 ? "text-orange-600 font-medium" : ""}>Documents</span>
+            <span className={currentStep >= 3 ? "text-orange-600 font-medium" : ""}>Pricing</span>
+            <span className={currentStep >= 4 ? "text-orange-600 font-medium" : ""}>Availability</span>
           </div>
         </div>
       </div>
 
       {/* Form Container */}
       <div className="container mx-auto px-4 py-8 max-w-2xl">
+        {/* Logged In Banner */}
+        {isAuthenticated && user && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start">
+              <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900">
+                  ✓ You're logged in as {user.firstName} {user.lastName}
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Email: {user.email} • We'll use your existing account to create your provider profile.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ============================================= */}
-        {/* STEP 1: Personal Information */}
+        {/* STEP 0: Personal Information (Only if not logged in) */}
         {/* ============================================= */}
-        {currentStep === 1 && (
+        {currentStep === 0 && !isAuthenticated && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -435,9 +743,9 @@ export default function ProviderRegistration() {
         )}
 
         {/* ============================================= */}
-        {/* STEP 2: Business Information */}
+        {/* STEP 1: Business Information */}
         {/* ============================================= */}
-        {currentStep === 2 && (
+        {currentStep === 1 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -526,9 +834,9 @@ export default function ProviderRegistration() {
         )}
 
         {/* ============================================= */}
-        {/* STEP 3: Documents & Portfolio */}
+        {/* STEP 2: Documents & Portfolio */}
         {/* ============================================= */}
-        {currentStep === 3 && (
+        {currentStep === 2 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -651,9 +959,9 @@ export default function ProviderRegistration() {
         )}
 
         {/* ============================================= */}
-        {/* STEP 4: Pricing */}
+        {/* STEP 3: Pricing */}
         {/* ============================================= */}
-        {currentStep === 4 && (
+        {currentStep === 3 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -831,9 +1139,9 @@ export default function ProviderRegistration() {
         )}
 
         {/* ============================================= */}
-        {/* STEP 5: Availability */}
+        {/* STEP 4: Availability */}
         {/* ============================================= */}
-        {currentStep === 5 && (
+        {currentStep === 4 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -949,7 +1257,7 @@ export default function ProviderRegistration() {
           )}
           
           <div className="flex gap-3">
-            {currentStep > 1 && (
+            {currentStep > 0 && (
               <button
                 onClick={() => setCurrentStep(currentStep - 1)}
                 disabled={isSubmitting}
@@ -958,7 +1266,7 @@ export default function ProviderRegistration() {
                 <ChevronLeft className="w-5 h-5" /> Back
               </button>
             )}
-            {currentStep < totalSteps ? (
+            {currentStep < 4 ? (
               <button
                 onClick={() => setCurrentStep(currentStep + 1)}
                 className="flex-1 py-3 bg-orange-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600"

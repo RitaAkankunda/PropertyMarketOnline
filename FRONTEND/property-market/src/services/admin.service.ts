@@ -23,6 +23,14 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export interface AdminActivity {
+  id: string;
+  type: 'user' | 'property' | 'verification';
+  message: string;
+  time: string;
+  status: 'active' | 'pending' | 'approved';
+}
+
 export const adminService = {
   // Get admin dashboard statistics
   async getStats(): Promise<AdminStats> {
@@ -45,6 +53,12 @@ export const adminService = {
   // Delete user (admin only)
   async deleteUser(userId: string): Promise<{ message: string }> {
     const response = await api.delete<{ message: string }>(`/users/admin/users/${userId}`);
+    return response.data;
+  },
+
+  // Get admin activities (admin only)
+  async getActivities(): Promise<AdminActivity[]> {
+    const response = await api.get<AdminActivity[]>('/users/admin/activities');
     return response.data;
   },
 };

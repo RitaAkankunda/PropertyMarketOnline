@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -89,13 +89,49 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, isAuthenticated, isLoading, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    // Wait for auth to load
+    if (isLoading) return;
+
+    // Check if user is authenticated
+    if (!isAuthenticated || !user) {
+      console.log('[ADMIN LAYOUT] User not authenticated, redirecting to login');
+      router.push("/auth/login");
+      return;
+    }
+
+    // Check if user is admin
+    if (user.role !== "admin") {
+      console.log('[ADMIN LAYOUT] User is not admin. Role:', user.role, 'User:', user);
+      router.push("/dashboard");
+      return;
+    }
+  }, [user, isAuthenticated, isLoading, router]);
 
   const handleLogout = () => {
     logout();
     router.push("/auth/login");
   };
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if user is not admin
+  if (!isAuthenticated || !user || user.role !== "admin") {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 flex">
@@ -168,19 +204,21 @@ export default function AdminLayout({
 
           {/* Sidebar Footer */}
           <div className="p-4 border-t border-slate-200/60">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar
-                name={user ? `${user.firstName} ${user.lastName}` : "Admin"}
-                size="sm"
-                className="h-10 w-10"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">
-                  {user ? `${user.firstName} ${user.lastName}` : "Admin"}
-                </p>
-                <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+            <Link href="/profile" onClick={() => setSidebarOpen(false)}>
+              <div className="flex items-center gap-3 mb-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                <Avatar
+                  name={user ? `${user.firstName} ${user.lastName}` : "Admin"}
+                  size="sm"
+                  className="h-10 w-10"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">
+                    {user ? `${user.firstName} ${user.lastName}` : "Admin"}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                </div>
               </div>
-            </div>
+            </Link>
             <Button
               variant="outline"
               size="sm"
