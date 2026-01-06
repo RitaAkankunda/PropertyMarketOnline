@@ -164,4 +164,11 @@ export class PropertiesService {
     // In the future, you might add a status field
     return await this.propertyRepository.count();
   }
+
+  async getRecentProperties(limit: number = 10): Promise<Property[]> {
+    return await this.propertyRepository.find({
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
 }

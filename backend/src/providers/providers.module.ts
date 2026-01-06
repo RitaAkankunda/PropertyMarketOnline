@@ -5,10 +5,11 @@ import { ProvidersController } from './providers.controller';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { Provider } from './entities/provider.entity';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Provider]),
+    TypeOrmModule.forFeature([Provider, User]),
     UsersModule,
     AuthModule,
   ],

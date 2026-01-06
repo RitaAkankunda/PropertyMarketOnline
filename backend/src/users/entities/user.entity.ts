@@ -50,7 +50,10 @@ export class User {
   @OneToMany(() => Property, (property) => property.owner)
   properties: Property[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({
+    type: 'timestamptz', // Use timestamp with timezone to store in UTC
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
   @BeforeInsert()
@@ -60,6 +63,9 @@ export class User {
     }
   }
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({
+    type: 'timestamptz', // Use timestamp with timezone to store in UTC
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

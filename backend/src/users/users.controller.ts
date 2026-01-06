@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request, Post, Body, Headers, UnauthorizedException, NotFoundException, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Post, Body, Headers, UnauthorizedException, NotFoundException, Patch, Param, Delete, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from 'src/auth/roles.decorator';
@@ -8,6 +8,9 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRole } from './enums/user-role.enum';
 import { PropertiesService } from 'src/properties/properties.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Provider } from 'src/providers/entities/provider.entity';
 
 @Controller('users')
 export class UsersController {
@@ -15,6 +18,8 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly propertiesService: PropertiesService,
+    @InjectRepository(Provider)
+    private readonly providerRepository: Repository<Provider>,
   ) {}
 
   @UseGuards(AuthGuard('jwt'))
@@ -70,30 +75,61 @@ export class UsersController {
   @Roles('admin')
   @Get('admin/stats')
   async getAdminStats() {
-    const totalUsers = await this.usersService.getTotalUsersCount();
-    const totalListers = await this.usersService.getUsersByRole(UserRole.LISTER);
-    const totalPropertyManagers = await this.usersService.getUsersByRole(UserRole.PROPERTY_MANAGER);
-    const totalServiceProviders = await this.usersService.getUsersByRole(UserRole.SERVICE_PROVIDER);
-    const totalBuyers = await this.usersService.getUsersByRole(UserRole.BUYER);
-    const totalRenters = await this.usersService.getUsersByRole(UserRole.RENTER);
+    try {
+      console.log('[ADMIN STATS] Fetching admin statistics...');
+      
+      const totalUsers = await this.usersService.getTotalUsersCount();
+      console.log('[ADMIN STATS] Total users:', totalUsers);
+      
+      const totalListers = await this.usersService.getUsersByRole(UserRole.LISTER);
+      console.log('[ADMIN STATS] Total listers:', totalListers);
+      
+      const totalPropertyManagers = await this.usersService.getUsersByRole(UserRole.PROPERTY_MANAGER);
+      console.log('[ADMIN STATS] Total property managers:', totalPropertyManagers);
+      
+      // Count providers from the providers table (not from user roles)
+      // This is more accurate since users with provider profiles may not have SERVICE_PROVIDER role yet
+      const totalServiceProviders = await this.providerRepository.count();
+      console.log('[ADMIN STATS] Total service providers (from providers table):', totalServiceProviders);
+      
+      const totalBuyers = await this.usersService.getUsersByRole(UserRole.BUYER);
+      console.log('[ADMIN STATS] Total buyers:', totalBuyers);
+      
+      const totalRenters = await this.usersService.getUsersByRole(UserRole.RENTER);
+      console.log('[ADMIN STATS] Total renters:', totalRenters);
 
-    // Get properties stats
-    const totalProperties = await this.propertiesService.getTotalCount();
-    const activeListings = await this.propertiesService.getActiveListingsCount();
+      // Get properties stats
+      console.log('[ADMIN STATS] Fetching property statistics...');
+      const totalProperties = await this.propertiesService.getTotalCount();
+      console.log('[ADMIN STATS] Total properties:', totalProperties);
+      
+      const activeListings = await this.propertiesService.getActiveListingsCount();
+      console.log('[ADMIN STATS] Active listings:', activeListings);
 
-    return {
-      totalUsers,
-      totalProviders: totalServiceProviders, // Service providers with dedicated role
-      pendingVerifications: 0, // TODO: Implement verification system
-      totalProperties,
-      revenue: 0, // TODO: Implement revenue tracking
-      activeListings,
-      totalListers,
-      totalPropertyManagers,
-      totalServiceProviders,
-      totalBuyers,
-      totalRenters,
-    };
+      const stats = {
+        totalUsers,
+        totalProviders: totalServiceProviders, // Service providers with dedicated role
+        pendingVerifications: 0, // TODO: Implement verification system
+        totalProperties,
+        revenue: 0, // TODO: Implement revenue tracking
+        activeListings,
+        totalListers,
+        totalPropertyManagers,
+        totalServiceProviders,
+        totalBuyers,
+        totalRenters,
+      };
+
+      console.log('[ADMIN STATS] Statistics compiled successfully:', stats);
+      return stats;
+    } catch (error) {
+      console.error('[ADMIN STATS] Error fetching admin statistics:', {
+        message: error.message,
+        stack: error.stack,
+        error: error,
+      });
+      throw error;
+    }
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -135,6 +171,20 @@ export class UsersController {
   ) {
     await this.usersService.deleteUser(id, req.user.sub);
     return { message: 'User deleted successfully' };
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @Get('admin/activities')
+  async getAdminActivities() {
+    // Ensure timezone is UTC for this request
+    try {
+      await this.providerRepository.manager.query("SET timezone = 'UTC'");
+    } catch (error) {
+      console.warn('[ADMIN ACTIVITIES] Failed to set timezone:', error.message);
+    }
+    
+    return this.usersService.getAdminActivities();
   }
 
 }

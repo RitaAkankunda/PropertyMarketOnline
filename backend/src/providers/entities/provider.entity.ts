@@ -108,10 +108,16 @@ export class Provider {
   @Column({ default: false })
   isKycVerified: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({
+    type: 'timestamptz', // Use timestamp with timezone to store in UTC
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({
+    type: 'timestamptz', // Use timestamp with timezone to store in UTC
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }
 

@@ -30,7 +30,12 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       extra: {
         // PostGIS extension will be enabled via migration
         // Run: CREATE EXTENSION IF NOT EXISTS postgis;
+        // Set timezone to UTC for PostgreSQL connection
+        // This ensures all timestamps are interpreted as UTC
+        connectionLimit: 10,
       },
+      // Note: Timezone is set to UTC in AppModule.onModuleInit()
+      // This ensures all queries use UTC timezone
     };
   }
 }

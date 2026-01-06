@@ -1,6 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -35,4 +37,20 @@ import { HealthModule } from './health/health.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  constructor(
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async onModuleInit() {
+    // Set timezone to UTC for all database connections
+    // This ensures all timestamps are stored and retrieved in UTC
+    try {
+      await this.dataSource.query("SET timezone = 'UTC'");
+      console.log('[APP MODULE] Database timezone set to UTC');
+    } catch (error) {
+      console.warn('[APP MODULE] Failed to set database timezone to UTC:', error.message);
+    }
+  }
+}

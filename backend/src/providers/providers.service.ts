@@ -8,12 +8,15 @@ import { RegisterProviderCompleteDto } from './dto/register-provider-complete.dt
 import { User } from '../users/entities/user.entity';
 import { Provider } from './entities/provider.entity';
 import { AuthService } from '../auth/auth.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ProvidersService {
   constructor(
     @InjectRepository(Provider)
     private readonly providerRepository: Repository<Provider>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
   ) {}
@@ -98,9 +101,52 @@ export class ProvidersService {
   async registerProvider(userId: string, registerDto: RegisterProviderDto): Promise<Provider> {
     try {
       // Get the current user
-      const user = await this.usersService.findOneById(userId);
+      let user = await this.usersService.findOneById(userId);
       if (!user) {
         throw new NotFoundException('User not found');
+      }
+
+      // Update user role to SERVICE_PROVIDER (unless they're an admin)
+      // Admins can have provider profiles while keeping their admin role
+      if (user.role !== UserRole.SERVICE_PROVIDER && user.role !== UserRole.ADMIN) {
+        try {
+          console.log('[PROVIDERS] Updating user role from', user.role, 'to', UserRole.SERVICE_PROVIDER);
+          const updatedUser = await this.usersService.updateRole(userId, UserRole.SERVICE_PROVIDER);
+          console.log('[PROVIDERS] User role updated successfully:', {
+            userId: updatedUser.id,
+            oldRole: user.role,
+            newRole: updatedUser.role,
+          });
+          
+          // Verify the role was actually saved
+          const verifyUser = await this.usersService.findOneById(userId);
+          if (verifyUser && verifyUser.role !== UserRole.SERVICE_PROVIDER && verifyUser.role !== UserRole.ADMIN) {
+            console.error('[PROVIDERS] WARNING: Role update did not persist!', {
+              expected: UserRole.SERVICE_PROVIDER,
+              actual: verifyUser.role,
+            });
+            // Log warning but continue - provider profile can still be created
+            console.warn('[PROVIDERS] Continuing with provider creation despite role update issue');
+          } else {
+            console.log('[PROVIDERS] Role update verified in database');
+            // Update the user object for later use
+            user = verifyUser || updatedUser;
+          }
+        } catch (roleError) {
+          console.error('[PROVIDERS] Failed to update user role:', {
+            error: roleError.message,
+            stack: roleError.stack,
+            userId: userId,
+            userRole: user.role,
+          });
+          // Log error but continue - we can still create the provider profile
+          // The user can sync their role later if needed
+          console.warn('[PROVIDERS] Continuing with provider creation despite role update failure');
+        }
+      } else if (user.role === UserRole.ADMIN) {
+        console.log('[PROVIDERS] User is an admin - keeping admin role, adding provider profile');
+      } else {
+        console.log('[PROVIDERS] User already has SERVICE_PROVIDER role');
       }
 
       // Check if provider already exists
@@ -109,6 +155,32 @@ export class ProvidersService {
       });
 
       if (existingProvider) {
+        console.log('[PROVIDERS] Existing provider found, updating profile:', {
+          providerId: existingProvider.id,
+          businessName: existingProvider.businessName,
+          currentUserRole: user.role,
+        });
+        
+        // Try to update role if needed, but don't fail if it doesn't work
+        // The provider profile is more important than the role
+        if (user.role !== UserRole.SERVICE_PROVIDER && user.role !== UserRole.ADMIN) {
+          console.log('[PROVIDERS] Attempting to update role from', user.role, 'to', UserRole.SERVICE_PROVIDER);
+          try {
+            const updatedUser = await this.usersService.updateRole(userId, UserRole.SERVICE_PROVIDER);
+            user = updatedUser;
+            console.log('[PROVIDERS] Role updated for existing provider');
+          } catch (roleError) {
+            console.warn('[PROVIDERS] Failed to update role for existing provider (non-critical):', {
+              error: roleError.message,
+              userRole: user.role,
+            });
+            // Continue anyway - provider exists and can be updated
+            // User can sync their role later if needed
+          }
+        } else {
+          console.log('[PROVIDERS] User role is already', user.role, '- no update needed');
+        }
+        
         // Update existing provider
         Object.assign(existingProvider, {
           businessName: registerDto.businessName.trim(),
@@ -143,16 +215,6 @@ export class ProvidersService {
         });
 
         return providerWithUser || updatedProvider;
-      }
-
-      // Update user role to SERVICE_PROVIDER when they register as a provider
-      if (user.role !== UserRole.SERVICE_PROVIDER) {
-        try {
-          await this.usersService.updateRole(userId, UserRole.SERVICE_PROVIDER);
-        } catch (roleError) {
-          console.warn('[PROVIDERS] Failed to update user role, continuing with provider creation:', roleError.message);
-          // Continue with provider creation even if role update fails
-        }
       }
 
       // Validate required fields
@@ -295,11 +357,114 @@ export class ProvidersService {
 
       // Check if user already exists
       const existingUser = await this.usersService.findOneByEmail(registerDto.email);
+      let user: User;
+      let isExistingUser = false;
+      
       if (existingUser) {
-        throw new BadRequestException('An account with this email already exists. Please login instead.');
+        // User exists - verify password and add provider profile to existing account
+        console.log('[PROVIDERS] User with email already exists, verifying password to add provider profile:', {
+          email: registerDto.email,
+          userId: existingUser.id,
+          currentRole: existingUser.role,
+        });
+        
+        // Verify password
+        if (!existingUser.password) {
+          throw new BadRequestException('This email is registered with OAuth. Please login and register as a provider from your dashboard.');
+        }
+        
+        const isPasswordValid = await bcrypt.compare(registerDto.password, existingUser.password);
+        if (!isPasswordValid) {
+          throw new BadRequestException('Incorrect password. Please use the correct password for this account, or login first and register as a provider from your dashboard.');
+        }
+        
+        // Use existing user
+        user = existingUser;
+        isExistingUser = true;
+        
+        // Check if user already has a provider profile
+        const existingProvider = await this.providerRepository.findOne({
+          where: { userId: user.id },
+        });
+        
+        if (existingProvider) {
+          throw new BadRequestException('You already have a service provider profile. Please login to manage it.');
+        }
+        
+        // Update user role to SERVICE_PROVIDER (unless they're an admin)
+        if (user.role !== UserRole.SERVICE_PROVIDER && user.role !== UserRole.ADMIN) {
+          try {
+            console.log('[PROVIDERS] Updating existing user role from', user.role, 'to', UserRole.SERVICE_PROVIDER);
+            user = await this.usersService.updateRole(user.id, UserRole.SERVICE_PROVIDER);
+            console.log('[PROVIDERS] User role updated successfully');
+          } catch (roleError) {
+            console.error('[PROVIDERS] Failed to update user role:', roleError);
+            throw new BadRequestException('Failed to update account. Please contact support.');
+          }
+        }
+        
+        // Update user info if provided (phone, name updates)
+        if (registerDto.phone && registerDto.phone !== user.phone) {
+          user.phone = registerDto.phone;
+        }
+        if (registerDto.firstName && registerDto.firstName !== user.firstName) {
+          user.firstName = registerDto.firstName;
+        }
+        if (registerDto.lastName && registerDto.lastName !== user.lastName) {
+          user.lastName = registerDto.lastName;
+        }
+        
+        // Save updated user info if any changes
+        if (registerDto.phone || registerDto.firstName || registerDto.lastName) {
+          user = await this.userRepository.save(user);
+        }
+      } else {
+        // User doesn't exist - create new account
+          // Validate required fields
+        if (!registerDto.businessName || !registerDto.serviceTypes || !registerDto.description) {
+          throw new BadRequestException('Missing required fields: businessName, serviceTypes, or description');
+        }
+
+        if (!registerDto.pricing || !registerDto.availability || !registerDto.location) {
+          throw new BadRequestException('Missing required fields: pricing, availability, or location');
+        }
+
+        // Ensure serviceTypes is an array
+        const serviceTypes = Array.isArray(registerDto.serviceTypes) 
+          ? registerDto.serviceTypes 
+          : [registerDto.serviceTypes].filter(Boolean);
+
+        if (serviceTypes.length === 0) {
+          throw new BadRequestException('At least one service type is required');
+        }
+
+        // Create user account with SERVICE_PROVIDER role
+        console.log('[PROVIDERS] Creating new user account:', {
+          email: registerDto.email,
+          firstName: registerDto.firstName,
+          lastName: registerDto.lastName,
+        });
+        
+        user = await this.usersService.create({
+          email: registerDto.email,
+          password: registerDto.password,
+          firstName: registerDto.firstName,
+          lastName: registerDto.lastName,
+          phone: registerDto.phone,
+          role: UserRole.SERVICE_PROVIDER,
+        });
+
+        if (!user || !user.id) {
+          throw new BadRequestException('Failed to create user account');
+        }
+        
+        console.log('[PROVIDERS] New user created:', {
+          userId: user.id,
+          email: user.email,
+        });
       }
 
-      // Validate required fields
+      // Validate required fields for provider profile
       if (!registerDto.businessName || !registerDto.serviceTypes || !registerDto.description) {
         throw new BadRequestException('Missing required fields: businessName, serviceTypes, or description');
       }
@@ -317,46 +482,7 @@ export class ProvidersService {
         throw new BadRequestException('At least one service type is required');
       }
 
-      // Create user account with PROPERTY_MANAGER role
-      console.log('[PROVIDERS] Creating new user account:', {
-        email: registerDto.email,
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-      });
-      
-      const user = await this.usersService.create({
-        email: registerDto.email,
-        password: registerDto.password,
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        phone: registerDto.phone,
-        role: UserRole.PROPERTY_MANAGER,
-      });
-
-      if (!user || !user.id) {
-        throw new BadRequestException('Failed to create user account');
-      }
-      
-      console.log('[PROVIDERS] New user created:', {
-        userId: user.id,
-        email: user.email,
-      });
-      
-      // Double-check: Verify no provider exists for this new user (shouldn't happen, but safety check)
-      const checkExistingProvider = await this.providerRepository.findOne({
-        where: { userId: user.id },
-      });
-      
-      if (checkExistingProvider) {
-        console.error('[PROVIDERS] ERROR: Provider already exists for newly created user!', {
-          userId: user.id,
-          providerId: checkExistingProvider.id,
-        });
-        // This should never happen, but if it does, we should handle it
-        throw new BadRequestException('Provider already exists for this user. This should not happen.');
-      }
-
-      // Check if provider already exists for this user (shouldn't happen, but safety check)
+      // Check if provider already exists for this user
       const existingProviderForUser = await this.providerRepository.findOne({
         where: { userId: user.id },
       });
@@ -509,6 +635,61 @@ export class ProvidersService {
     }
   }
 
+  /**
+   * Sync user role - if user has a provider profile, ensure their role is SERVICE_PROVIDER
+   */
+  async syncUserRole(userId: string) {
+    try {
+      // Check if user has a provider profile
+      const provider = await this.providerRepository.findOne({
+        where: { userId },
+      });
+      
+      if (provider) {
+        // User has provider, ensure role is SERVICE_PROVIDER
+        const user = await this.usersService.findOneById(userId);
+        if (!user) {
+          throw new NotFoundException('User not found');
+        }
+        
+        if (user.role !== UserRole.SERVICE_PROVIDER) {
+          console.log(`[PROVIDERS] Syncing role for user ${userId} from ${user.role} to SERVICE_PROVIDER`);
+          const updatedUser = await this.usersService.updateRole(userId, UserRole.SERVICE_PROVIDER);
+          
+          // Verify the update
+          const verifyUser = await this.usersService.findOneById(userId);
+          console.log('[PROVIDERS] Role sync result:', {
+            userId: verifyUser.id,
+            role: verifyUser.role,
+            success: verifyUser.role === UserRole.SERVICE_PROVIDER,
+          });
+          
+          const { password, ...userWithoutPassword } = updatedUser;
+          return { 
+            success: true, 
+            message: 'Role updated to service_provider',
+            user: userWithoutPassword 
+          };
+        }
+        
+        const { password, ...userWithoutPassword } = user;
+        return { 
+          success: true, 
+          message: 'User already has correct role',
+          user: userWithoutPassword 
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: 'User does not have a provider profile' 
+      };
+    } catch (error) {
+      console.error('[PROVIDERS] Error in syncUserRole:', error);
+      throw error;
+    }
+  }
+
   async findNearbyProviders(
     serviceType: string,
     latitude: number,
@@ -542,6 +723,91 @@ export class ProvidersService {
       .sort((a, b) => a.distance - b.distance);
 
     return nearbyProviders;
+  }
+
+  async getProviderByUserId(userId: string): Promise<Provider | null> {
+    const provider = await this.providerRepository.findOne({
+      where: { userId },
+      relations: ['user'],
+    });
+    return provider;
+  }
+
+  /**
+   * Deactivate provider profile and revert user role back to LISTER
+   * This allows users to go back to being a lister from being a service provider
+   */
+  async deactivateProviderProfile(userId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // Get the user
+      const user = await this.usersService.findOneById(userId);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Check if user has a provider profile
+      const provider = await this.providerRepository.findOne({
+        where: { userId },
+      });
+
+      if (!provider) {
+        return {
+          success: false,
+          message: 'You do not have an active provider profile',
+        };
+      }
+
+      // Check if user has active jobs (pending, accepted, or in-progress)
+      // We prevent deactivation if there are active jobs
+      const { Job, JobStatus } = await import('src/jobs/entities/job.entity');
+      const jobRepository = this.providerRepository.manager.getRepository(Job);
+      const activeJobs = await jobRepository.count({
+        where: [
+          { providerId: userId, status: JobStatus.PENDING },
+          { providerId: userId, status: JobStatus.ACCEPTED },
+          { providerId: userId, status: JobStatus.IN_PROGRESS },
+        ],
+      });
+
+      if (activeJobs > 0) {
+        throw new BadRequestException(
+          `Cannot deactivate provider profile. You have ${activeJobs} active job(s). Please complete or cancel them first.`,
+        );
+      }
+
+      // Delete the provider profile
+      await this.providerRepository.remove(provider);
+      console.log('[PROVIDERS] Provider profile deleted for user:', {
+        userId,
+        providerId: provider.id,
+        businessName: provider.businessName,
+      });
+
+      // Revert user role back to LISTER (unless they're an admin)
+      if (user.role === UserRole.SERVICE_PROVIDER) {
+        try {
+          await this.usersService.updateRole(userId, UserRole.LISTER);
+          console.log('[PROVIDERS] User role reverted from SERVICE_PROVIDER to LISTER');
+        } catch (roleError) {
+          console.warn('[PROVIDERS] Failed to revert user role (non-critical):', roleError.message);
+          // Continue anyway - provider is deleted
+        }
+      } else if (user.role === UserRole.ADMIN) {
+        console.log('[PROVIDERS] User is an admin - keeping admin role after provider deactivation');
+      }
+
+      return {
+        success: true,
+        message: 'Provider profile deactivated successfully. Your account has been reverted to lister.',
+      };
+    } catch (error) {
+      console.error('[PROVIDERS] Error deactivating provider profile:', {
+        error: error.message,
+        stack: error.stack,
+        userId,
+      });
+      throw error;
+    }
   }
 
   async getProvider(id: string): Promise<Provider> {

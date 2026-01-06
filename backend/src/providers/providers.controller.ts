@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Request, Param, BadRequestException, NotFoundException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ProvidersService } from './providers.service';
 import { RegisterProviderDto } from './dto/register-provider.dto';
@@ -38,6 +38,7 @@ export class ProvidersController {
     try {
       console.log('[PROVIDERS] Registration request received:', {
         userId: req.user?.id,
+        userEmail: req.user?.email,
         userRole: req.user?.role,
         businessName: registerDto.businessName,
         serviceTypes: registerDto.serviceTypes,
@@ -49,7 +50,11 @@ export class ProvidersController {
         message: error.message,
         stack: error.stack,
         userId: req.user?.id,
+        userEmail: req.user?.email,
+        userRole: req.user?.role,
         errorName: error.name,
+        errorCode: error.code,
+        errorResponse: error.response,
       });
       throw error;
     }
@@ -89,8 +94,100 @@ export class ProvidersController {
     );
   }
 
+  @Get('profile')
+  @UseGuards(AuthGuard('jwt'))
+  async getProfile(@Request() req) {
+    try {
+      const userId = req.user?.sub || req.user?.id;
+      if (!userId) {
+        throw new BadRequestException('User ID not found in token');
+      }
+      
+      console.log('[PROVIDERS] Fetching profile for user:', {
+        userId,
+        userEmail: req.user?.email,
+        userRole: req.user?.role,
+      });
+      
+      const provider = await this.providersService.getProviderByUserId(userId);
+      
+      if (!provider) {
+        console.log('[PROVIDERS] No provider profile found for user:', userId);
+        throw new NotFoundException('Provider profile not found');
+      }
+      
+      return provider;
+    } catch (error) {
+      console.error('[PROVIDERS] Error fetching profile:', {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user?.sub || req.user?.id,
+        userEmail: req.user?.email,
+      });
+      throw error;
+    }
+  }
+
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.providersService.getProvider(id);
+  }
+
+  @Post('sync-role')
+  @UseGuards(AuthGuard('jwt'))
+  async syncRole(@Request() req) {
+    try {
+      // JWT payload uses 'sub' for user ID
+      const userId = req.user?.sub || req.user?.id;
+      console.log('[PROVIDERS] Sync role request received:', {
+        userId: userId,
+        userEmail: req.user?.email,
+        userObject: req.user,
+      });
+      
+      if (!userId) {
+        throw new Error('User ID not found in JWT token');
+      }
+      
+      const result = await this.providersService.syncUserRole(userId);
+      console.log('[PROVIDERS] Sync role result:', result);
+      return result;
+    } catch (error) {
+      console.error('[PROVIDERS] Error syncing role:', {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user?.sub || req.user?.id,
+        userObject: req.user,
+      });
+      throw error;
+    }
+  }
+
+  @Post('deactivate')
+  @UseGuards(AuthGuard('jwt'))
+  async deactivateProvider(@Request() req) {
+    try {
+      const userId = req.user?.sub || req.user?.id;
+      if (!userId) {
+        throw new BadRequestException('User ID not found in token');
+      }
+
+      console.log('[PROVIDERS] Deactivate provider request received:', {
+        userId,
+        userEmail: req.user?.email,
+        userRole: req.user?.role,
+      });
+
+      return await this.providersService.deactivateProviderProfile(userId);
+    } catch (error) {
+      console.error('[PROVIDERS] Error deactivating provider:', {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user?.sub || req.user?.id,
+        userEmail: req.user?.email,
+      });
+      throw error;
+    }
   }
 }
