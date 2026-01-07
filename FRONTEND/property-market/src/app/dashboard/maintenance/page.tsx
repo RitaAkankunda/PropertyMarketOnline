@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { maintenanceTicketsService } from "@/services";
@@ -255,7 +255,7 @@ function PriorityBadge({ priority }: { priority: TicketPriority }) {
   const config = {
     low: { color: "bg-gray-100 text-gray-600", label: "Low" },
     medium: { color: "bg-yellow-100 text-yellow-600", label: "Medium" },
-    high: { color: "bg-orange-100 text-orange-600", label: "High" },
+    high: { color: "bg-blue-100 text-blue-600", label: "High" },
     urgent: { color: "bg-red-100 text-red-600", label: "Urgent" },
   };
   
@@ -271,8 +271,8 @@ function CategoryIcon({ category }: { category: IssueCategory }) {
   const cat = ISSUE_CATEGORIES.find(c => c.id === category);
   const Icon = cat?.icon || Wrench;
   return (
-    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-      <Icon className="w-5 h-5 text-orange-600" />
+    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+      <Icon className="w-5 h-5 text-blue-600" />
     </div>
   );
 }
@@ -308,9 +308,9 @@ function CreateTicketModal({ onClose, onSubmit }: { onClose: () => void; onSubmi
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
+        <div className="bg-blue-500 text-white p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-orange-100">Step {step} of 3</p>
+            <p className="text-sm text-blue-100">Step {step} of 3</p>
             <h2 className="font-bold text-lg">Report Maintenance Issue</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
@@ -319,8 +319,8 @@ function CreateTicketModal({ onClose, onSubmit }: { onClose: () => void; onSubmi
         </div>
 
         {/* Progress Bar */}
-        <div className="h-1 bg-orange-100">
-          <div className="h-full bg-orange-500 transition-all" style={{ width: `${(step / 3) * 100}%` }} />
+        <div className="h-1 bg-blue-100">
+          <div className="h-full bg-blue-500 transition-all" style={{ width: `${(step / 3) * 100}%` }} />
         </div>
 
         {/* Content */}
@@ -335,12 +335,12 @@ function CreateTicketModal({ onClose, onSubmit }: { onClose: () => void; onSubmi
                     onClick={() => setFormData({ ...formData, category: cat.id })}
                     className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
                       formData.category === cat.id 
-                        ? "border-orange-500 bg-orange-50" 
-                        : "border-gray-200 hover:border-orange-300"
+                        ? "border-blue-500 bg-blue-50" 
+                        : "border-gray-200 hover:border-blue-300"
                     }`}
                   >
-                    <cat.icon className={`w-6 h-6 ${formData.category === cat.id ? "text-orange-600" : "text-gray-400"}`} />
-                    <span className={`text-sm font-medium ${formData.category === cat.id ? "text-orange-600" : "text-gray-600"}`}>
+                    <cat.icon className={`w-6 h-6 ${formData.category === cat.id ? "text-blue-600" : "text-gray-400"}`} />
+                    <span className={`text-sm font-medium ${formData.category === cat.id ? "text-blue-600" : "text-gray-600"}`}>
                       {cat.label}
                     </span>
                   </button>
@@ -443,14 +443,14 @@ function CreateTicketModal({ onClose, onSubmit }: { onClose: () => void; onSubmi
             <button
               onClick={() => setStep(step + 1)}
               disabled={step === 1 && !formData.category}
-              className="flex-1 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50"
+              className="flex-1 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
             >
               Continue
             </button>
           ) : (
             <button
               onClick={handleSubmit}
-              className="flex-1 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+              className="flex-1 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
             >
               Submit Ticket
             </button>
@@ -469,9 +469,9 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
+        <div className="bg-blue-500 text-white p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-orange-100">Ticket #{ticket.id}</p>
+            <p className="text-sm text-blue-100">Ticket #{ticket.id}</p>
             <h2 className="font-bold text-lg">{ticket.title}</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
@@ -512,7 +512,7 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     <span>{ticket.assignedProvider.rating}</span>
-                    <span>•</span>
+                    <span>â€¢</span>
                     <span>{ticket.assignedProvider.serviceType}</span>
                   </div>
                 </div>
@@ -535,15 +535,15 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
               <div className="space-y-2">
                 {ticket.suggestedProviders.map((provider) => (
                   <div key={provider.id} className="border rounded-xl p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                      <Wrench className="w-5 h-5 text-orange-600" />
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Wrench className="w-5 h-5 text-blue-600" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">{provider.name}</p>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                         <span>{provider.rating}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>{provider.price}</span>
                       </div>
                       <p className="text-xs text-green-600">{provider.availability}</p>
@@ -565,7 +565,7 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
                 {ticket.timeline.map((event, index) => (
                   <div key={index} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <div className={`w-3 h-3 rounded-full ${index === ticket.timeline!.length - 1 ? "bg-orange-500" : "bg-green-500"}`} />
+                      <div className={`w-3 h-3 rounded-full ${index === ticket.timeline!.length - 1 ? "bg-blue-500" : "bg-green-500"}`} />
                       {index < ticket.timeline!.length - 1 && <div className="w-0.5 h-full bg-gray-200" />}
                     </div>
                     <div className="flex-1 pb-3">
@@ -667,12 +667,12 @@ export default function MaintenanceDashboard() {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Maintenance Tickets</h1>
-              <p className="text-orange-100">Report and track property issues</p>
+              <p className="text-blue-100">Report and track property issues</p>
             </div>
             <button className="p-2 bg-white/20 rounded-lg">
               <Bell className="w-5 h-5" />
@@ -736,7 +736,7 @@ export default function MaintenanceDashboard() {
         {/* Report Issue Button */}
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-full py-4 bg-orange-500 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-orange-600 shadow-lg mb-4"
+          className="w-full py-4 bg-blue-500 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-600 shadow-lg mb-4"
         >
           <Plus className="w-5 h-5" />
           Report New Issue
@@ -756,7 +756,7 @@ export default function MaintenanceDashboard() {
               onClick={() => setStatusFilter(filter.id as TicketStatus | "all")}
               className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
                 statusFilter === filter.id 
-                  ? "bg-orange-500 text-white" 
+                  ? "bg-blue-500 text-white" 
                   : "bg-white text-gray-600 border"
               }`}
             >
@@ -769,7 +769,7 @@ export default function MaintenanceDashboard() {
         <div className="space-y-3">
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-gray-600">Loading tickets...</p>
             </div>
           ) : error ? (
@@ -777,7 +777,7 @@ export default function MaintenanceDashboard() {
               <p className="text-red-600 mb-4">{error}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
               >
                 Retry
               </button>
@@ -824,7 +824,7 @@ export default function MaintenanceDashboard() {
               <p className="text-gray-500 mb-4">You haven&apos;t reported any maintenance issues yet</p>
               <button 
                 onClick={() => setShowCreateModal(true)}
-                className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
               >
                 Report an Issue
               </button>
@@ -844,7 +844,7 @@ export default function MaintenanceDashboard() {
               { step: 5, title: "Payment Released", desc: "Payment is released after verification" },
             ].map((item) => (
               <div key={item.step} className="flex items-center gap-4">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-sm font-bold text-orange-600">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">
                   {item.step}
                 </div>
                 <div>
@@ -881,3 +881,4 @@ export default function MaintenanceDashboard() {
     </div>
   );
 }
+

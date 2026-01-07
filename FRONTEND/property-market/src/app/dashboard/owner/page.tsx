@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -171,7 +171,7 @@ function PriorityBadge({ priority }: { priority: string }) {
   const config: Record<string, { color: string; label: string }> = {
     low: { color: "bg-gray-100 text-gray-600", label: "Low" },
     medium: { color: "bg-yellow-100 text-yellow-600", label: "Medium" },
-    high: { color: "bg-orange-100 text-orange-600", label: "High" },
+    high: { color: "bg-orange-100 text-blue-600", label: "High" },
     urgent: { color: "bg-red-100 text-red-600", label: "Urgent" },
   };
   
@@ -215,9 +215,9 @@ function AssignProviderModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
+        <div className="bg-blue-500 text-white p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-orange-100">Ticket #{ticket.id}</p>
+            <p className="text-sm text-blue-100">Ticket #{ticket.id}</p>
             <h2 className="font-bold text-lg">Assign Provider</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
@@ -262,16 +262,16 @@ function AssignProviderModal({
                   onClick={() => setSelectedProvider(provider.id)}
                   className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     selectedProvider === provider.id
-                      ? "border-orange-500 bg-orange-50"
-                      : "border-gray-200 hover:border-orange-300"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-blue-300"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedProvider === provider.id ? "border-orange-500" : "border-gray-300"
+                      selectedProvider === provider.id ? "border-blue-500" : "border-gray-300"
                     }`}>
                       {selectedProvider === provider.id && (
-                        <div className="w-3 h-3 bg-orange-500 rounded-full" />
+                        <div className="w-3 h-3 bg-blue-500 rounded-full" />
                       )}
                     </div>
                     <div className="flex-1">
@@ -284,7 +284,7 @@ function AssignProviderModal({
                       </div>
                       <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
                         <span>{provider.price}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span className="text-green-600">{provider.availability}</span>
                       </div>
                       <p className="text-xs text-gray-400 mt-1">{provider.completedJobs} jobs completed</p>
@@ -329,7 +329,7 @@ function AssignProviderModal({
           <button
             onClick={handleAssign}
             disabled={!selectedProvider}
-            className="flex-1 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50"
+            className="flex-1 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
           >
             Assign Provider
           </button>
@@ -520,12 +520,12 @@ export default function OwnerDashboard() {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Owner Dashboard</h1>
-              <p className="text-orange-100">Manage your properties & maintenance</p>
+              <p className="text-blue-100">Manage your properties & maintenance</p>
             </div>
             <div className="flex items-center gap-3">
               <button className="p-2 bg-white/20 rounded-lg relative">
@@ -558,7 +558,7 @@ export default function OwnerDashboard() {
               onClick={() => setActiveTab(tab.id as TabType)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab.id 
-                  ? "bg-orange-500 text-white" 
+                  ? "bg-blue-500 text-white" 
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
@@ -566,7 +566,7 @@ export default function OwnerDashboard() {
               <span className="hidden sm:inline">{tab.label}</span>
               {tab.badge && tab.badge > 0 && (
                 <span className={`w-5 h-5 rounded-full text-xs flex items-center justify-center ${
-                  activeTab === tab.id ? "bg-white text-orange-500" : "bg-red-500 text-white"
+                  activeTab === tab.id ? "bg-white text-blue-500" : "bg-red-500 text-white"
                 }`}>
                   {tab.badge}
                 </span>
@@ -586,7 +586,7 @@ export default function OwnerDashboard() {
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <Building className="w-6 h-6 text-orange-600" />
+                    <Building className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Properties</p>
@@ -635,7 +635,7 @@ export default function OwnerDashboard() {
                 <h2 className="font-bold text-gray-900">Recent Maintenance Tickets</h2>
                 <button 
                   onClick={() => setActiveTab("tickets")}
-                  className="text-sm text-orange-600 flex items-center gap-1"
+                  className="text-sm text-blue-600 flex items-center gap-1"
                 >
                   View All <ChevronRight className="w-4 h-4" />
                 </button>
@@ -644,7 +644,7 @@ export default function OwnerDashboard() {
                 {tickets.slice(0, 3).map((ticket) => (
                   <div key={ticket.id} className="p-4 flex items-center gap-4">
                     <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <Wrench className="w-5 h-5 text-orange-600" />
+                      <Wrench className="w-5 h-5 text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{ticket.title}</p>
@@ -666,7 +666,7 @@ export default function OwnerDashboard() {
                   <div key={property.id} className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-medium">{property.name}</h3>
-                      <span className="text-sm text-orange-600">{property.occupancy}% occupied</span>
+                      <span className="text-sm text-blue-600">{property.occupancy}% occupied</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span className="flex items-center gap-1">
@@ -709,7 +709,7 @@ export default function OwnerDashboard() {
                   onClick={() => setTicketFilter(filter.id as TicketStatus | "all")}
                   className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
                     ticketFilter === filter.id 
-                      ? "bg-orange-500 text-white" 
+                      ? "bg-blue-500 text-white" 
                       : "bg-white text-gray-600 border"
                   }`}
                 >
@@ -750,7 +750,7 @@ export default function OwnerDashboard() {
                       <div className="flex gap-2 pt-3 border-t">
                         <button
                           onClick={() => { setSelectedTicket(ticket); setShowAssignModal(true); }}
-                          className="flex-1 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600"
+                          className="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
                         >
                           Assign Provider
                         </button>
@@ -893,7 +893,7 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">{tx.provider}</p>
-                      <p className="text-sm text-gray-500">Ticket #{tx.ticket} • {tx.date}</p>
+                      <p className="text-sm text-gray-500">Ticket #{tx.ticket} â€¢ {tx.date}</p>
                     </div>
                     <div className="text-right">
                       <p className={`font-bold ${tx.type === "Released" ? "text-green-600" : "text-blue-600"}`}>
@@ -920,7 +920,7 @@ export default function OwnerDashboard() {
             <Building className="w-5 h-5" />
             <span className="text-xs mt-1">Properties</span>
           </Link>
-          <Link href="/dashboard/owner" className="flex-1 flex flex-col items-center py-3 text-orange-500">
+          <Link href="/dashboard/owner" className="flex-1 flex flex-col items-center py-3 text-blue-500">
             <Wrench className="w-5 h-5" />
             <span className="text-xs mt-1">Dashboard</span>
           </Link>
@@ -933,3 +933,4 @@ export default function OwnerDashboard() {
     </div>
   );
 }
+

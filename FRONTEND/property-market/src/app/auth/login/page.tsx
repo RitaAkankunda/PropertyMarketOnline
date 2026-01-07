@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -167,11 +167,11 @@ export default function LoginPage() {
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {infoMessage && (
-                <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
-                  <p className="text-orange-800 text-sm font-medium mb-2">{infoMessage}</p>
-                  <p className="text-orange-700 text-xs">
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <p className="text-blue-800 text-sm font-medium mb-2">{infoMessage}</p>
+                  <p className="text-blue-700 text-xs">
                     Don't have an account yet?{" "}
-                    <Link href="/auth/register" className="font-semibold underline hover:text-orange-900">
+                    <Link href="/auth/register" className="font-semibold underline hover:text-blue-900">
                       Sign up first
                     </Link>
                     , then come back here to login and complete your provider registration.
@@ -328,3 +328,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

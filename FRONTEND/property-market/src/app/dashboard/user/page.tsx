@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -168,9 +168,9 @@ function RequestDetailModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
+        <div className="bg-blue-500 text-white p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-orange-100">Request #{request.id}</p>
+            <p className="text-sm text-blue-100">Request #{request.id}</p>
             <h2 className="font-bold text-lg">{request.serviceType}</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
@@ -191,7 +191,7 @@ function RequestDetailModal({
             <h3 className="font-medium text-gray-900 mb-2">Service Provider</h3>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-orange-600" />
+                <User className="w-6 h-6 text-blue-600" />
               </div>
               <div className="flex-1">
                 <p className="font-medium">{request.providerName}</p>
@@ -232,16 +232,16 @@ function RequestDetailModal({
           </div>
 
           {/* Amount */}
-          <div className="bg-orange-50 rounded-lg p-4 flex items-center justify-between">
+          <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
             <span className="text-gray-700">Amount</span>
-            <span className="text-xl font-bold text-orange-600">UGX {request.amount.toLocaleString()}</span>
+            <span className="text-xl font-bold text-blue-600">UGX {request.amount.toLocaleString()}</span>
           </div>
 
           {/* Rating for completed jobs */}
           {request.status === "completed" && !showRating && (
             <button
               onClick={() => setShowRating(true)}
-              className="w-full py-3 border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50"
+              className="w-full py-3 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50"
             >
               <Star className="w-5 h-5 inline mr-2" />
               Rate this service
@@ -261,7 +261,7 @@ function RequestDetailModal({
               <button
                 onClick={() => { onRate(request.id, rating); onClose(); }}
                 disabled={rating === 0}
-                className="w-full py-2 bg-orange-500 text-white rounded-lg disabled:opacity-50"
+                className="w-full py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50"
               >
                 Submit Rating
               </button>
@@ -324,7 +324,7 @@ function ChatModal({
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-orange-600" />
+              <Briefcase className="w-5 h-5 text-blue-600" />
             </div>
             <div>
               <p className="font-medium">{conversation.providerName}</p>
@@ -342,11 +342,11 @@ function ChatModal({
             <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                 msg.sender === "user" 
-                  ? "bg-orange-500 text-white rounded-br-md" 
+                  ? "bg-blue-500 text-white rounded-br-md" 
                   : "bg-gray-100 text-gray-900 rounded-bl-md"
               }`}>
                 <p className="text-sm">{msg.text}</p>
-                <p className={`text-xs mt-1 ${msg.sender === "user" ? "text-orange-100" : "text-gray-400"}`}>
+                <p className={`text-xs mt-1 ${msg.sender === "user" ? "text-blue-100" : "text-gray-400"}`}>
                   {msg.time}
                 </p>
               </div>
@@ -361,10 +361,10 @@ function ChatModal({
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
           />
-          <button onClick={handleSend} className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+          <button onClick={handleSend} className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
             <Send className="w-5 h-5" />
           </button>
         </div>
@@ -453,12 +453,12 @@ export default function UserDashboard() {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">My Dashboard</h1>
-              <p className="text-orange-100">Track your service requests</p>
+              <p className="text-blue-100">Track your service requests</p>
             </div>
             <div className="flex items-center gap-3">
               <button className="p-2 bg-white/20 rounded-lg relative">
@@ -540,7 +540,7 @@ export default function UserDashboard() {
               onClick={() => setActiveTab(tab.id as TabType)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab.id 
-                  ? "bg-orange-500 text-white" 
+                  ? "bg-blue-500 text-white" 
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
@@ -548,7 +548,7 @@ export default function UserDashboard() {
               {tab.label}
               {tab.badge && tab.badge > 0 && (
                 <span className={`w-5 h-5 rounded-full text-xs flex items-center justify-center ${
-                  activeTab === tab.id ? "bg-white text-orange-500" : "bg-red-500 text-white"
+                  activeTab === tab.id ? "bg-white text-blue-500" : "bg-red-500 text-white"
                 }`}>
                   {tab.badge}
                 </span>
@@ -565,7 +565,7 @@ export default function UserDashboard() {
           <div className="space-y-4">
             {/* New Request Button */}
             <Link href="/providers">
-              <button className="w-full py-4 bg-orange-500 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-orange-600 shadow-lg">
+              <button className="w-full py-4 bg-blue-500 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-600 shadow-lg">
                 <Plus className="w-5 h-5" />
                 Request New Service
               </button>
@@ -585,7 +585,7 @@ export default function UserDashboard() {
                   onClick={() => setStatusFilter(filter.id as RequestStatus | "all")}
                   className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
                     statusFilter === filter.id 
-                      ? "bg-orange-500 text-white" 
+                      ? "bg-blue-500 text-white" 
                       : "bg-white text-gray-600 border"
                   }`}
                 >
@@ -598,7 +598,7 @@ export default function UserDashboard() {
             <div className="space-y-3">
               {isLoading ? (
                 <div className="text-center py-12">
-                  <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading requests...</p>
                 </div>
               ) : error ? (
@@ -606,7 +606,7 @@ export default function UserDashboard() {
                   <p className="text-red-600 mb-4">{error}</p>
                   <button
                     onClick={() => window.location.reload()}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                   >
                     Retry
                   </button>
@@ -628,7 +628,7 @@ export default function UserDashboard() {
                       <p className="text-sm text-gray-500 mt-1">{request.providerName}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-orange-600">UGX {request.amount.toLocaleString()}</p>
+                      <p className="font-bold text-blue-600">UGX {request.amount.toLocaleString()}</p>
                       <p className="text-xs text-gray-400">{new Date(request.scheduledDate).toLocaleDateString()}</p>
                     </div>
                   </div>
@@ -648,7 +648,7 @@ export default function UserDashboard() {
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No requests found</h3>
                   <p className="text-gray-500 mb-4">You haven&apos;t made any service requests yet</p>
                   <Link href="/providers">
-                    <button className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+                    <button className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                       Find Service Providers
                     </button>
                   </Link>
@@ -669,7 +669,7 @@ export default function UserDashboard() {
               >
                 <div className="relative">
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <Briefcase className="w-6 h-6 text-orange-600" />
+                    <Briefcase className="w-6 h-6 text-blue-600" />
                   </div>
                   {conv.unread && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full" />
@@ -696,7 +696,7 @@ export default function UserDashboard() {
             {notifications.map((notif) => (
               <div 
                 key={notif.id}
-                className={`bg-white rounded-xl p-4 shadow-sm ${!notif.read ? "border-l-4 border-orange-500" : ""}`}
+                className={`bg-white rounded-xl p-4 shadow-sm ${!notif.read ? "border-l-4 border-blue-500" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -730,7 +730,7 @@ export default function UserDashboard() {
             <Search className="w-5 h-5" />
             <span className="text-xs mt-1">Services</span>
           </Link>
-          <Link href="/dashboard/user" className="flex-1 flex flex-col items-center py-3 text-orange-500">
+          <Link href="/dashboard/user" className="flex-1 flex flex-col items-center py-3 text-blue-500">
             <Briefcase className="w-5 h-5" />
             <span className="text-xs mt-1">Requests</span>
           </Link>
@@ -743,3 +743,4 @@ export default function UserDashboard() {
     </div>
   );
 }
+

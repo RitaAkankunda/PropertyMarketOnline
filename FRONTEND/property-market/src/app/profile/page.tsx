@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -188,7 +188,7 @@ export default function ProfilePage() {
                 {/* Profile Picture Upload */}
                 <div className="flex flex-col items-center space-y-4 pb-6 border-b">
                   <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-2xl font-medium overflow-hidden">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-medium overflow-hidden">
                       {avatarPreview ? (
                         <img 
                           src={avatarPreview} 
@@ -331,4 +331,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
