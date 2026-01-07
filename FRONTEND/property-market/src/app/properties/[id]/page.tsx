@@ -16,11 +16,14 @@ import {
   Check,
   Edit,
   Loader2,
+  Calendar,
+  MessageSquare,
 } from "lucide-react";
 import { Button, Badge, Card } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
 import { propertyService } from "@/services/property.service";
 import { useAuth } from "@/hooks";
+import { PropertyInquiryModal } from "@/components/properties";
 import type { Property } from "@/types";
 
 // Mockup property data
@@ -248,7 +251,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const { user, isAuthenticated } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -557,54 +560,74 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </Card>
 
-        {/* Payment Card */}
+        {/* Contact/Inquiry Card */}
         <Card>
           <div className="p-6">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Payment Methods</h2>
-            <p className="text-slate-600 mb-6">Choose your preferred payment method to proceed with this property</p>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">
+              {property.listingType === "sale" 
+                ? "Interested in this property?" 
+                : property.propertyType === "airbnb"
+                ? "Book Your Stay"
+                : "Apply for This Property"}
+            </h2>
+            <p className="text-slate-600 mb-6">
+              {property.listingType === "sale" 
+                ? "Schedule a viewing or make an inquiry about this property" 
+                : property.propertyType === "airbnb"
+                ? "Check availability and book your dates"
+                : "Submit your rental application and we'll get back to you"}
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {paymentMethods.map((method) => (
-                <button
-                  key={method.id}
-                  onClick={() => setSelectedPaymentMethod(method.id)}
-                  className={cn(
-                    "flex items-center gap-4 p-4 rounded-lg border-2 transition-all",
-                    selectedPaymentMethod === method.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-slate-200 hover:border-blue-300 bg-white"
-                  )}
-                >
-                  <div className={cn("w-12 h-12 rounded-full flex items-center justify-center text-2xl", method.color, "text-white")}>
-                    {method.icon}
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="font-semibold text-slate-900">{method.name}</p>
-                    <p className="text-sm text-slate-500">Fast & Secure</p>
-                  </div>
-                  {selectedPaymentMethod === method.id && (
-                    <Check className="w-6 h-6 text-blue-600" />
-                  )}
-                </button>
-              ))}
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center gap-3 text-slate-700">
+                <Check className="w-5 h-5 text-green-500" />
+                <span>Quick response from property owner</span>
+              </div>
+              <div className="flex items-center gap-3 text-slate-700">
+                <Check className="w-5 h-5 text-green-500" />
+                <span>Flexible viewing schedule</span>
+              </div>
+              <div className="flex items-center gap-3 text-slate-700">
+                <Check className="w-5 h-5 text-green-500" />
+                <span>Secure and verified listings</span>
+              </div>
             </div>
 
-            <Button 
-              className="w-full py-6 text-lg"
-              disabled={!selectedPaymentMethod}
-            >
-              {selectedPaymentMethod 
-                ? `Proceed with ${paymentMethods.find(m => m.id === selectedPaymentMethod)?.name}`
-                : "Select a payment method"
-              }
-            </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button
+                onClick={() => setIsInquiryModalOpen(true)}
+                className="w-full py-6 text-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+              >
+                <Calendar className="w-5 h-5 mr-2" />
+                {property.listingType === "sale" 
+                  ? "Schedule Viewing" 
+                  : property.propertyType === "airbnb"
+                  ? "Check Availability"
+                  : "Apply Now"}
+              </Button>
+              
+              <Button
+                onClick={() => setIsInquiryModalOpen(true)}
+                className="w-full py-6 text-lg bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+              >
+                <MessageSquare className="w-5 h-5 mr-2" />
+                Send Inquiry
+              </Button>
+            </div>
 
             <p className="text-center text-sm text-slate-500 mt-4">
-              🔒 Your payment information is secure and encrypted
+              📞 Questions? Contact us at +256 700 000 000
             </p>
           </div>
         </Card>
       </div>
+
+      {/* Property Inquiry Modal */}
+      <PropertyInquiryModal
+        property={property}
+        isOpen={isInquiryModalOpen}
+        onClose={() => setIsInquiryModalOpen(false)}
+      />
     </div>
   );
 }
