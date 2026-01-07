@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Calendar, Clock, MapPin, User, CheckCircle, XCircle, AlertCircle, Repeat } from "lucide-react";
@@ -77,7 +77,7 @@ export default function BookingsPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading bookings...</p>
         </div>
       </div>
@@ -209,7 +209,7 @@ export default function BookingsPage() {
                         <span>Repeats {booking.frequency}</span>
                         {booking.nextOccurrence && (
                           <span className="text-gray-400">
-                            • Next: {new Date(booking.nextOccurrence).toLocaleDateString()}
+                            â€¢ Next: {new Date(booking.nextOccurrence).toLocaleDateString()}
                           </span>
                         )}
                       </div>
@@ -240,3 +240,4 @@ export default function BookingsPage() {
     </div>
   );
 }
+

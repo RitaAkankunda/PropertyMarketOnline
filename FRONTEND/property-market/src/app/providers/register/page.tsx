@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -223,7 +223,7 @@ export default function ProviderRegisterPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -545,7 +545,7 @@ export default function ProviderRegisterPage() {
           <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/30">
             <CheckCircle className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">Registration Successful! 🎉</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">Registration Successful! ðŸŽ‰</h1>
           <p className="text-lg text-gray-600 mb-8 leading-relaxed">
             Congratulations! You've successfully registered as a service provider on PropertyMarket Online.
           </p>
@@ -589,7 +589,7 @@ export default function ProviderRegisterPage() {
                   }
                 }, 500);
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/30 transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all"
             >
               <Briefcase className="w-5 h-5" />
               View My Provider Profile
@@ -637,7 +637,7 @@ export default function ProviderRegisterPage() {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-orange-500 to-orange-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -712,10 +712,10 @@ export default function ProviderRegisterPage() {
                   Registering as: {user.firstName} {user.lastName}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Email: {user.email} • Role: {user.role}
+                  Email: {user.email} â€¢ Role: {user.role}
                 </p>
                 <p className="text-xs text-blue-700 mt-2">
-                  ✓ You're logged in. We'll use your existing account to create your provider profile.
+                  âœ“ You're logged in. We'll use your existing account to create your provider profile.
                 </p>
               </div>
             </div>
@@ -763,8 +763,8 @@ export default function ProviderRegisterPage() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <User className="w-6 h-6 text-orange-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <User className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900">Create Your Account</h2>
@@ -785,7 +785,7 @@ export default function ProviderRegisterPage() {
                             <input
                               type="text"
                               placeholder="John"
-                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                                 errors.firstName ? "border-red-300" : "border-gray-300"
                               }`}
                               {...register("firstName")}
@@ -806,7 +806,7 @@ export default function ProviderRegisterPage() {
                             <input
                               type="text"
                               placeholder="Doe"
-                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                                 errors.lastName ? "border-red-300" : "border-gray-300"
                               }`}
                               {...register("lastName")}
@@ -829,7 +829,7 @@ export default function ProviderRegisterPage() {
                           <input
                             type="email"
                             placeholder="you@example.com"
-                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                               errors.email ? "border-red-300" : "border-gray-300"
                             }`}
                             {...register("email")}
@@ -851,7 +851,7 @@ export default function ProviderRegisterPage() {
                           <input
                             type="tel"
                             placeholder="+256 700 000 000"
-                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             {...register("phone")}
                           />
                         </div>
@@ -868,7 +868,7 @@ export default function ProviderRegisterPage() {
                           <input
                             type="password"
                             placeholder="Minimum 8 characters"
-                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                               errors.password ? "border-red-300" : "border-gray-300"
                             }`}
                             {...register("password")}
@@ -891,8 +891,8 @@ export default function ProviderRegisterPage() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <Briefcase className="w-6 h-6 text-orange-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <Briefcase className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900">Business Information</h2>
@@ -912,7 +912,7 @@ export default function ProviderRegisterPage() {
                           <input
                             type="text"
                             placeholder="e.g., John's Electrical Services"
-                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                               errors.businessName ? "border-red-300" : "border-gray-300"
                             }`}
                             {...register("businessName")}
@@ -930,7 +930,7 @@ export default function ProviderRegisterPage() {
                         <textarea
                           placeholder="Describe your services, experience, certifications, and what makes your business unique. Minimum 50 characters."
                           rows={6}
-                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all resize-none ${
+                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none ${
                             errors.description ? "border-red-300" : "border-gray-300"
                           }`}
                           {...register("description")}
@@ -955,8 +955,8 @@ export default function ProviderRegisterPage() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <DollarSign className="w-6 h-6 text-orange-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <DollarSign className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900">Services & Pricing</h2>
@@ -979,7 +979,7 @@ export default function ProviderRegisterPage() {
                                 onClick={() => toggleService(category.value)}
                                 className={`p-4 border-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                                   isSelected
-                                    ? "border-orange-500 bg-orange-50 text-orange-700 shadow-md scale-105"
+                                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md scale-105"
                                     : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700"
                                 }`}
                               >
@@ -1007,7 +1007,7 @@ export default function ProviderRegisterPage() {
                                 onClick={() => setValue("pricingType", option.value as "hourly" | "fixed" | "custom")}
                                 className={`p-4 border-2 rounded-xl text-sm font-medium transition-all ${
                                   isSelected
-                                    ? "border-orange-500 bg-orange-50 text-orange-700 shadow-md"
+                                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md"
                                     : "border-gray-200 hover:border-gray-300 text-gray-700"
                                 }`}
                               >
@@ -1032,7 +1032,7 @@ export default function ProviderRegisterPage() {
                               placeholder="50000"
                               min="1"
                               step="1"
-                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                                 errors.hourlyRate ? "border-red-300" : "border-gray-300"
                               }`}
                               {...register("hourlyRate", { 
@@ -1060,7 +1060,7 @@ export default function ProviderRegisterPage() {
                               placeholder="100000"
                               min="1"
                               step="1"
-                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                                 errors.minimumCharge ? "border-red-300" : "border-gray-300"
                               }`}
                               {...register("minimumCharge", { 
@@ -1083,8 +1083,8 @@ export default function ProviderRegisterPage() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <MapPin className="w-6 h-6 text-orange-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <MapPin className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900">Location & Availability</h2>
@@ -1105,7 +1105,7 @@ export default function ProviderRegisterPage() {
                             <input
                               type="text"
                               placeholder="Kampala"
-                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                              className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                                 errors.city ? "border-red-300" : "border-gray-300"
                               }`}
                               {...register("city")}
@@ -1122,7 +1122,7 @@ export default function ProviderRegisterPage() {
                           <input
                             type="text"
                             placeholder="Nakawa"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             {...register("district")}
                           />
                         </div>
@@ -1135,7 +1135,7 @@ export default function ProviderRegisterPage() {
                         <input
                           type="number"
                           placeholder="10"
-                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                             errors.serviceRadius ? "border-red-300" : "border-gray-300"
                           }`}
                           {...register("serviceRadius", { valueAsNumber: true })}
@@ -1160,7 +1160,7 @@ export default function ProviderRegisterPage() {
                                 onClick={() => toggleDay(day.value)}
                                 className={`p-3 border-2 rounded-xl text-sm font-medium transition-all ${
                                   isSelected
-                                    ? "border-orange-500 bg-orange-50 text-orange-700 shadow-md"
+                                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md"
                                     : "border-gray-200 hover:border-gray-300 text-gray-700"
                                 }`}
                               >
@@ -1181,7 +1181,7 @@ export default function ProviderRegisterPage() {
                           </label>
                           <input
                             type="time"
-                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                               errors.startTime ? "border-red-300" : "border-gray-300"
                             }`}
                             {...register("startTime")}
@@ -1196,7 +1196,7 @@ export default function ProviderRegisterPage() {
                           </label>
                           <input
                             type="time"
-                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                               errors.endTime ? "border-red-300" : "border-gray-300"
                             }`}
                             {...register("endTime")}
@@ -1216,8 +1216,8 @@ export default function ProviderRegisterPage() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-orange-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900">Review Your Information</h2>
@@ -1294,7 +1294,7 @@ export default function ProviderRegisterPage() {
                   type="button"
                   onClick={nextStep}
                   disabled={!canProceed()}
-                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                   <ChevronRight className="w-4 h-4" />
@@ -1316,7 +1316,7 @@ export default function ProviderRegisterPage() {
                     // Let the form handle validation - don't prevent default
                     // The form's handleSubmit will catch validation errors
                   }}
-                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {(isSubmitting || isFormSubmitting) ? (
                     <>
@@ -1369,3 +1369,4 @@ export default function ProviderRegisterPage() {
     </div>
   );
 }
+

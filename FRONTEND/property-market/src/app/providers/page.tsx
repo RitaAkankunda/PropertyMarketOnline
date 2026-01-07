@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -410,7 +410,7 @@ function RequestFormModal({
             </div>
             <div>
               <h2 className="font-bold text-xl mb-1">{provider.businessName}</h2>
-              <p className="text-orange-100 text-sm flex items-center gap-2">
+              <p className="text-blue-100 text-sm flex items-center gap-2">
                 {category?.name}
                 {provider.isVerified && (
                   <span className="inline-flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full text-xs">
@@ -759,7 +759,7 @@ function RequestFormModal({
                   onClick={() => setPaymentMethod("mtn")}
                   className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     paymentMethod === "mtn" 
-                      ? "border-orange-500 bg-orange-50 shadow-md scale-[1.02]" 
+                      ? "border-blue-500 bg-blue-50 shadow-md scale-[1.02]" 
                       : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
@@ -771,7 +771,7 @@ function RequestFormModal({
                     <p className="text-sm text-gray-500">Pay via MTN MoMo</p>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    paymentMethod === "mtn" ? "border-orange-500 bg-orange-500" : "border-gray-300"
+                    paymentMethod === "mtn" ? "border-blue-500 bg-blue-500" : "border-gray-300"
                   }`}>
                     {paymentMethod === "mtn" && <CheckCircle className="w-4 h-4 text-white" />}
                   </div>
@@ -782,7 +782,7 @@ function RequestFormModal({
                   onClick={() => setPaymentMethod("airtel")}
                   className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     paymentMethod === "airtel" 
-                      ? "border-orange-500 bg-orange-50 shadow-md scale-[1.02]" 
+                      ? "border-blue-500 bg-blue-50 shadow-md scale-[1.02]" 
                       : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
@@ -794,7 +794,7 @@ function RequestFormModal({
                     <p className="text-sm text-gray-500">Pay via Airtel Money</p>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    paymentMethod === "airtel" ? "border-orange-500 bg-orange-500" : "border-gray-300"
+                    paymentMethod === "airtel" ? "border-blue-500 bg-blue-500" : "border-gray-300"
                   }`}>
                     {paymentMethod === "airtel" && <CheckCircle className="w-4 h-4 text-white" />}
                   </div>
@@ -805,7 +805,7 @@ function RequestFormModal({
                   onClick={() => setPaymentMethod("card")}
                   className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     paymentMethod === "card" 
-                      ? "border-orange-500 bg-orange-50 shadow-md scale-[1.02]" 
+                      ? "border-blue-500 bg-blue-50 shadow-md scale-[1.02]" 
                       : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
@@ -817,7 +817,7 @@ function RequestFormModal({
                     <p className="text-sm text-gray-500">Visa, Mastercard</p>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    paymentMethod === "card" ? "border-orange-500 bg-orange-500" : "border-gray-300"
+                    paymentMethod === "card" ? "border-blue-500 bg-blue-500" : "border-gray-300"
                   }`}>
                     {paymentMethod === "card" && <CheckCircle className="w-4 h-4 text-white" />}
                   </div>
@@ -828,7 +828,7 @@ function RequestFormModal({
                   onClick={() => setPaymentMethod("later")}
                   className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     paymentMethod === "later" 
-                      ? "border-orange-500 bg-orange-50 shadow-md scale-[1.02]" 
+                      ? "border-blue-500 bg-blue-50 shadow-md scale-[1.02]" 
                       : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
@@ -840,7 +840,7 @@ function RequestFormModal({
                     <p className="text-sm text-gray-500">Pay when job is completed</p>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    paymentMethod === "later" ? "border-orange-500 bg-orange-500" : "border-gray-300"
+                    paymentMethod === "later" ? "border-blue-500 bg-blue-500" : "border-gray-300"
                   }`}>
                     {paymentMethod === "later" && <CheckCircle className="w-4 h-4 text-white" />}
                   </div>
@@ -852,10 +852,10 @@ function RequestFormModal({
                 <input 
                   type="checkbox" 
                   id="terms" 
-                  className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500" 
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
                 />
                 <label htmlFor="terms" className="text-sm text-gray-600 leading-relaxed">
-                  I agree to the <a href="#" className="text-orange-600 hover:underline font-medium">Terms of Service</a> and understand that 
+                  I agree to the <a href="#" className="text-blue-600 hover:underline font-medium">Terms of Service</a> and understand that 
                   final pricing may vary based on the actual scope of work.
                 </label>
               </div>
@@ -877,7 +877,7 @@ function RequestFormModal({
           {step < 3 ? (
             <button
               onClick={() => setStep(step + 1)}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/30 transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all"
             >
               Continue
               <ChevronRight className="w-4 h-4" />
@@ -886,7 +886,7 @@ function RequestFormModal({
             <button
               onClick={handleSubmit}
               disabled={!paymentMethod || isSubmitting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
@@ -925,8 +925,8 @@ function ProviderCard({
     <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg transition-shadow">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-          <Icon className="w-6 h-6 text-orange-600" />
+        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+          <Icon className="w-6 h-6 text-blue-600" />
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -956,7 +956,7 @@ function ProviderCard({
       <div className="flex items-center justify-between mt-4 pt-4 border-t">
         <div>
           <p className="text-xs text-gray-500">{provider.jobs} jobs done</p>
-          <p className="font-semibold text-orange-600">{provider.price}</p>
+          <p className="font-semibold text-blue-600">{provider.price}</p>
         </div>
         <div className="flex gap-2">
           <button className="p-2 border rounded-lg hover:bg-gray-50">
@@ -967,7 +967,7 @@ function ProviderCard({
           </button>
           <button 
             onClick={onRequest}
-            className="px-4 py-2 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600"
+            className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600"
           >
             Request
           </button>
@@ -1119,12 +1119,12 @@ export default function ServiceProvidersPage() {
       {/* =========================================== */}
       {/* HEADER SECTION */}
       {/* =========================================== */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-12">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-12">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl md:text-4xl font-bold text-center mb-2">
             Find Service Providers
           </h1>
-          <p className="text-center text-orange-100 mb-8">
+          <p className="text-center text-blue-100 mb-8">
             {CATEGORIES.length - 1} categories  {providers.length} verified professionals
           </p>
 
@@ -1137,7 +1137,7 @@ export default function ServiceProvidersPage() {
                 placeholder="Search by name or location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className="w-full pl-12 pr-4 py-3 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
             </div>
           </div>
@@ -1170,7 +1170,7 @@ export default function ServiceProvidersPage() {
                       onClick={() => setSelectedCategory(category.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
                         selectedCategory === category.id
-                          ? "bg-orange-500 text-white"
+                          ? "bg-blue-500 text-white"
                           : "hover:bg-gray-100 text-gray-700"
                       }`}
                     >
@@ -1179,7 +1179,7 @@ export default function ServiceProvidersPage() {
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${
                           selectedCategory === category.id
-                            ? "bg-orange-400"
+                            ? "bg-blue-400"
                             : "bg-gray-100"
                         }`}
                       >
@@ -1214,7 +1214,7 @@ export default function ServiceProvidersPage() {
             {/* Provider Cards Grid */}
             {isLoading ? (
               <div className="text-center py-16 bg-white rounded-xl">
-                <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-gray-600">Loading providers...</p>
               </div>
             ) : error ? (
@@ -1222,7 +1222,7 @@ export default function ServiceProvidersPage() {
                 <p className="text-red-600 mb-4">{error}</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                 >
                   Retry
                 </button>
@@ -1251,7 +1251,7 @@ export default function ServiceProvidersPage() {
                     setSelectedCategory("all");
                     setSearchQuery("");
                   }}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                 >
                   Clear Filters
                 </button>
@@ -1271,7 +1271,7 @@ export default function ServiceProvidersPage() {
             Join our platform and connect with property owners
           </p>
           <Link href="/auth/register/provider">
-            <button className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+            <button className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
               Register as Provider
             </button>
           </Link>
@@ -1280,3 +1280,5 @@ export default function ServiceProvidersPage() {
     </div>
   );
 }
+
+

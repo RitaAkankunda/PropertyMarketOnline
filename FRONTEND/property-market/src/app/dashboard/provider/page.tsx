@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -134,9 +134,9 @@ function JobDetailModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
+        <div className="bg-blue-500 text-white p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-orange-100">Job #{job.id}</p>
+            <p className="text-sm text-blue-100">Job #{job.id}</p>
             <h2 className="font-bold text-lg">{job.serviceType}</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
@@ -193,9 +193,9 @@ function JobDetailModal({
           </div>
 
           {/* Amount */}
-          <div className="bg-orange-50 rounded-lg p-4 flex items-center justify-between">
+          <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
             <span className="text-gray-700">Amount</span>
-            <span className="text-xl font-bold text-orange-600">UGX {job.amount.toLocaleString()}</span>
+            <span className="text-xl font-bold text-blue-600">UGX {job.amount.toLocaleString()}</span>
           </div>
         </div>
 
@@ -285,7 +285,7 @@ function WithdrawModal({
             UGX {Number(amount).toLocaleString()} will be sent to your {method === "mtn" ? "MTN" : "Airtel"} number.
           </p>
           <p className="text-sm text-gray-500 mb-6">Processing time: 1-5 minutes</p>
-          <button onClick={onClose} className="w-full py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+          <button onClick={onClose} className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
             Done
           </button>
         </div>
@@ -325,7 +325,7 @@ function WithdrawModal({
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="Enter amount"
                   max={balance}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
                 <div className="flex gap-2 mt-2">
                   {[50000, 100000, 200000].map(val => (
@@ -339,7 +339,7 @@ function WithdrawModal({
                   ))}
                   <button
                     onClick={() => setAmount(String(balance))}
-                    className="flex-1 py-2 text-sm border rounded-lg hover:bg-gray-50 text-orange-600"
+                    className="flex-1 py-2 text-sm border rounded-lg hover:bg-gray-50 text-blue-600"
                   >
                     All
                   </button>
@@ -354,7 +354,7 @@ function WithdrawModal({
                 <div className="space-y-2">
                   <div 
                     onClick={() => setMethod("mtn")}
-                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${method === "mtn" ? "border-orange-500 bg-orange-50" : ""}`}
+                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${method === "mtn" ? "border-blue-500 bg-blue-50" : ""}`}
                   >
                     <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center">
                       <Smartphone className="w-5 h-5" />
@@ -363,7 +363,7 @@ function WithdrawModal({
                   </div>
                   <div 
                     onClick={() => setMethod("airtel")}
-                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${method === "airtel" ? "border-orange-500 bg-orange-50" : ""}`}
+                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${method === "airtel" ? "border-blue-500 bg-blue-50" : ""}`}
                   >
                     <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
                       <Smartphone className="w-5 h-5 text-white" />
@@ -376,7 +376,7 @@ function WithdrawModal({
               <button
                 onClick={() => setStep(2)}
                 disabled={!amount || !method || Number(amount) > balance || Number(amount) < 5000}
-                className="w-full py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
               >
                 Continue
               </button>
@@ -395,7 +395,7 @@ function WithdrawModal({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder={method === "mtn" ? "077X XXX XXX" : "070X XXX XXX"}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -411,7 +411,7 @@ function WithdrawModal({
                 </div>
                 <div className="flex justify-between font-medium pt-2 border-t">
                   <span>You Receive</span>
-                  <span className="text-orange-600">UGX {(Number(amount) * 0.99).toLocaleString()}</span>
+                  <span className="text-blue-600">UGX {(Number(amount) * 0.99).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -425,7 +425,7 @@ function WithdrawModal({
                 <button
                   onClick={handleSubmit}
                   disabled={!phone || phone.length < 10 || isProcessing}
-                  className="flex-1 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                  className="flex-1 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
                 >
                   {isProcessing ? "Processing..." : "Withdraw"}
                 </button>
@@ -473,8 +473,8 @@ function ChatModal({
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-orange-600" />
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <User className="w-5 h-5 text-blue-600" />
             </div>
             <div>
               <p className="font-medium">{message.clientName}</p>
@@ -492,11 +492,11 @@ function ChatModal({
             <div key={msg.id} className={`flex ${msg.sender === "provider" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                 msg.sender === "provider" 
-                  ? "bg-orange-500 text-white rounded-br-md" 
+                  ? "bg-blue-500 text-white rounded-br-md" 
                   : "bg-gray-100 text-gray-900 rounded-bl-md"
               }`}>
                 <p className="text-sm">{msg.text}</p>
-                <p className={`text-xs mt-1 ${msg.sender === "provider" ? "text-orange-100" : "text-gray-400"}`}>
+                <p className={`text-xs mt-1 ${msg.sender === "provider" ? "text-blue-100" : "text-gray-400"}`}>
                   {msg.time}
                 </p>
               </div>
@@ -511,12 +511,12 @@ function ChatModal({
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
           />
           <button 
             onClick={handleSend}
-            className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+            className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             <Send className="w-5 h-5" />
           </button>
@@ -704,12 +704,12 @@ export default function ProviderDashboard() {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Provider Dashboard</h1>
-              <p className="text-orange-100">
+              <p className="text-blue-100">
                 {providerProfile?.businessName || user?.firstName + ' ' + user?.lastName || 'Service Provider'}
               </p>
             </div>
@@ -741,8 +741,8 @@ export default function ProviderDashboard() {
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-orange-600" />
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-xs text-gray-500">Available</p>
@@ -791,7 +791,7 @@ export default function ProviderDashboard() {
               onClick={() => setActiveTab(tab.id as TabType)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab.id 
-                  ? "bg-orange-500 text-white" 
+                  ? "bg-blue-500 text-white" 
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
@@ -799,7 +799,7 @@ export default function ProviderDashboard() {
               <span className="hidden sm:inline">{tab.label}</span>
               {tab.badge && (
                 <span className={`w-5 h-5 rounded-full text-xs flex items-center justify-center ${
-                  activeTab === tab.id ? "bg-white text-orange-500" : "bg-red-500 text-white"
+                  activeTab === tab.id ? "bg-white text-blue-500" : "bg-red-500 text-white"
                 }`}>
                   {tab.badge}
                 </span>
@@ -828,7 +828,7 @@ export default function ProviderDashboard() {
                   onClick={() => setJobFilter(filter.id as JobStatus | "all")}
                   className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
                     jobFilter === filter.id 
-                      ? "bg-orange-500 text-white" 
+                      ? "bg-blue-500 text-white" 
                       : "bg-white text-gray-600 border"
                   }`}
                 >
@@ -841,7 +841,7 @@ export default function ProviderDashboard() {
             <div className="space-y-3">
               {isLoadingJobs ? (
                 <div className="text-center py-12">
-                  <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading jobs...</p>
                 </div>
               ) : jobsError ? (
@@ -849,7 +849,7 @@ export default function ProviderDashboard() {
                   <p className="text-red-600 mb-4">{jobsError}</p>
                   <button
                     onClick={() => window.location.reload()}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                   >
                     Retry
                   </button>
@@ -871,7 +871,7 @@ export default function ProviderDashboard() {
                         <p className="text-sm text-gray-500 mt-1">{job.clientName}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-orange-600">UGX {job.amount.toLocaleString()}</p>
+                        <p className="font-bold text-blue-600">UGX {job.amount.toLocaleString()}</p>
                         <p className="text-xs text-gray-400">{new Date(job.scheduledDate).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -908,7 +908,7 @@ export default function ProviderDashboard() {
                   <p className="text-xs text-gray-500">Total Earned</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-orange-600">UGX {(stats.pendingPayments/1000).toFixed(0)}K</p>
+                  <p className="text-2xl font-bold text-blue-600">UGX {(stats.pendingPayments/1000).toFixed(0)}K</p>
                   <p className="text-xs text-gray-500">Pending</p>
                 </div>
                 <div>
@@ -929,10 +929,10 @@ export default function ProviderDashboard() {
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         txn.type === "earning" ? "bg-green-100" : 
-                        txn.type === "withdrawal" ? "bg-orange-100" : "bg-red-100"
+                        txn.type === "withdrawal" ? "bg-blue-100" : "bg-red-100"
                       }`}>
                         {txn.type === "earning" ? <ArrowDownRight className="w-5 h-5 text-green-600" /> :
-                         txn.type === "withdrawal" ? <ArrowUpRight className="w-5 h-5 text-orange-600" /> :
+                         txn.type === "withdrawal" ? <ArrowUpRight className="w-5 h-5 text-blue-600" /> :
                          <DollarSign className="w-5 h-5 text-red-600" />}
                       </div>
                       <div>
@@ -964,8 +964,8 @@ export default function ProviderDashboard() {
                 className="p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
               >
                 <div className="relative">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-orange-600" />
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-blue-600" />
                   </div>
                   {msg.unread && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full" />
@@ -1015,7 +1015,7 @@ export default function ProviderDashboard() {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="font-medium text-gray-900">{job.clientName}</p>
-                      <p className="text-xs text-gray-500">{job.serviceType} • {new Date(job.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-500">{job.serviceType} â€¢ {new Date(job.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -1041,12 +1041,12 @@ export default function ProviderDashboard() {
         {activeTab === "withdraw" && (
           <div className="space-y-4">
             {/* Balance Card */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white text-center">
-              <p className="text-orange-100">Available Balance</p>
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white text-center">
+              <p className="text-blue-100">Available Balance</p>
               <p className="text-4xl font-bold my-2">UGX {stats.availableBalance.toLocaleString()}</p>
               <button 
                 onClick={() => setShowWithdraw(true)}
-                className="mt-4 px-8 py-3 bg-white text-orange-600 rounded-lg font-medium hover:bg-orange-50"
+                className="mt-4 px-8 py-3 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50"
               >
                 Withdraw Funds
               </button>
@@ -1062,7 +1062,7 @@ export default function ProviderDashboard() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">MTN Mobile Money</p>
-                    <p className="text-sm text-gray-500">Instant transfer • 1% fee</p>
+                    <p className="text-sm text-gray-500">Instant transfer â€¢ 1% fee</p>
                   </div>
                   <CheckCircle className="w-5 h-5 text-green-500" />
                 </div>
@@ -1072,7 +1072,7 @@ export default function ProviderDashboard() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">Airtel Money</p>
-                    <p className="text-sm text-gray-500">Instant transfer • 1% fee</p>
+                    <p className="text-sm text-gray-500">Instant transfer â€¢ 1% fee</p>
                   </div>
                   <CheckCircle className="w-5 h-5 text-green-500" />
                 </div>
@@ -1089,8 +1089,8 @@ export default function ProviderDashboard() {
                   {transactions.filter(t => t.type === "withdrawal").map((txn) => (
                     <div key={txn.id} className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                          <ArrowUpRight className="w-5 h-5 text-orange-600" />
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <ArrowUpRight className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{txn.description}</p>
@@ -1114,7 +1114,7 @@ export default function ProviderDashboard() {
             {/* Verification Status Card */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <Shield className="w-6 h-6 text-orange-600" />
+                <Shield className="w-6 h-6 text-blue-600" />
                 <h3 className="text-lg font-semibold text-gray-900">Verification Status</h3>
               </div>
               
@@ -1203,7 +1203,7 @@ export default function ProviderDashboard() {
                             setVerificationErrors({ ...verificationErrors, idDocument: undefined });
                           }
                         }}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                           verificationErrors.idDocument ? 'border-red-500' : 'border-gray-300'
                         }`}
                         disabled={isLoadingVerification}
@@ -1249,7 +1249,7 @@ export default function ProviderDashboard() {
                             setVerificationErrors({ ...verificationErrors, businessLicense: undefined });
                           }
                         }}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                           verificationErrors.businessLicense ? 'border-red-500' : 'border-gray-300'
                         }`}
                         disabled={isLoadingVerification}
@@ -1325,7 +1325,7 @@ export default function ProviderDashboard() {
                         }
                       }}
                       disabled={isLoadingVerification || !verificationFiles.idDocument || !!verificationErrors.idDocument || !!verificationErrors.businessLicense}
-                      className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                       {isLoadingVerification ? "Submitting..." : "Submit Verification Request"}
                     </button>
@@ -1339,3 +1339,5 @@ export default function ProviderDashboard() {
     </div>
   );
 }
+
+

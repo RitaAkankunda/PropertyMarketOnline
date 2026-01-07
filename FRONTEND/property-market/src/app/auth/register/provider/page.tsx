@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -564,17 +564,17 @@ export default function ProviderRegistration() {
           <p className="text-gray-600 mb-6">
             You are now registered as a service provider! Redirecting you to your provider dashboard...
           </p>
-          <div className="bg-orange-50 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-medium text-orange-800 mb-2">Next Steps:</h3>
-            <ul className="text-sm text-orange-700 space-y-1">
-              <li>• Complete your profile with photos and certifications</li>
-              <li>• Start receiving job requests from clients</li>
-              <li>• Build your reputation with great service!</li>
+          <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
+            <h3 className="font-medium text-blue-800 mb-2">Next Steps:</h3>
+            <ul className="text-sm text-blue-700 space-y-1">
+              <li>â€¢ Complete your profile with photos and certifications</li>
+              <li>â€¢ Start receiving job requests from clients</li>
+              <li>â€¢ Build your reputation with great service!</li>
             </ul>
           </div>
           <button
             onClick={() => router.push('/dashboard/provider')}
-            className="w-full py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+            className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             Go to Provider Dashboard
           </button>
@@ -589,10 +589,10 @@ export default function ProviderRegistration() {
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="text-xl font-bold text-orange-600">
+            <Link href="/" className="text-xl font-bold text-blue-600">
               PropertyMarket
             </Link>
-            <Link href="/auth/login" className="text-sm text-gray-600 hover:text-orange-600">
+            <Link href="/auth/login" className="text-sm text-gray-600 hover:text-blue-600">
               Already have an account? Login
             </Link>
           </div>
@@ -610,18 +610,18 @@ export default function ProviderRegistration() {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
-              className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-500">
             {!isAuthenticated && (
-              <span className={currentStep >= 0 ? "text-orange-600 font-medium" : ""}>Personal</span>
+              <span className={currentStep >= 0 ? "text-blue-600 font-medium" : ""}>Personal</span>
             )}
-            <span className={currentStep >= 1 ? "text-orange-600 font-medium" : ""}>Business</span>
-            <span className={currentStep >= 2 ? "text-orange-600 font-medium" : ""}>Documents</span>
-            <span className={currentStep >= 3 ? "text-orange-600 font-medium" : ""}>Pricing</span>
-            <span className={currentStep >= 4 ? "text-orange-600 font-medium" : ""}>Availability</span>
+            <span className={currentStep >= 1 ? "text-blue-600 font-medium" : ""}>Business</span>
+            <span className={currentStep >= 2 ? "text-blue-600 font-medium" : ""}>Documents</span>
+            <span className={currentStep >= 3 ? "text-blue-600 font-medium" : ""}>Pricing</span>
+            <span className={currentStep >= 4 ? "text-blue-600 font-medium" : ""}>Availability</span>
           </div>
         </div>
       </div>
@@ -635,10 +635,10 @@ export default function ProviderRegistration() {
               <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-blue-900">
-                  ✓ You're logged in as {user.firstName} {user.lastName}
+                  âœ“ You're logged in as {user.firstName} {user.lastName}
                 </p>
                 <p className="text-xs text-blue-700 mt-1">
-                  Email: {user.email} • We'll use your existing account to create your provider profile.
+                  Email: {user.email} â€¢ We'll use your existing account to create your provider profile.
                 </p>
               </div>
             </div>
@@ -651,8 +651,8 @@ export default function ProviderRegistration() {
         {currentStep === 0 && !isAuthenticated && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="w-8 h-8 text-orange-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-8 h-8 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Personal Information</h2>
               <p className="text-gray-500">Let&apos;s start with your basic details</p>
@@ -667,7 +667,7 @@ export default function ProviderRegistration() {
                     value={formData.firstName}
                     onChange={(e) => updateForm("firstName", e.target.value)}
                     placeholder="John"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -677,7 +677,7 @@ export default function ProviderRegistration() {
                     value={formData.lastName}
                     onChange={(e) => updateForm("lastName", e.target.value)}
                     placeholder="Doe"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -691,7 +691,7 @@ export default function ProviderRegistration() {
                   value={formData.email}
                   onChange={(e) => updateForm("email", e.target.value)}
                   placeholder="john@example.com"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -704,7 +704,7 @@ export default function ProviderRegistration() {
                   value={formData.phone}
                   onChange={(e) => updateForm("phone", e.target.value)}
                   placeholder="+256 7XX XXX XXX"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -716,7 +716,7 @@ export default function ProviderRegistration() {
                     value={formData.password}
                     onChange={(e) => updateForm("password", e.target.value)}
                     placeholder="Create a strong password"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     type="button"
@@ -735,7 +735,7 @@ export default function ProviderRegistration() {
                   value={formData.confirmPassword}
                   onChange={(e) => updateForm("confirmPassword", e.target.value)}
                   placeholder="Confirm your password"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -748,8 +748,8 @@ export default function ProviderRegistration() {
         {currentStep === 1 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Briefcase className="w-8 h-8 text-orange-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Briefcase className="w-8 h-8 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Business Information</h2>
               <p className="text-gray-500">Tell us about your services</p>
@@ -763,7 +763,7 @@ export default function ProviderRegistration() {
                   value={formData.businessName}
                   onChange={(e) => updateForm("businessName", e.target.value)}
                   placeholder="e.g., ElectroPro Services"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -774,7 +774,7 @@ export default function ProviderRegistration() {
                   onChange={(e) => updateForm("description", e.target.value)}
                   placeholder="Describe your services, experience, and what makes you stand out..."
                   rows={4}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -793,11 +793,11 @@ export default function ProviderRegistration() {
                         onClick={() => toggleService(service.id)}
                         className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
                           isSelected 
-                            ? "border-orange-500 bg-orange-50 text-orange-700" 
+                            ? "border-blue-500 bg-blue-50 text-blue-700" 
                             : "border-gray-200 hover:border-gray-300"
                         }`}
                       >
-                        <Icon className={`w-6 h-6 mb-1 ${isSelected ? "text-orange-600" : "text-gray-400"}`} />
+                        <Icon className={`w-6 h-6 mb-1 ${isSelected ? "text-blue-600" : "text-gray-400"}`} />
                         <span className="text-xs text-center">{service.name}</span>
                       </button>
                     );
@@ -819,7 +819,7 @@ export default function ProviderRegistration() {
                         onClick={() => toggleLocation(location)}
                         className={`px-3 py-2 rounded-full text-sm transition-all ${
                           isSelected 
-                            ? "bg-orange-500 text-white" 
+                            ? "bg-blue-500 text-white" 
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
@@ -839,8 +839,8 @@ export default function ProviderRegistration() {
         {currentStep === 2 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-8 h-8 text-orange-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Documents & Portfolio</h2>
               <p className="text-gray-500">Upload your verification documents</p>
@@ -852,7 +852,7 @@ export default function ProviderRegistration() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   National ID / Passport <span className="text-red-500">*</span>
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
                   {formData.nationalId ? (
                     <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
                       <div className="flex items-center gap-2">
@@ -888,7 +888,7 @@ export default function ProviderRegistration() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Professional Certifications <span className="text-gray-400">(Optional)</span>
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
                   <label className="cursor-pointer">
                     <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600">Upload certifications, licenses, or qualifications</p>
@@ -939,7 +939,7 @@ export default function ProviderRegistration() {
                     </div>
                   ))}
                   {formData.portfolioImages.length < 9 && (
-                    <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 transition-colors">
+                    <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 transition-colors">
                       <Plus className="w-8 h-8 text-gray-400 mb-1" />
                       <span className="text-xs text-gray-500">Add Photo</span>
                       <input
@@ -964,8 +964,8 @@ export default function ProviderRegistration() {
         {currentStep === 3 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <DollarSign className="w-8 h-8 text-orange-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <DollarSign className="w-8 h-8 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Pricing</h2>
               <p className="text-gray-500">Set your service rates</p>
@@ -987,11 +987,11 @@ export default function ProviderRegistration() {
                       onClick={() => updateForm("pricingType", option.id)}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
                         formData.pricingType === option.id 
-                          ? "border-orange-500 bg-orange-50" 
+                          ? "border-blue-500 bg-blue-50" 
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
-                      <p className={`font-medium ${formData.pricingType === option.id ? "text-orange-700" : "text-gray-900"}`}>
+                      <p className={`font-medium ${formData.pricingType === option.id ? "text-blue-700" : "text-gray-900"}`}>
                         {option.label}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">{option.desc}</p>
@@ -1011,7 +1011,7 @@ export default function ProviderRegistration() {
                       onClick={() => updateForm("currency", curr)}
                       className={`px-4 py-3 rounded-lg border-2 transition-all ${
                         formData.currency === curr
-                          ? "border-orange-500 bg-orange-50 text-orange-700 font-medium"
+                          ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
                           : "border-gray-200 hover:border-gray-300 text-gray-700"
                       }`}
                     >
@@ -1034,7 +1034,7 @@ export default function ProviderRegistration() {
                           value={formData.hourlyRateUGX}
                           onChange={(e) => updateForm("hourlyRateUGX", e.target.value)}
                           placeholder="50,000"
-                          className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">/hr</span>
                       </div>
@@ -1049,7 +1049,7 @@ export default function ProviderRegistration() {
                           value={formData.hourlyRateUSD}
                           onChange={(e) => updateForm("hourlyRateUSD", e.target.value)}
                           placeholder="15"
-                          className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">/hr</span>
                       </div>
@@ -1070,7 +1070,7 @@ export default function ProviderRegistration() {
                           value={formData.minimumChargeUGX}
                           onChange={(e) => updateForm("minimumChargeUGX", e.target.value)}
                           placeholder="100,000"
-                          className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -1084,7 +1084,7 @@ export default function ProviderRegistration() {
                           value={formData.minimumChargeUSD}
                           onChange={(e) => updateForm("minimumChargeUSD", e.target.value)}
                           placeholder="30"
-                          className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          className="w-full pl-24 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -1104,7 +1104,7 @@ export default function ProviderRegistration() {
                         value={formData.minimumChargeUGX}
                         onChange={(e) => updateForm("minimumChargeUGX", e.target.value)}
                         placeholder="50,000"
-                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Minimum amount for any job</p>
@@ -1119,7 +1119,7 @@ export default function ProviderRegistration() {
                         value={formData.minimumChargeUSD}
                         onChange={(e) => updateForm("minimumChargeUSD", e.target.value)}
                         placeholder="15"
-                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full pl-14 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Minimum amount for any job</p>
@@ -1144,8 +1144,8 @@ export default function ProviderRegistration() {
         {currentStep === 4 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-orange-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Availability</h2>
               <p className="text-gray-500">Set your working schedule</p>
@@ -1165,7 +1165,7 @@ export default function ProviderRegistration() {
                         onClick={() => toggleDay(day.id)}
                         className={`flex-1 py-3 rounded-lg font-medium transition-all ${
                           isSelected 
-                            ? "bg-orange-500 text-white" 
+                            ? "bg-blue-500 text-white" 
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                         }`}
                       >
@@ -1183,7 +1183,7 @@ export default function ProviderRegistration() {
                   <select
                     value={formData.startTime}
                     onChange={(e) => updateForm("startTime", e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     {Array.from({ length: 24 }, (_, i) => {
                       const hour = i.toString().padStart(2, "0");
@@ -1196,7 +1196,7 @@ export default function ProviderRegistration() {
                   <select
                     value={formData.endTime}
                     onChange={(e) => updateForm("endTime", e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     {Array.from({ length: 24 }, (_, i) => {
                       const hour = i.toString().padStart(2, "0");
@@ -1209,7 +1209,7 @@ export default function ProviderRegistration() {
               {/* Emergency Availability */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 text-orange-500 rounded" />
+                  <input type="checkbox" className="w-5 h-5 text-blue-500 rounded" />
                   <div>
                     <p className="font-medium text-gray-900">Available for Emergency Calls</p>
                     <p className="text-sm text-gray-500">Accept urgent jobs outside normal hours (higher rates apply)</p>
@@ -1224,10 +1224,10 @@ export default function ProviderRegistration() {
                     type="checkbox" 
                     checked={formData.agreeTerms}
                     onChange={(e) => updateForm("agreeTerms", e.target.checked)}
-                    className="w-5 h-5 text-orange-500 rounded mt-0.5" 
+                    className="w-5 h-5 text-blue-500 rounded mt-0.5" 
                   />
                   <p className="text-sm text-gray-600">
-                    I agree to the <a href="#" className="text-orange-600 underline">Terms of Service</a> and <a href="#" className="text-orange-600 underline">Provider Agreement</a>
+                    I agree to the <a href="#" className="text-blue-600 underline">Terms of Service</a> and <a href="#" className="text-blue-600 underline">Provider Agreement</a>
                   </p>
                 </label>
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -1235,7 +1235,7 @@ export default function ProviderRegistration() {
                     type="checkbox" 
                     checked={formData.agreeKYC}
                     onChange={(e) => updateForm("agreeKYC", e.target.checked)}
-                    className="w-5 h-5 text-orange-500 rounded mt-0.5" 
+                    className="w-5 h-5 text-blue-500 rounded mt-0.5" 
                   />
                   <p className="text-sm text-gray-600">
                     I consent to KYC verification and understand that my documents will be reviewed
@@ -1269,7 +1269,7 @@ export default function ProviderRegistration() {
             {currentStep < 4 ? (
               <button
                 onClick={() => setCurrentStep(currentStep + 1)}
-                className="flex-1 py-3 bg-orange-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600"
+                className="flex-1 py-3 bg-blue-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-blue-600"
               >
                 Continue <ChevronRight className="w-5 h-5" />
               </button>
@@ -1277,7 +1277,7 @@ export default function ProviderRegistration() {
               <button
                 onClick={handleSubmit}
                 disabled={!formData.agreeTerms || !formData.agreeKYC || isSubmitting}
-                className="flex-1 py-3 bg-orange-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3 bg-blue-500 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Submitting..." : "Submit Application"}
               </button>
@@ -1288,3 +1288,4 @@ export default function ProviderRegistration() {
     </div>
   );
 }
+

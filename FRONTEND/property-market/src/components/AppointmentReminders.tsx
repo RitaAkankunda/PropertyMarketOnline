@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Bell, X, Calendar, Clock, CheckCircle, AlertCircle, Info } from "lucide-react";
@@ -30,7 +30,7 @@ const reminderConfig = {
   },
   "1h": {
     icon: AlertCircle,
-    color: "text-orange-600 bg-orange-50 border-orange-200",
+    color: "text-blue-600 bg-blue-50 border-blue-200",
     message: "Reminder: Appointment in 1 hour",
   },
   now: {
@@ -58,7 +58,7 @@ export default function AppointmentReminders({ reminders, onMarkAsRead, onDismis
       {/* Bell Icon with Badge */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-all"
+        className="relative p-2 text-gray-600 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
@@ -198,3 +198,4 @@ export default function AppointmentReminders({ reminders, onMarkAsRead, onDismis
     </>
   );
 }
+
