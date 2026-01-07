@@ -80,12 +80,12 @@ export default function AppointmentReminders({ reminders, onMarkAsRead, onDismis
           {/* Panel */}
           <div className="fixed right-4 top-20 w-96 max-h-[80vh] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in slide-in-from-right-5 duration-300">
             {/* Header */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bell className="w-5 h-5" />
                 <div>
                   <h3 className="font-bold text-lg">Appointment Reminders</h3>
-                  <p className="text-xs text-orange-100">
+                  <p className="text-xs text-blue-100">
                     {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
                   </p>
                 </div>
@@ -119,7 +119,7 @@ export default function AppointmentReminders({ reminders, onMarkAsRead, onDismis
                       <div
                         key={reminder.id}
                         className={`p-4 hover:bg-gray-50 transition-colors ${
-                          !reminder.read ? "bg-orange-50/50" : ""
+                          !reminder.read ? "bg-blue-50/50" : ""
                         }`}
                       >
                         <div className="flex gap-3">
@@ -131,7 +131,7 @@ export default function AppointmentReminders({ reminders, onMarkAsRead, onDismis
                             <div className="flex items-start justify-between gap-2 mb-1">
                               <p className="font-semibold text-gray-900 text-sm">{message}</p>
                               {!reminder.read && (
-                                <span className="flex-shrink-0 w-2 h-2 bg-orange-500 rounded-full mt-1.5" />
+                                <span className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
                               )}
                             </div>
 
@@ -160,7 +160,7 @@ export default function AppointmentReminders({ reminders, onMarkAsRead, onDismis
                               {!reminder.read && (
                                 <button
                                   onClick={() => onMarkAsRead(reminder.id)}
-                                  className="text-xs px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors"
+                                  className="text-xs px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"
                                 >
                                   Mark as Read
                                 </button>
@@ -186,7 +186,7 @@ export default function AppointmentReminders({ reminders, onMarkAsRead, onDismis
               <div className="border-t border-gray-200 p-3 bg-gray-50">
                 <button
                   onClick={() => reminders.forEach((r) => !r.read && onMarkAsRead(r.id))}
-                  className="w-full text-sm py-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
+                  className="w-full text-sm py-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
                   Mark all as read
                 </button>

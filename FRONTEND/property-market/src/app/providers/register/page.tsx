@@ -550,12 +550,12 @@ export default function ProviderRegisterPage() {
             Congratulations! You've successfully registered as a service provider on PropertyMarket Online.
           </p>
           
-          <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 mb-8 border border-orange-200 text-left">
-            <h3 className="font-semibold text-orange-900 mb-4 flex items-center gap-2">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 mb-8 border border-blue-200 text-left">
+            <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5" />
               What happens next?
             </h3>
-            <ul className="space-y-3 text-sm text-orange-800">
+            <ul className="space-y-3 text-sm text-blue-800">
               <li className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <span>Your profile is now active and visible to customers</span>
@@ -614,12 +614,12 @@ export default function ProviderRegisterPage() {
           <div className="flex items-center justify-between">
             <Link
               href="/providers"
-              className="inline-flex items-center text-sm text-gray-600 hover:text-orange-600 transition-colors"
+              className="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Providers
             </Link>
-            <Link href="/auth/login" className="text-sm text-gray-600 hover:text-orange-600 transition-colors">
+            <Link href="/auth/login" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
               Already have an account? Login
             </Link>
           </div>
@@ -653,7 +653,7 @@ export default function ProviderRegisterPage() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold mb-2 transition-all duration-300 ${
                         isActive
-                          ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110"
+                          ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-110"
                           : isCompleted
                           ? "bg-green-500 text-white"
                           : "bg-gray-200 text-gray-400"
@@ -667,7 +667,7 @@ export default function ProviderRegisterPage() {
                     </div>
                     <span
                       className={`text-xs text-center font-medium transition-colors ${
-                        isActive ? "text-orange-600" : isCompleted ? "text-green-600" : "text-gray-400"
+                        isActive ? "text-blue-600" : isCompleted ? "text-green-600" : "text-gray-400"
                       }`}
                     >
                       {step.title}
@@ -676,7 +676,7 @@ export default function ProviderRegisterPage() {
                   {index < steps.length - 1 && (
                     <div
                       className={`h-0.5 flex-1 mx-2 transition-colors ${
-                        isCompleted ? "bg-green-500" : currentStep > step.num ? "bg-orange-500" : "bg-gray-200"
+                        isCompleted ? "bg-green-500" : currentStep > step.num ? "bg-blue-500" : "bg-gray-200"
                       }`}
                     />
                   )}
@@ -691,7 +691,7 @@ export default function ProviderRegisterPage() {
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Page Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg shadow-orange-500/20 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg shadow-blue-500/20 mb-4">
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-3">Become a Service Provider</h1>
@@ -1226,7 +1226,7 @@ export default function ProviderRegisterPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
                         <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           Business Information

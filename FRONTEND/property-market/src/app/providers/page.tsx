@@ -377,13 +377,13 @@ function RequestFormModal({
             Your service request has been sent to <strong className="text-gray-900">{provider.businessName}</strong>. 
             They will contact you within 24 hours.
           </p>
-          <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-5 mb-6 border border-orange-200">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-5 mb-6 border border-blue-200">
             <p className="text-xs font-medium text-gray-500 mb-1">Reference Number</p>
-            <p className="font-mono font-bold text-xl text-orange-700">REQ-{Date.now().toString().slice(-8)}</p>
+            <p className="font-mono font-bold text-xl text-blue-700">REQ-{Date.now().toString().slice(-8)}</p>
           </div>
           <button
             onClick={onClose}
-            className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/30 transition-all"
+            className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all"
           >
             Done
           </button>
@@ -396,7 +396,7 @@ function RequestFormModal({
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 relative">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 relative">
           <button 
             onClick={onClose} 
             className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -440,7 +440,7 @@ function RequestFormModal({
                   <div className="flex flex-col items-center flex-1">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold mb-2 transition-all ${
                       isActive
-                        ? "bg-white text-orange-600 shadow-lg scale-110"
+                        ? "bg-white text-blue-600 shadow-lg scale-110"
                         : isCompleted
                         ? "bg-green-500 text-white"
                         : "bg-white/30 text-white/70"
@@ -452,7 +452,7 @@ function RequestFormModal({
                       )}
                     </div>
                     <span className={`text-xs font-medium transition-colors ${
-                      isActive ? "text-white" : "text-orange-100"
+                      isActive ? "text-white" : "text-blue-100"
                     }`}>
                       {s.title}
                     </span>
@@ -488,7 +488,7 @@ function RequestFormModal({
                     <select
                       value={formData[field.label] || ""}
                       onChange={(e) => handleInputChange(field.label, e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     >
                       <option value="">{field.placeholder}</option>
                       {field.options?.map((opt) => (
@@ -501,7 +501,7 @@ function RequestFormModal({
                       onChange={(e) => handleInputChange(field.label, e.target.value)}
                       placeholder={field.placeholder}
                       rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all resize-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
                     />
                   ) : (
                     <input
@@ -509,7 +509,7 @@ function RequestFormModal({
                       value={formData[field.label] || ""}
                       onChange={(e) => handleInputChange(field.label, e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
                   )}
                 </div>
@@ -525,7 +525,7 @@ function RequestFormModal({
                   onChange={(e) => handleInputChange("notes", e.target.value)}
                   placeholder="Any special requirements or details..."
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
                 />
               </div>
 
@@ -559,7 +559,7 @@ function RequestFormModal({
 
                 {/* Upload Area */}
                 {images.length < 10 && (
-                  <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-500 hover:bg-orange-50/50 cursor-pointer transition-all">
+                  <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 cursor-pointer transition-all">
                     <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                     <p className="text-sm text-gray-600 font-medium">Click to upload or drag photos here</p>
                     <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB (Max 10 images)</p>
@@ -574,7 +574,7 @@ function RequestFormModal({
                 )}
                 
                 {images.length >= 10 && (
-                  <p className="text-sm text-orange-600 text-center py-2">
+                  <p className="text-sm text-amber-600 text-center py-2">
                     Maximum 10 images reached. Remove some to add more.
                   </p>
                 )}
@@ -601,7 +601,7 @@ function RequestFormModal({
                     value={formData["date"] || ""}
                     onChange={(e) => handleInputChange("date", e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                 </div>
 
@@ -613,7 +613,7 @@ function RequestFormModal({
                   <select
                     value={formData["time"] || ""}
                     onChange={(e) => handleInputChange("time", e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   >
                     <option value="">Select time slot</option>
                     <option value="morning">Morning (8AM - 12PM)</option>
@@ -634,7 +634,7 @@ function RequestFormModal({
                   value={formData["address"] || ""}
                   onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="Enter full address"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
@@ -648,7 +648,7 @@ function RequestFormModal({
                   value={formData["phone"] || ""}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                   placeholder="+256 7XX XXX XXX"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
@@ -734,10 +734,10 @@ function RequestFormModal({
               </div>
               
               {/* Estimated Cost */}
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-5 mb-5 border border-orange-200">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-5 mb-5 border border-blue-200">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-700 font-medium">Estimated Cost</span>
-                  <span className="text-2xl font-bold text-orange-600">
+                  <span className="text-2xl font-bold text-blue-700">
                     {provider.pricing.type === "hourly" && provider.pricing.hourlyRate
                       ? `UGX ${provider.pricing.hourlyRate.toLocaleString()}/hr`
                       : provider.pricing.type === "fixed" && provider.pricing.minimumCharge

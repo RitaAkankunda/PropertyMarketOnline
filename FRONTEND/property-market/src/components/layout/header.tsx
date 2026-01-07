@@ -182,7 +182,7 @@ export function Header() {
                     className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     {/* Profile Picture Circle */}
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
                       {user?.avatar ? (
                         <img 
                           src={user.avatar} 
@@ -413,7 +413,7 @@ export function Header() {
                     className="flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-accent"
                   >
                     {/* Profile Picture Circle */}
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-medium overflow-hidden flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-medium overflow-hidden flex-shrink-0">
                       {user?.avatar ? (
                         <img 
                           src={user.avatar} 

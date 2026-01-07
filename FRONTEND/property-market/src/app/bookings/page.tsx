@@ -105,7 +105,7 @@ export default function BookingsPage() {
               onClick={() => setFilter(tab.value as any)}
               className={`px-6 py-2 rounded-lg font-medium transition-all ${
                 filter === tab.value
-                  ? "bg-orange-500 text-white shadow-sm"
+                  ? "bg-blue-500 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -128,7 +128,7 @@ export default function BookingsPage() {
             </p>
             <a
               href="/providers"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
             >
               Browse Services
             </a>
@@ -226,7 +226,7 @@ export default function BookingsPage() {
                       </button>
                     )}
                     {booking.status === "completed" && (
-                      <button className="flex-1 py-2 px-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors">
+                      <button className="flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors">
                         Leave Review
                       </button>
                     )}
