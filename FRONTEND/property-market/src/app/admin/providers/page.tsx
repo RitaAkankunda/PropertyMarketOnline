@@ -2,20 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Wrench, Shield, UserCheck, UserX, BadgeCheck, AlertTriangle, Filter, CheckCircle, XCircle, Download } from "lucide-react";
+import { Wrench, BadgeCheck, Filter, CheckCircle, XCircle, Download, ExternalLink } from "lucide-react";
 import { Button, Card, Badge, Avatar } from "@/components/ui";
 import { useAuthStore } from "@/store";
 import { providerService } from "@/services/provider.service";
-import { useToastContext } from "@/components/ui/toast-provider";
+import Link from "next/link";
 import type { ServiceProvider } from "@/types";
 
 export default function AdminProvidersPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const { success, error } = useToastContext();
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [verifyingProviderId, setVerifyingProviderId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -50,24 +48,6 @@ export default function AdminProvidersPage() {
     }
   };
 
-  const toggleVerification = async (providerId: string, currentStatus: boolean) => {
-    setVerifyingProviderId(providerId);
-    try {
-      // TODO: Implement verify/unverify provider endpoint in backend
-      // For now, just show a message
-      if (currentStatus) {
-        success("Provider verification status updated", 3000);
-      } else {
-        success("Provider verified successfully", 3000);
-      }
-      await loadProviders(); // Reload the list
-    } catch (err) {
-      console.error("Failed to update verification:", err);
-      error("Failed to update verification. Please try again.", 5000);
-    } finally {
-      setVerifyingProviderId(null);
-    }
-  };
 
   const filteredProviders = providers.filter((provider) => {
     if (statusFilter === "all") return true;
@@ -149,7 +129,11 @@ export default function AdminProvidersPage() {
             </div>
           </div>
           <p className="mt-2 text-gray-600">
-            Manage service provider accounts and verifications
+            Manage service provider accounts. To verify providers, use the{" "}
+            <Link href="/admin/verifications" className="text-blue-600 hover:underline font-medium">
+              Verifications tab
+            </Link>{" "}
+            to review their verification requests.
           </p>
         </div>
 
@@ -222,33 +206,17 @@ export default function AdminProvidersPage() {
                   </div>
 
                   <div className="flex space-x-2">
-                    <Button
-                      onClick={() => toggleVerification(provider.id, provider.isVerified)}
-                      disabled={verifyingProviderId === provider.id}
-                      size="sm"
-                      className={provider.isVerified 
-                        ? "bg-yellow-600 hover:bg-yellow-700" 
-                        : "bg-green-600 hover:bg-green-700"
-                      }
-                    >
-                      {verifyingProviderId === provider.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      ) : (
-                        <>
-                          {provider.isVerified ? (
-                            <>
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Unverify
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Verify
-                            </>
-                          )}
-                        </>
-                      )}
-                    </Button>
+                    <Link href="/admin/verifications">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                      >
+                        <BadgeCheck className="h-4 w-4 mr-2" />
+                        Review Verification
+                        <ExternalLink className="h-3 w-3 ml-2" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>

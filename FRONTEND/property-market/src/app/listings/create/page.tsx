@@ -217,6 +217,7 @@ export default function CreateListingPage() {
         office: "offices",
         land: "land",
         commercial: "commercial",
+        airbnb: "airbnb",
       };
       const urlType = propertyTypeMap[propertyType] || propertyType;
       

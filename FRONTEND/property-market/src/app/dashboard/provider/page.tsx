@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { providerService } from "@/services";
+import { providerService, propertyService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
+import { useToastContext } from "@/components/ui/toast-provider";
 import type { Job as ApiJob, JobStatus as ApiJobStatus } from "@/types";
 import {
   Briefcase,
@@ -27,13 +28,14 @@ import {
   Smartphone,
   ChevronRight,
   X,
+  Shield,
 } from "lucide-react";
 
 // =============================================
 // TYPES
 // =============================================
 type JobStatus = "pending" | "accepted" | "in_progress" | "completed" | "cancelled";
-type TabType = "jobs" | "earnings" | "messages" | "ratings" | "withdraw";
+type TabType = "jobs" | "earnings" | "messages" | "ratings" | "withdraw" | "verification";
 
 // DisplayJob type (for UI display)
 type DisplayJob = {
@@ -530,6 +532,7 @@ function ChatModal({
 export default function ProviderDashboard() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const { success, error: showError } = useToastContext();
   
   // Protect route: Only SERVICE_PROVIDER can access
   const { hasAccess } = useRequireRole(['service_provider'], '/dashboard');
@@ -550,9 +553,21 @@ export default function ProviderDashboard() {
   const [selectedJob, setSelectedJob] = useState<DisplayJob | null>(null);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
-  const [providerProfile, setProviderProfile] = useState<{ businessName?: string } | null>(null);
+  const [providerProfile, setProviderProfile] = useState<{ businessName?: string; isVerified?: boolean; isKycVerified?: boolean } | null>(null);
   const [messages] = useState<Message[]>([]); // TODO: Implement real messages API
   const [transactions] = useState<Transaction[]>([]); // TODO: Implement real transactions API
+  const [verificationRequest, setVerificationRequest] = useState<any>(null);
+  const [isLoadingVerification, setIsLoadingVerification] = useState(false);
+  const [verificationFiles, setVerificationFiles] = useState<{
+    idDocument?: File;
+    businessLicense?: File;
+    additionalDocuments?: File[];
+  }>({});
+  const [verificationErrors, setVerificationErrors] = useState<{
+    idDocument?: string;
+    businessLicense?: string;
+    general?: string;
+  }>({});
 
   // Fetch provider profile
   useEffect(() => {
@@ -568,6 +583,26 @@ export default function ProviderDashboard() {
     
     if (isAuthenticated && user?.role === 'service_provider') {
       fetchProfile();
+    }
+  }, [isAuthenticated, user]);
+
+  // Fetch verification request status
+  useEffect(() => {
+    const fetchVerificationRequest = async () => {
+      try {
+        const request = await providerService.getMyVerificationRequest();
+        setVerificationRequest(request);
+      } catch (err: any) {
+        // 404 means no request exists yet, which is fine
+        if (err?.response?.status !== 404) {
+          console.error("Error fetching verification request:", err);
+        }
+        setVerificationRequest(null);
+      }
+    };
+    
+    if (isAuthenticated && user?.role === 'service_provider') {
+      fetchVerificationRequest();
     }
   }, [isAuthenticated, user]);
 
@@ -749,6 +784,7 @@ export default function ProviderDashboard() {
             { id: "messages", label: "Messages", icon: MessageCircle, badge: 2 },
             { id: "ratings", label: "Ratings", icon: Star },
             { id: "withdraw", label: "Withdraw", icon: Wallet },
+            { id: "verification", label: "Verification", icon: Shield },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1070,6 +1106,233 @@ export default function ProviderDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === "verification" && (
+          <div className="space-y-4">
+            {/* Verification Status Card */}
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <Shield className="w-6 h-6 text-orange-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Verification Status</h3>
+              </div>
+              
+              {verificationRequest?.status === "approved" ? (
+                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-900">Verified Provider</p>
+                    <p className="text-sm text-green-700">Your account has been verified by our team.</p>
+                    <p className="text-xs text-green-600 mt-1">
+                      Verified: {verificationRequest.reviewedAt ? new Date(verificationRequest.reviewedAt).toLocaleDateString() : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              ) : verificationRequest?.status === "pending" ? (
+                <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                  <div>
+                    <p className="font-semibold text-yellow-900">Verification Pending</p>
+                    <p className="text-sm text-yellow-700">
+                      Your verification request is under review. We'll notify you once it's processed.
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-1">
+                      Submitted: {new Date(verificationRequest.submittedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ) : verificationRequest?.status === "rejected" ? (
+                <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
+                  <XCircle className="w-6 h-6 text-red-600" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-red-900">Verification Rejected</p>
+                    <p className="text-sm text-red-700 mt-1">
+                      {verificationRequest.rejectionReason || "Your verification request was rejected."}
+                    </p>
+                    <p className="text-xs text-red-600 mt-1">
+                      Rejected: {verificationRequest.reviewedAt ? new Date(verificationRequest.reviewedAt).toLocaleDateString() : "N/A"}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setVerificationRequest(null);
+                        setVerificationFiles({});
+                      }}
+                      className="mt-3 text-sm text-red-700 hover:text-red-900 underline"
+                    >
+                      Submit New Request
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-gray-700 mb-4">
+                    Get verified to increase trust with clients and unlock additional features.
+                  </p>
+                  
+                  {/* Verification Request Form */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ID Document (Required)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Auto-validation: Check file size (max 5MB)
+                            if (file.size > 5 * 1024 * 1024) {
+                              setVerificationErrors({
+                                ...verificationErrors,
+                                idDocument: 'File size must be less than 5MB',
+                              });
+                              return;
+                            }
+                            // Auto-validation: Check file type
+                            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+                            if (!validTypes.includes(file.type)) {
+                              setVerificationErrors({
+                                ...verificationErrors,
+                                idDocument: 'File must be an image (JPG, PNG, WebP) or PDF',
+                              });
+                              return;
+                            }
+                            setVerificationFiles({ ...verificationFiles, idDocument: file });
+                            setVerificationErrors({ ...verificationErrors, idDocument: undefined });
+                          }
+                        }}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                          verificationErrors.idDocument ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        disabled={isLoadingVerification}
+                      />
+                      {verificationErrors.idDocument && (
+                        <p className="text-xs text-red-600 mt-1">{verificationErrors.idDocument}</p>
+                      )}
+                      {verificationFiles.idDocument && !verificationErrors.idDocument && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Selected: {verificationFiles.idDocument.name} ({(verificationFiles.idDocument.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Business License (Optional)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Auto-validation: Check file size (max 5MB)
+                            if (file.size > 5 * 1024 * 1024) {
+                              setVerificationErrors({
+                                ...verificationErrors,
+                                businessLicense: 'File size must be less than 5MB',
+                              });
+                              return;
+                            }
+                            // Auto-validation: Check file type
+                            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+                            if (!validTypes.includes(file.type)) {
+                              setVerificationErrors({
+                                ...verificationErrors,
+                                businessLicense: 'File must be an image (JPG, PNG, WebP) or PDF',
+                              });
+                              return;
+                            }
+                            setVerificationFiles({ ...verificationFiles, businessLicense: file });
+                            setVerificationErrors({ ...verificationErrors, businessLicense: undefined });
+                          }
+                        }}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                          verificationErrors.businessLicense ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        disabled={isLoadingVerification}
+                      />
+                      {verificationErrors.businessLicense && (
+                        <p className="text-xs text-red-600 mt-1">{verificationErrors.businessLicense}</p>
+                      )}
+                      {verificationFiles.businessLicense && !verificationErrors.businessLicense && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Selected: {verificationFiles.businessLicense.name} ({(verificationFiles.businessLicense.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      )}
+                    </div>
+
+                    {verificationErrors.general && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700">{verificationErrors.general}</p>
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        // Clear previous errors
+                        setVerificationErrors({});
+                        
+                        // Auto-validation: Check that at least one document is provided
+                        if (!verificationFiles.idDocument) {
+                          setVerificationErrors({ general: 'Please upload at least an ID document' });
+                          return;
+                        }
+
+                        // Auto-validation: Check for validation errors
+                        if (verificationErrors.idDocument || verificationErrors.businessLicense) {
+                          setVerificationErrors({ general: 'Please fix the errors above before submitting' });
+                          return;
+                        }
+
+                        try {
+                          setIsLoadingVerification(true);
+                          setVerificationErrors({});
+                          
+                          // Upload files and get URLs
+                          const filesToUpload: File[] = [];
+                          if (verificationFiles.idDocument) filesToUpload.push(verificationFiles.idDocument);
+                          if (verificationFiles.businessLicense) filesToUpload.push(verificationFiles.businessLicense);
+                          
+                          const urls = await propertyService.uploadImages(filesToUpload);
+                          
+                          // Submit verification request
+                          await providerService.submitVerificationRequest({
+                            idDocumentUrl: urls[0],
+                            businessLicenseUrl: urls[1] || undefined,
+                          });
+
+                          // Refresh verification request
+                          const request = await providerService.getMyVerificationRequest();
+                          setVerificationRequest(request);
+                          setVerificationFiles({});
+                          
+                          // Show success toast
+                          success(
+                            "Verification request submitted successfully! We'll review your documents and notify you via email.",
+                            6000
+                          );
+                        } catch (error: any) {
+                          console.error("Failed to submit verification request:", error);
+                          const errorMessage = error?.response?.data?.message || "Failed to submit verification request";
+                          setVerificationErrors({ general: errorMessage });
+                          
+                          // Show error toast
+                          showError(errorMessage, 5000);
+                        } finally {
+                          setIsLoadingVerification(false);
+                        }
+                      }}
+                      disabled={isLoadingVerification || !verificationFiles.idDocument || !!verificationErrors.idDocument || !!verificationErrors.businessLicense}
+                      className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {isLoadingVerification ? "Submitting..." : "Submit Verification Request"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

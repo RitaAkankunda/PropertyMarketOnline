@@ -22,12 +22,12 @@ export const PROPERTY_TYPES = [
   { value: "house", label: "House" },
   { value: "apartment", label: "Apartment" },
   { value: "condo", label: "Condominium" },
-  { value: "townhouse", label: "Townhouse" },
   { value: "villa", label: "Villa" },
   { value: "land", label: "Land" },
   { value: "commercial", label: "Commercial" },
   { value: "warehouse", label: "Warehouse" },
   { value: "office", label: "Office Space" },
+  { value: "airbnb", label: "Airbnb" },
 ] as const;
 
 // Listing Types

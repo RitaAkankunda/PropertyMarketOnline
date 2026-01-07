@@ -9,7 +9,7 @@ import { User, Mail, Phone, Building2, Save, ArrowLeft, Camera, Upload } from "l
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { authService } from "@/services/auth.service";
-import { useToast } from "@/hooks/use-toast";
+import { useToastContext } from "@/components/ui/toast-provider";
 import { APP_NAME } from "@/lib/constants";
 
 const profileSchema = z.object({
@@ -24,7 +24,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const router = useRouter();
   const { user, isAuthenticated, updateUser } = useAuth();
-  const { success, error } = useToast();
+  const { success, error } = useToastContext();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -100,20 +100,31 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      // TODO: Upload avatar file if changed
-      // For now, we'll just update the text fields
-      // In a real implementation, you would:
-      // 1. Upload the image to Cloudflare R2 or your storage
-      // 2. Get the URL back
-      // 3. Include it in the update
+      let avatarUrl = user.avatar;
+
+      // Upload avatar file if changed
+      if (avatarFile) {
+        try {
+          const uploadResult = await authService.uploadAvatar(avatarFile);
+          avatarUrl = uploadResult.avatar;
+        } catch (uploadError: any) {
+          console.error("Failed to upload avatar:", uploadError);
+          error(uploadError.message || "Failed to upload profile picture. Please try again.");
+          setIsSaving(false);
+          return;
+        }
+      }
       
       const updateData = {
         ...data,
-        // avatar: uploadedImageUrl (if avatar was changed)
+        avatar: avatarUrl,
       };
       
       const updatedUser = await authService.updateProfile(updateData);
       updateUser(updatedUser);
+      
+      // Clear the avatar file state after successful upload
+      setAvatarFile(null);
       
       success("Your profile has been updated successfully.");
     } catch (error: any) {

@@ -181,7 +181,15 @@ export const providerService = {
     await api.patch("/providers/availability", availability);
   },
 
-  // Get provider reviews
+  // Review methods
+  async createReview(providerId: string, rating: number, comment?: string): Promise<Review> {
+    const response = await api.post<Review>(`/providers/${providerId}/reviews`, {
+      rating,
+      comment,
+    });
+    return response.data;
+  },
+
   async getReviews(
     providerId: string,
     page: number = 1,
@@ -191,6 +199,30 @@ export const providerService = {
       `/providers/${providerId}/reviews?page=${page}&pageSize=${pageSize}`
     );
     return response.data;
+  },
+
+  async getMyReview(providerId: string): Promise<Review | null> {
+    try {
+      const response = await api.get<Review>(`/providers/${providerId}/reviews/my`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 400) {
+        return null; // User hasn't reviewed yet
+      }
+      throw error;
+    }
+  },
+
+  async updateReview(reviewId: string, rating?: number, comment?: string): Promise<Review> {
+    const response = await api.patch<Review>(`/providers/reviews/${reviewId}`, {
+      rating,
+      comment,
+    });
+    return response.data;
+  },
+
+  async deleteReview(reviewId: string): Promise<void> {
+    await api.delete(`/providers/reviews/${reviewId}`);
   },
 
   // Get provider earnings
@@ -318,6 +350,66 @@ export const providerService = {
     const response = await api.get<ServiceProvider[]>(
       `/providers/nearby?serviceType=${serviceType}&lat=${latitude}&lng=${longitude}&radius=${radius}`
     );
+    return response.data;
+  },
+
+  // Admin provider management methods
+  async verifyProvider(providerId: string): Promise<ServiceProvider> {
+    const response = await api.patch<ServiceProvider>(`/providers/${providerId}/verify`);
+    return response.data;
+  },
+
+  async rejectProvider(providerId: string, reason?: string): Promise<ServiceProvider> {
+    const response = await api.patch<ServiceProvider>(`/providers/${providerId}/reject`, { reason });
+    return response.data;
+  },
+
+  async suspendProvider(providerId: string, reason?: string, duration?: number): Promise<ServiceProvider> {
+    const response = await api.patch<ServiceProvider>(`/providers/${providerId}/suspend`, { reason, duration });
+    return response.data;
+  },
+
+  async banProvider(providerId: string, reason?: string): Promise<ServiceProvider> {
+    const response = await api.patch<ServiceProvider>(`/providers/${providerId}/ban`, { reason });
+    return response.data;
+  },
+
+  // Verification Request methods
+  async submitVerificationRequest(data: {
+    idDocumentUrl?: string;
+    businessLicenseUrl?: string;
+    additionalDocuments?: Array<{ name: string; url: string; type: string }>;
+  }): Promise<any> {
+    const response = await api.post("/providers/verification-request", data);
+    return response.data;
+  },
+
+  async getMyVerificationRequest(): Promise<any> {
+    const response = await api.get("/providers/verification-request");
+    return response.data;
+  },
+
+  // Admin verification request methods
+  async getVerificationRequests(status?: "pending" | "approved" | "rejected"): Promise<any[]> {
+    const params = status ? `?status=${status}` : "";
+    const response = await api.get(`/providers/admin/verification-requests${params}`);
+    return response.data;
+  },
+
+  async getVerificationRequest(id: string): Promise<any> {
+    const response = await api.get(`/providers/admin/verification-requests/${id}`);
+    return response.data;
+  },
+
+  async reviewVerificationRequest(
+    id: string,
+    status: "approved" | "rejected",
+    rejectionReason?: string
+  ): Promise<any> {
+    const response = await api.patch(`/providers/admin/verification-requests/${id}/review`, {
+      status,
+      rejectionReason,
+    });
     return response.data;
   },
 };

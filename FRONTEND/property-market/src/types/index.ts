@@ -49,12 +49,12 @@ export type PropertyType =
   | "house"
   | "apartment"
   | "condo"
-  | "townhouse"
   | "villa"
   | "land"
   | "commercial"
   | "warehouse"
-  | "office";
+  | "office"
+  | "airbnb";
 
 export type ListingType = "sale" | "rent" | "lease";
 
@@ -293,12 +293,16 @@ export type PaymentStatus = "pending" | "processing" | "completed" | "failed" | 
 // Review Types
 export interface Review {
   id: string;
-  rating: number;
-  comment: string;
+  providerId: string;
+  reviewerId: string;
+  rating: number; // 1.0 to 5.0
+  comment?: string;
   reviewer: User;
-  providerId?: string;
-  propertyId?: string;
+  provider?: ServiceProvider;
+  isVerified: boolean;
+  isHidden: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 // Notification Types

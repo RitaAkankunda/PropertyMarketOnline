@@ -104,6 +104,16 @@ export const authService = {
     return response.data;
   },
 
+  // Upload avatar
+  async uploadAvatar(file: File): Promise<{ avatar: string; message: string }> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const response = await api.post<{ avatar: string; message: string }>("/users/profile/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
   // Change password
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await api.post("/auth/change-password", { currentPassword, newPassword });

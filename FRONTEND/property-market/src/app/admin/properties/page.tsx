@@ -91,12 +91,12 @@ export default function AdminPropertiesPage() {
       house: "bg-blue-100 text-blue-800",
       apartment: "bg-purple-100 text-purple-800",
       condo: "bg-green-100 text-green-800",
-      townhouse: "bg-yellow-100 text-yellow-800",
       villa: "bg-pink-100 text-pink-800",
       land: "bg-gray-100 text-gray-800",
       commercial: "bg-indigo-100 text-indigo-800",
       warehouse: "bg-orange-100 text-orange-800",
       office: "bg-cyan-100 text-cyan-800",
+      airbnb: "bg-teal-100 text-teal-800",
     };
     return colors[type] || "bg-gray-100 text-gray-800";
   };
@@ -161,12 +161,12 @@ export default function AdminPropertiesPage() {
                 <option value="house">House</option>
                 <option value="apartment">Apartment</option>
                 <option value="condo">Condo</option>
-                <option value="townhouse">Townhouse</option>
                 <option value="villa">Villa</option>
                 <option value="land">Land</option>
                 <option value="commercial">Commercial</option>
                 <option value="warehouse">Warehouse</option>
                 <option value="office">Office</option>
+                <option value="airbnb">Airbnb</option>
               </select>
             </div>
           </div>

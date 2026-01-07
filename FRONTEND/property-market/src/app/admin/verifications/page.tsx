@@ -22,6 +22,7 @@ import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
 import { useAuthStore } from "@/store";
 import { useRouter } from "next/navigation";
 import { providerService } from "@/services";
+import { useToastContext } from "@/components/ui/toast-provider";
 import type { ServiceProvider } from "@/types";
 
 interface VerificationRequest {
@@ -40,6 +41,7 @@ interface VerificationRequest {
 export default function VerificationsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const { success, error: showError } = useToastContext();
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
@@ -69,11 +71,28 @@ export default function VerificationsPage() {
   const fetchVerifications = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call when verification system is implemented
-      // For now, return empty array - no verifications yet
-      setRequests([]);
+      // Fetch actual verification requests from backend
+      const status = filter === "all" ? undefined : filter;
+      const verificationRequestsData = await providerService.getVerificationRequests(status);
+      
+      // Convert backend data to frontend format
+      const verificationRequests: VerificationRequest[] = verificationRequestsData.map((req: any) => ({
+        id: req.id,
+        provider: req.provider,
+        status: req.status,
+        submittedAt: req.submittedAt,
+        documents: {
+          idDocument: req.idDocumentUrl,
+          businessLicense: req.businessLicenseUrl,
+          certifications: req.additionalDocuments?.map((doc: any) => doc.url) || [],
+        },
+        notes: req.rejectionReason,
+      }));
+
+      setRequests(verificationRequests);
     } catch (error) {
       console.error("Failed to fetch verifications:", error);
+      setRequests([]);
     } finally {
       setLoading(false);
     }
@@ -81,41 +100,43 @@ export default function VerificationsPage() {
 
   const handleApprove = async (requestId: string) => {
     try {
-      // Call API to approve verification
-      // await providerService.approveVerification(requestId);
+      // Call API to approve verification request
+      await providerService.reviewVerificationRequest(requestId, "approved");
       
-      setRequests(requests.map(r => 
-        r.id === requestId ? { ...r, status: "approved" as const } : r
-      ));
+      // Refresh the list
+      await fetchVerifications();
+      
+      // Clear selection
       setSelectedRequest(null);
       
-      alert("Provider verified successfully!");
+      success("Verification request approved successfully! The provider has been notified via email.", 5000);
     } catch (error) {
       console.error("Failed to approve verification:", error);
-      alert("Failed to approve verification");
+      showError("Failed to approve verification. Please try again.", 5000);
     }
   };
 
   const handleReject = async (requestId: string) => {
     if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection");
+      showError("Please provide a reason for rejection", 4000);
       return;
     }
 
     try {
-      // Call API to reject verification
-      // await providerService.rejectVerification(requestId, rejectionReason);
+      // Call API to reject verification request
+      await providerService.reviewVerificationRequest(requestId, "rejected", rejectionReason);
       
-      setRequests(requests.map(r => 
-        r.id === requestId ? { ...r, status: "rejected" as const, notes: rejectionReason } : r
-      ));
+      // Refresh the list
+      await fetchVerifications();
+      
+      // Clear selection and reason
       setSelectedRequest(null);
       setRejectionReason("");
       
-      alert("Verification rejected");
+      success("Verification request rejected. The provider has been notified with the reason.", 5000);
     } catch (error) {
       console.error("Failed to reject verification:", error);
-      alert("Failed to reject verification");
+      showError("Failed to reject verification. Please try again.", 5000);
     }
   };
 
@@ -339,23 +360,60 @@ export default function VerificationsPage() {
                         {selectedRequest.documents.idDocument && (
                           <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                             <span className="text-sm font-medium">ID Document</span>
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(selectedRequest.documents.idDocument, '_blank')}
+                            >
                               <Eye className="w-4 h-4 mr-1" />
                               View
                             </Button>
                           </div>
                         )}
-                        {selectedRequest.documents.businessLicense && (
-                          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                            <span className="text-sm font-medium">Business License</span>
-                            <Button variant="outline" size="sm">
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
+                        {selectedRequest.documents.certifications && selectedRequest.documents.certifications.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-sm font-medium block mb-2">Certifications ({selectedRequest.documents.certifications.length})</span>
+                            {selectedRequest.documents.certifications.map((certUrl, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <span className="text-sm">Certification {index + 1}</span>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => window.open(certUrl, '_blank')}
+                                >
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View
+                                </Button>
+                              </div>
+                            ))}
                           </div>
                         )}
-                        {(!selectedRequest.documents.idDocument &&
-                          !selectedRequest.documents.businessLicense) && (
+                        {selectedRequest.provider.certifications && selectedRequest.provider.certifications.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-sm font-medium block mb-2">Certifications ({selectedRequest.provider.certifications.length})</span>
+                            {selectedRequest.provider.certifications.map((cert: any, index: number) => (
+                              <div key={cert.id || index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium block">{cert.name}</span>
+                                  <span className="text-xs text-muted-foreground">Issued by: {cert.issuer}</span>
+                                </div>
+                                {cert.documentUrl && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => window.open(cert.documentUrl, '_blank')}
+                                  >
+                                    <Eye className="w-4 h-4 mr-1" />
+                                    View
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {!selectedRequest.documents.idDocument &&
+                          (!selectedRequest.documents.certifications || selectedRequest.documents.certifications.length === 0) &&
+                          (!selectedRequest.provider.certifications || selectedRequest.provider.certifications.length === 0) && (
                           <p className="text-sm text-muted-foreground">
                             No documents uploaded
                           </p>
