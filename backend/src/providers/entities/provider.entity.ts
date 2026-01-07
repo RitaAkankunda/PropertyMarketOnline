@@ -43,6 +43,9 @@ export class Provider {
   @Column()
   businessName: string;
 
+  @Column({ nullable: true })
+  profilePicture: string;
+
   @Column({
     type: 'text',
     array: true,
@@ -83,6 +86,9 @@ export class Provider {
     transformer: arrayTransformer,
   })
   portfolio: string[];
+
+  @Column({ nullable: true })
+  idDocumentUrl: string;
 
   @Column('jsonb', { nullable: true })
   certifications: Array<{

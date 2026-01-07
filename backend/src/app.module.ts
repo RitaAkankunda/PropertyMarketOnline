@@ -13,6 +13,8 @@ import { ProvidersModule } from './providers/providers.module';
 import { PaymentsModule } from './payments/payments.module';
 import { JobsModule } from './jobs/jobs.module';
 import { MaintenanceTicketsModule } from './maintenance-tickets/maintenance-tickets.module';
+import { CategoriesModule } from './categories/categories.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { DatabaseConfig } from './config/database.config';
 import { HealthModule } from './health/health.module';
 
@@ -32,6 +34,8 @@ import { HealthModule } from './health/health.module';
     PaymentsModule,
     JobsModule,
     MaintenanceTicketsModule,
+    CategoriesModule,
+    ReviewsModule,
     HealthModule,
   ],
   controllers: [AppController],

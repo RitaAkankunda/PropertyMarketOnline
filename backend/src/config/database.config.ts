@@ -6,6 +6,9 @@ import { Property } from '../properties/entities/property.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { MaintenanceTicket } from '../maintenance-tickets/entities/maintenance-ticket.entity';
 import { Provider } from '../providers/entities/provider.entity';
+import { ProviderVerificationRequest } from '../providers/entities/provider-verification-request.entity';
+import { ServiceCategory } from '../categories/entities/service-category.entity';
+import { Review } from '../reviews/entities/review.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -22,7 +25,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       username: this.configService.get<string>('DB_USERNAME', 'postgres'),
       password: this.configService.get<string>('DB_PASSWORD', 'postgres'),
       database: this.configService.get<string>('DB_DATABASE', 'propertymarket'),
-      entities: [User, Property, Job, MaintenanceTicket, Provider],
+      entities: [User, Property, Job, MaintenanceTicket, Provider, ProviderVerificationRequest, ServiceCategory, Review],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
       synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       logging: this.configService.get<string>('NODE_ENV') === 'development',

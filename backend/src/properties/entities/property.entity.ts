@@ -12,12 +12,12 @@ export enum PropertyType {
   HOUSE = 'house',
   APARTMENT = 'apartment',
   CONDO = 'condo',
-  TOWNHOUSE = 'townhouse',
   VILLA = 'villa',
   LAND = 'land',
   COMMERCIAL = 'commercial',
   WAREHOUSE = 'warehouse',
   OFFICE = 'office',
+  AIRBNB = 'airbnb',
 }
 
 export enum ListingType {

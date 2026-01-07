@@ -10,15 +10,20 @@ import { Job, JobStatus } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { QueryJobDto } from './dto/query-job.dto';
+import { AssignProviderDto } from './dto/assign-provider.dto';
+import { CompleteJobDto } from './dto/complete-job.dto';
 import { UsersService } from 'src/users/users.service';
 import { UserRole } from 'src/users/enums/user-role.enum';
 import { R2Service } from 'src/common/r2.service';
+import { Provider } from 'src/providers/entities/provider.entity';
 
 @Injectable()
 export class JobsService {
   constructor(
     @InjectRepository(Job)
     private readonly jobRepository: Repository<Job>,
+    @InjectRepository(Provider)
+    private readonly providerRepository: Repository<Provider>,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
   ) {}
@@ -283,6 +288,123 @@ export class JobsService {
 
     job.rating = rating;
     job.review = review;
+
+    return await this.jobRepository.save(job);
+  }
+
+  /**
+   * Client assigns a provider to a pending job
+   */
+  async assignProvider(jobId: string, assignDto: AssignProviderDto, clientId: string): Promise<Job> {
+    const job = await this.findOne(jobId);
+
+    // Only client can assign provider
+    if (job.clientId !== clientId) {
+      throw new ForbiddenException('Only the job creator can assign a provider');
+    }
+
+    // Job must be pending
+    if (job.status !== JobStatus.PENDING) {
+      throw new BadRequestException('Can only assign provider to pending jobs');
+    }
+
+    // Verify provider exists and is a service provider
+    const providerUser = await this.usersService.findOneById(assignDto.providerId);
+    if (!providerUser) {
+      throw new NotFoundException('Provider not found');
+    }
+
+    // Check if provider has a provider profile
+    const provider = await this.providerRepository.findOne({
+      where: { userId: assignDto.providerId },
+    });
+
+    if (!provider) {
+      throw new BadRequestException('Selected user is not a registered service provider');
+    }
+
+    // Assign provider
+    job.providerId = assignDto.providerId;
+    // Status remains PENDING until provider accepts
+
+    return await this.jobRepository.save(job);
+  }
+
+  /**
+   * Provider accepts a job (that has been assigned to them)
+   */
+  async acceptJob(jobId: string, providerUserId: string): Promise<Job> {
+    const job = await this.findOne(jobId);
+
+    // Verify job is assigned to this provider
+    if (job.providerId !== providerUserId) {
+      throw new ForbiddenException('This job is not assigned to you');
+    }
+
+    // Job must be pending
+    if (job.status !== JobStatus.PENDING) {
+      throw new BadRequestException('Can only accept pending jobs');
+    }
+
+    // Update status to accepted
+    job.status = JobStatus.ACCEPTED;
+
+    return await this.jobRepository.save(job);
+  }
+
+  /**
+   * Provider completes a job with notes and photos
+   */
+  async completeJob(jobId: string, completeDto: CompleteJobDto, providerUserId: string): Promise<Job> {
+    const job = await this.findOne(jobId);
+
+    // Verify job is assigned to this provider
+    if (job.providerId !== providerUserId) {
+      throw new ForbiddenException('You can only complete jobs assigned to you');
+    }
+
+    // Job must be accepted or in progress
+    if (job.status !== JobStatus.ACCEPTED && job.status !== JobStatus.IN_PROGRESS) {
+      throw new BadRequestException('Can only complete accepted or in-progress jobs');
+    }
+
+    // Update job
+    job.status = JobStatus.COMPLETED;
+    job.completedAt = new Date();
+    job.completionNotes = completeDto.completionNotes || null;
+    job.completionPhotos = completeDto.completionPhotos || null;
+
+    // Update provider's completed jobs count
+    const provider = await this.providerRepository.findOne({
+      where: { userId: providerUserId },
+    });
+
+    if (provider) {
+      provider.completedJobs = (provider.completedJobs || 0) + 1;
+      await this.providerRepository.save(provider);
+    }
+
+    return await this.jobRepository.save(job);
+  }
+
+  /**
+   * Provider starts work on a job (moves from accepted to in_progress)
+   */
+  async startJob(jobId: string, providerUserId: string): Promise<Job> {
+    const job = await this.findOne(jobId);
+
+    // Verify job is assigned to this provider
+    if (job.providerId !== providerUserId) {
+      throw new ForbiddenException('You can only start jobs assigned to you');
+    }
+
+    // Job must be accepted
+    if (job.status !== JobStatus.ACCEPTED) {
+      throw new BadRequestException('Can only start accepted jobs');
+    }
+
+    // Update status to in progress
+    job.status = JobStatus.IN_PROGRESS;
 
     return await this.jobRepository.save(job);
   }

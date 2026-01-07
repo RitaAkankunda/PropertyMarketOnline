@@ -22,6 +22,8 @@ import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { QueryJobDto } from './dto/query-job.dto';
+import { AssignProviderDto } from './dto/assign-provider.dto';
+import { CompleteJobDto } from './dto/complete-job.dto';
 
 @Controller('jobs')
 @UseGuards(AuthGuard('jwt'))
@@ -167,6 +169,52 @@ export class JobsController {
       body.review || '',
       req.user.id,
     );
+  }
+
+  /**
+   * Client assigns a provider to a job
+   */
+  @Post(':id/assign')
+  async assignProvider(
+    @Param('id') id: string,
+    @Body() assignDto: AssignProviderDto,
+    @Request() req,
+  ) {
+    return this.jobsService.assignProvider(id, assignDto, req.user.id);
+  }
+
+  /**
+   * Provider accepts a job
+   */
+  @Post(':id/accept')
+  async acceptJob(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    return this.jobsService.acceptJob(id, req.user.id);
+  }
+
+  /**
+   * Provider starts work on a job
+   */
+  @Post(':id/start')
+  async startJob(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    return this.jobsService.startJob(id, req.user.id);
+  }
+
+  /**
+   * Provider completes a job
+   */
+  @Post(':id/complete')
+  async completeJob(
+    @Param('id') id: string,
+    @Body() completeDto: CompleteJobDto,
+    @Request() req,
+  ) {
+    return this.jobsService.completeJob(id, completeDto, req.user.id);
   }
 }
 

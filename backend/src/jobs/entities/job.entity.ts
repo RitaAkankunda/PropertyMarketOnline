@@ -83,6 +83,12 @@ export class Job {
   @Column({ nullable: true })
   completedAt: Date;
 
+  @Column('text', { nullable: true })
+  completionNotes: string; // Provider's notes about completion
+
+  @Column('simple-array', { nullable: true })
+  completionPhotos: string[]; // URLs of completion photos
+
   @Column({ nullable: true, type: 'decimal', precision: 3, scale: 2 })
   rating: number;
 

@@ -111,5 +111,9 @@ export class RegisterProviderCompleteDto {
   @ValidateNested()
   @Type(() => LocationDto)
   location: LocationDto;
+
+  @IsOptional()
+  @IsString()
+  profilePicture?: string;
 }
 

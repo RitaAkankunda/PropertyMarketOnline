@@ -39,6 +39,9 @@ export class User {
   phone?: string;
 
   @Column({ nullable: true })
+  avatar?: string;
+
+  @Column({ nullable: true })
   provider?: string;
 
   @Column({ nullable: true })

@@ -1,4 +1,5 @@
-import { Controller, Get, UseGuards, Request, Post, Body, Headers, UnauthorizedException, NotFoundException, Patch, Param, Delete, BadRequestException } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Post, Body, Headers, UnauthorizedException, NotFoundException, Patch, Param, Delete, BadRequestException, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from 'src/auth/roles.decorator';
@@ -11,6 +12,9 @@ import { PropertiesService } from 'src/properties/properties.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Provider } from 'src/providers/entities/provider.entity';
+import { ProviderVerificationRequest, VerificationRequestStatus } from 'src/providers/entities/provider-verification-request.entity';
+import { R2Service } from 'src/common/r2.service';
+import { File as MulterFile } from 'multer';
 
 @Controller('users')
 export class UsersController {
@@ -18,8 +22,11 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly propertiesService: PropertiesService,
+    private readonly r2Service: R2Service,
     @InjectRepository(Provider)
     private readonly providerRepository: Repository<Provider>,
+    @InjectRepository(ProviderVerificationRequest)
+    private readonly verificationRequestRepository: Repository<ProviderVerificationRequest>,
   ) {}
 
   @UseGuards(AuthGuard('jwt'))
@@ -46,6 +53,40 @@ export class UsersController {
   @Patch('profile')
   updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(req.user.sub, updateUserDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('profile/avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  async uploadAvatar(
+    @UploadedFile() file: MulterFile,
+    @Request() req,
+  ) {
+    const userId = req.user?.sub || req.user?.id;
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    // Validate file type
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('File must be an image');
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('File size must be less than 5MB');
+    }
+
+    // Upload to R2
+    const url = await this.r2Service.uploadFile(file, 'users/avatars');
+
+    // Update user with avatar URL
+    const user = await this.usersService.update(userId, { avatar: url });
+
+    return {
+      avatar: user.avatar,
+      message: 'Avatar uploaded successfully',
+    };
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -106,10 +147,17 @@ export class UsersController {
       const activeListings = await this.propertiesService.getActiveListingsCount();
       console.log('[ADMIN STATS] Active listings:', activeListings);
 
+      // Get pending verification requests count
+      console.log('[ADMIN STATS] Fetching pending verification requests...');
+      const pendingVerifications = await this.verificationRequestRepository.count({
+        where: { status: VerificationRequestStatus.PENDING },
+      });
+      console.log('[ADMIN STATS] Pending verifications:', pendingVerifications);
+
       const stats = {
         totalUsers,
         totalProviders: totalServiceProviders, // Service providers with dedicated role
-        pendingVerifications: 0, // TODO: Implement verification system
+        pendingVerifications, // Real count from database
         totalProperties,
         revenue: 0, // TODO: Implement revenue tracking
         activeListings,

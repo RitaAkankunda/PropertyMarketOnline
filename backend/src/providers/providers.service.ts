@@ -1,13 +1,19 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../users/users.service';
 import { UserRole } from '../users/enums/user-role.enum';
 import { RegisterProviderDto } from './dto/register-provider.dto';
 import { RegisterProviderCompleteDto } from './dto/register-provider-complete.dto';
+import { CreateVerificationRequestDto } from './dto/create-verification-request.dto';
+import { ReviewVerificationRequestDto } from './dto/review-verification-request.dto';
+import { UpdateProviderProfileDto } from './dto/update-provider-profile.dto';
 import { User } from '../users/entities/user.entity';
 import { Provider } from './entities/provider.entity';
+import { ProviderVerificationRequest, VerificationRequestStatus } from './entities/provider-verification-request.entity';
 import { AuthService } from '../auth/auth.service';
+import { EmailService } from '../common/email.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -17,8 +23,11 @@ export class ProvidersService {
     private readonly providerRepository: Repository<Provider>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(ProviderVerificationRequest)
+    private readonly verificationRequestRepository: Repository<ProviderVerificationRequest>,
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
+    private readonly emailService: EmailService,
   ) {}
 
   async findAllProviders(
@@ -184,6 +193,7 @@ export class ProvidersService {
         // Update existing provider
         Object.assign(existingProvider, {
           businessName: registerDto.businessName.trim(),
+          profilePicture: registerDto.profilePicture || existingProvider.profilePicture,
           serviceTypes: Array.isArray(registerDto.serviceTypes) 
             ? registerDto.serviceTypes 
             : [registerDto.serviceTypes].filter(Boolean),
@@ -250,6 +260,7 @@ export class ProvidersService {
       const provider = this.providerRepository.create({
         userId,
         businessName: registerDto.businessName.trim(),
+        profilePicture: registerDto.profilePicture || null,
         serviceTypes: serviceTypes as any, // TypeORM will handle the array conversion
         description: registerDto.description.trim(),
         pricing: {
@@ -496,6 +507,7 @@ export class ProvidersService {
         // Update existing provider instead of creating new one
         Object.assign(existingProviderForUser, {
           businessName: registerDto.businessName.trim(),
+          profilePicture: registerDto.profilePicture || existingProviderForUser.profilePicture,
           serviceTypes,
           description: registerDto.description.trim(),
           pricing: {
@@ -544,6 +556,7 @@ export class ProvidersService {
       const provider = this.providerRepository.create({
         userId: user.id,
         businessName: registerDto.businessName.trim(),
+        profilePicture: registerDto.profilePicture || null,
         serviceTypes,
         description: registerDto.description.trim(),
         pricing: {
@@ -734,6 +747,115 @@ export class ProvidersService {
   }
 
   /**
+   * Update provider profile picture
+   */
+  async updateProfilePicture(userId: string, profilePictureUrl: string): Promise<{ profilePicture: string; message: string }> {
+    const provider = await this.getProviderByUserId(userId);
+    if (!provider) {
+      throw new NotFoundException('Provider profile not found');
+    }
+
+    provider.profilePicture = profilePictureUrl;
+    await this.providerRepository.save(provider);
+
+    return {
+      profilePicture: provider.profilePicture,
+      message: 'Profile picture uploaded successfully',
+    };
+  }
+
+  /**
+   * Update provider profile
+   * Allows providers to update their business information, pricing, availability, location, etc.
+   */
+  async updateProviderProfile(userId: string, updateDto: UpdateProviderProfileDto): Promise<Provider> {
+    // Get the provider profile
+    const provider = await this.getProviderByUserId(userId);
+    if (!provider) {
+      throw new NotFoundException('Provider profile not found');
+    }
+
+    // Update business name if provided
+    if (updateDto.businessName !== undefined) {
+      if (updateDto.businessName.trim().length < 3) {
+        throw new BadRequestException('Business name must be at least 3 characters');
+      }
+      provider.businessName = updateDto.businessName.trim();
+    }
+
+    // Update service types if provided
+    if (updateDto.serviceTypes !== undefined) {
+      const serviceTypes = Array.isArray(updateDto.serviceTypes)
+        ? updateDto.serviceTypes.filter(Boolean).map(s => String(s).trim())
+        : [String(updateDto.serviceTypes).trim()].filter(Boolean);
+
+      if (serviceTypes.length === 0) {
+        throw new BadRequestException('At least one service type is required');
+      }
+      provider.serviceTypes = serviceTypes as any;
+    }
+
+    // Update description if provided
+    if (updateDto.description !== undefined) {
+      if (updateDto.description.trim().length < 50) {
+        throw new BadRequestException('Description must be at least 50 characters');
+      }
+      provider.description = updateDto.description.trim();
+    }
+
+    // Update pricing if provided
+    if (updateDto.pricing !== undefined) {
+      provider.pricing = {
+        ...provider.pricing,
+        ...updateDto.pricing,
+      };
+      // Ensure currency defaults to UGX if not provided
+      if (!provider.pricing.currency) {
+        provider.pricing.currency = 'UGX';
+      }
+    }
+
+    // Update availability if provided
+    if (updateDto.availability !== undefined) {
+      provider.availability = {
+        ...provider.availability,
+        ...updateDto.availability,
+      };
+      // Update isAvailable based on days
+      if (updateDto.availability.days !== undefined) {
+        provider.availability.isAvailable = updateDto.availability.days.length > 0;
+      }
+    }
+
+    // Update location if provided
+    if (updateDto.location !== undefined) {
+      provider.location = {
+        ...provider.location,
+        ...updateDto.location,
+      };
+    }
+
+    // Update portfolio images if provided
+    if (updateDto.portfolio !== undefined) {
+      const portfolio = Array.isArray(updateDto.portfolio)
+        ? updateDto.portfolio.filter(Boolean)
+        : [];
+      provider.portfolio = portfolio as any;
+    }
+
+    // Save the updated provider
+    const updatedProvider = await this.providerRepository.save(provider);
+
+    // Load with user relation for proper response
+    const providerWithUser = await this.providerRepository.findOne({
+      where: { id: updatedProvider.id },
+      relations: ['user'],
+    });
+
+    return providerWithUser || updatedProvider;
+  }
+
+  /**
    * Deactivate provider profile and revert user role back to LISTER
    * This allows users to go back to being a lister from being a service provider
    */
@@ -821,5 +943,225 @@ export class ProvidersService {
     }
 
     return provider;
+  }
+
+  // Document management methods
+  async updateIdDocument(providerId: string, documentUrl: string): Promise<Provider> {
+    const provider = await this.getProvider(providerId);
+    provider.idDocumentUrl = documentUrl;
+    return await this.providerRepository.save(provider);
+  }
+
+  async addCertification(
+    providerId: string,
+    certification: {
+      name: string;
+      issuer: string;
+      documentUrl: string;
+      isVerified: boolean;
+    },
+  ): Promise<Provider> {
+    const provider = await this.getProvider(providerId);
+    
+    const certifications = provider.certifications || [];
+    certifications.push({
+      id: uuidv4(),
+      ...certification,
+    });
+
+    provider.certifications = certifications;
+    return await this.providerRepository.save(provider);
+  }
+
+  // Admin management methods
+  async verifyProvider(providerId: string): Promise<Provider> {
+    const provider = await this.getProvider(providerId);
+    provider.isVerified = true;
+    provider.isKycVerified = true;
+    return await this.providerRepository.save(provider);
+  }
+
+  async rejectProvider(providerId: string, reason?: string): Promise<Provider> {
+    const provider = await this.getProvider(providerId);
+    provider.isVerified = false;
+    provider.isKycVerified = false;
+    // Store rejection reason if we have a field for it
+    // For now, just update the verification status
+    return await this.providerRepository.save(provider);
+  }
+
+  async suspendProvider(providerId: string, reason?: string, duration?: number): Promise<Provider> {
+    const provider = await this.getProvider(providerId);
+    // Add suspension fields to entity if needed
+    // For now, we'll just set isVerified to false as a simple suspension
+    provider.isVerified = false;
+    return await this.providerRepository.save(provider);
+  }
+
+  async banProvider(providerId: string, reason?: string): Promise<Provider> {
+    const provider = await this.getProvider(providerId);
+    // Add ban status to entity if needed
+    // For now, we'll set both verification flags to false
+    provider.isVerified = false;
+    provider.isKycVerified = false;
+    return await this.providerRepository.save(provider);
+  }
+
+  // Verification Request methods
+  async createVerificationRequest(
+    providerId: string,
+    createDto: CreateVerificationRequestDto,
+  ): Promise<ProviderVerificationRequest> {
+    const provider = await this.getProvider(providerId);
+
+    // Check if there's already a pending request
+    const existingPending = await this.verificationRequestRepository.findOne({
+      where: {
+        providerId,
+        status: VerificationRequestStatus.PENDING,
+      },
+    });
+
+    if (existingPending) {
+      throw new BadRequestException('You already have a pending verification request');
+    }
+
+    // Validate that at least one document is provided
+    if (!createDto.idDocumentUrl && !createDto.businessLicenseUrl && 
+        (!createDto.additionalDocuments || createDto.additionalDocuments.length === 0)) {
+      throw new BadRequestException('At least one document is required for verification');
+    }
+
+    const request = this.verificationRequestRepository.create({
+      providerId,
+      idDocumentUrl: createDto.idDocumentUrl,
+      businessLicenseUrl: createDto.businessLicenseUrl,
+      additionalDocuments: createDto.additionalDocuments || [],
+      status: VerificationRequestStatus.PENDING,
+    });
+
+    const savedRequest = await this.verificationRequestRepository.save(request);
+
+    // Send email notification
+    try {
+      const user = await this.userRepository.findOne({ where: { id: provider.userId } });
+      if (user) {
+        await this.emailService.sendVerificationRequestSubmitted(
+          user.email,
+          `${user.firstName} ${user.lastName}`,
+        );
+      }
+    } catch (error) {
+      // Don't fail the request if email fails
+      console.error('Failed to send verification request email:', error);
+    }
+
+    return savedRequest;
+  }
+
+  async getVerificationRequests(
+    filters?: {
+      status?: VerificationRequestStatus;
+      providerId?: string;
+    },
+  ): Promise<ProviderVerificationRequest[]> {
+    const query = this.verificationRequestRepository
+      .createQueryBuilder('request')
+      .leftJoinAndSelect('request.provider', 'provider')
+      .leftJoinAndSelect('provider.user', 'user');
+
+    if (filters?.status) {
+      query.where('request.status = :status', { status: filters.status });
+    }
+
+    if (filters?.providerId) {
+      query.andWhere('request.providerId = :providerId', { providerId: filters.providerId });
+    }
+
+    query.orderBy('request.submittedAt', 'DESC');
+
+    return await query.getMany();
+  }
+
+  async getVerificationRequest(id: string): Promise<ProviderVerificationRequest> {
+    const request = await this.verificationRequestRepository.findOne({
+      where: { id },
+      relations: ['provider', 'provider.user'],
+    });
+
+    if (!request) {
+      throw new NotFoundException('Verification request not found');
+    }
+
+    return request;
+  }
+
+  async reviewVerificationRequest(
+    requestId: string,
+    reviewDto: ReviewVerificationRequestDto,
+    adminUserId: string,
+  ): Promise<ProviderVerificationRequest> {
+    const request = await this.getVerificationRequest(requestId);
+
+    if (request.status !== VerificationRequestStatus.PENDING) {
+      throw new BadRequestException('This verification request has already been reviewed');
+    }
+
+    request.status = reviewDto.status;
+    request.reviewedBy = adminUserId;
+    request.reviewedAt = new Date();
+
+    if (reviewDto.status === VerificationRequestStatus.REJECTED) {
+      if (!reviewDto.rejectionReason) {
+        throw new BadRequestException('Rejection reason is required when rejecting a request');
+      }
+      request.rejectionReason = reviewDto.rejectionReason;
+    }
+
+    // If approved, also verify the provider
+    if (reviewDto.status === VerificationRequestStatus.APPROVED) {
+      const provider = await this.getProvider(request.providerId);
+      provider.isVerified = true;
+      provider.isKycVerified = true;
+      await this.providerRepository.save(provider);
+
+      // Send approval email
+      try {
+        const user = await this.userRepository.findOne({ where: { id: provider.userId } });
+        if (user) {
+          await this.emailService.sendVerificationApproved(
+            user.email,
+            `${user.firstName} ${user.lastName}`,
+          );
+        }
+      } catch (error) {
+        console.error('Failed to send verification approval email:', error);
+      }
+    } else if (reviewDto.status === VerificationRequestStatus.REJECTED) {
+      // Send rejection email
+      try {
+        const provider = await this.getProvider(request.providerId);
+        const user = await this.userRepository.findOne({ where: { id: provider.userId } });
+        if (user) {
+          await this.emailService.sendVerificationRejected(
+            user.email,
+            `${user.firstName} ${user.lastName}`,
+            reviewDto.rejectionReason || 'Your verification request did not meet our requirements.',
+          );
+        }
+      } catch (error) {
+        console.error('Failed to send verification rejection email:', error);
+      }
+    }
+
+    return await this.verificationRequestRepository.save(request);
+  }
+
+  async getProviderVerificationRequest(providerId: string): Promise<ProviderVerificationRequest | null> {
+    return await this.verificationRequestRepository.findOne({
+      where: { providerId },
+      relations: ['provider', 'provider.user'],
+      order: { submittedAt: 'DESC' },
+    });
   }
 }

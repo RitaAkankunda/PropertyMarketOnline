@@ -19,6 +19,10 @@ export class CreateUserDto {
   @IsString()
   phone?: string;
 
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
   @IsEnum(UserRole)
   role: UserRole;
 }
