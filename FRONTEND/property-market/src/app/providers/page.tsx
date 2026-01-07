@@ -28,6 +28,8 @@ import {
   X,
   Calendar,
   Clock,
+  Repeat,
+  Bell,
   CreditCard,
   Smartphone,
   Building,
@@ -222,6 +224,10 @@ function RequestFormModal({
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<string>("");
+  const [recurringEndDate, setRecurringEndDate] = useState<string>("");
+  const [sendReminder, setSendReminder] = useState(true);
 
   // Cleanup image previews on unmount
   useEffect(() => {
@@ -336,6 +342,10 @@ function RequestFormModal({
         scheduledDate: scheduledDate,
         scheduledTime: scheduledTime,
         images: images, // Include uploaded images
+        isRecurring: isRecurring,
+        recurringFrequency: isRecurring ? recurringFrequency : undefined,
+        recurringEndDate: isRecurring ? recurringEndDate : undefined,
+        sendReminder: sendReminder,
       });
 
       setIsSuccess(true);
@@ -640,6 +650,77 @@ function RequestFormModal({
                   placeholder="+256 7XX XXX XXX"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                 />
+              </div>
+
+              {/* Recurring Booking Section */}
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Repeat className="w-5 h-5 text-purple-600" />
+                    <span className="font-semibold text-gray-900">Make this a recurring booking</span>
+                  </div>
+                </label>
+                <p className="text-sm text-gray-600 ml-8 mb-3">
+                  Perfect for services like cleaning, maintenance, or security
+                </p>
+
+                {isRecurring && (
+                  <div className="ml-8 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
+                        <select
+                          value={recurringFrequency}
+                          onChange={(e) => setRecurringFrequency(e.target.value)}
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                        >
+                          <option value="">Select frequency</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="bi-weekly">Bi-weekly (Every 2 weeks)</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                        <input
+                          type="date"
+                          value={recurringEndDate}
+                          onChange={(e) => setRecurringEndDate(e.target.value)}
+                          min={formData["date"]}
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-purple-700 bg-purple-50 rounded-lg p-3">
+                      <strong>Note:</strong> Provider will confirm availability for recurring appointments. You'll be charged per occurrence.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Appointment Reminder Section */}
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendReminder}
+                    onChange={(e) => setSendReminder(e.target.checked)}
+                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-gray-900">Send me appointment reminders</span>
+                  </div>
+                </label>
+                <p className="text-sm text-gray-600 ml-8 mt-2">
+                  We'll send you email reminders 24 hours and 1 hour before your appointment
+                </p>
               </div>
             </div>
           )}
