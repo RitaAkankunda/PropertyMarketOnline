@@ -104,6 +104,11 @@ const propertyTypes = [
     icon: Building2,
   },
   { 
+    name: "Airbnb Stays", 
+    type: "airbnb" as PropertyType,
+    icon: Home,
+  },
+  { 
     name: "Villas", 
     type: "villa" as PropertyType,
     icon: Home,
@@ -166,6 +171,19 @@ export default function HomePage() {
     { value: "-", label: "Service Providers" },
     { value: "-", label: "Satisfaction Rate" },
   ]);
+
+  // Build ranked list of property types with counts and pick top 4 for display
+  const propertyTypesWithCount = propertyTypes.map((pt) => ({
+    ...pt,
+    count: (propertiesByType[pt.type] || []).length,
+  }));
+
+  const displayedPropertyTypes = [...propertyTypesWithCount]
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 4);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -436,27 +454,27 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="space-y-16">
-              {propertyTypes
-                .filter((type) => {
-                  const properties = propertiesByType[type.type] || [];
-                  return properties.length > 0;
-                })
-                .map((type) => {
-                  const properties = propertiesByType[type.type] || [];
-                  return (
-                    <div key={type.name}>
-                      {/* Category Header */}
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl flex items-center justify-center">
-                          <type.icon className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-2xl font-bold text-slate-900">{type.name}</h3>
-                          <p className="text-slate-600">Explore our {type.name.toLowerCase()} listings</p>
-                        </div>
-                      </div>
+              {displayedPropertyTypes.map((type) => {
+                const properties = propertiesByType[type.type] || [];
 
-                      {/* Property Cards */}
+                return (
+                  <div key={type.name}>
+                    {/* Category Header */}
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl flex items-center justify-center">
+                        <type.icon className="w-8 h-8 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                          {type.name}
+                          <span className="text-sm font-medium text-slate-500">{type.count} listings</span>
+                        </h3>
+                        <p className="text-slate-600">Explore our {type.name.toLowerCase()} listings</p>
+                      </div>
+                    </div>
+
+                    {/* Property Cards */}
+                    {properties.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                         {properties.slice(0, 4).map((property) => (
                           <Link
@@ -494,20 +512,36 @@ export default function HomePage() {
                           </Link>
                         ))}
                       </div>
-
-                      {/* Browse All Button */}
-                      <div className="text-center">
-                        <Link
-                          href={`/properties?type=${type.type}`}
-                          className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-white shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                        >
-                          View All {type.name}
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Link>
+                    ) : (
+                      <div className="mb-6 p-6 bg-white rounded-xl border border-dashed border-slate-200 text-slate-500">
+                        No listings yet for this category. Be the first to list!
                       </div>
+                    )}
+
+                    {/* Browse All Button */}
+                    <div className="text-center">
+                      <Link
+                        href={`/properties?type=${type.type}`}
+                        className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-white shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        View All {type.name}
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Link>
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
+
+              {/* Global view all CTA */}
+              <div className="text-center pt-4">
+                <Link
+                  href="/properties"
+                  className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-semibold bg-blue-600 text-white shadow hover:bg-blue-700 transition-colors"
+                >
+                  View All Properties
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </div>
             </div>
           )}
         </div>
