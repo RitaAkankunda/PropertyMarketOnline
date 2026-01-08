@@ -1,9 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { providerService } from "@/services";
+import { providerService, notificationsService } from "@/services";
+import { useNotificationAlerts } from "@/hooks/use-notifications";
+import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
+import { NotificationPermissionBanner } from "@/components/notifications/notification-permission-banner";
+import { NotificationPermissionSuccess } from "@/components/notifications/notification-permission-success";
 import type { Job as ApiJob } from "@/types";
+import type { Notification as ApiNotification } from "@/services/notifications.service";
 import {
   Home,
   Briefcase,
@@ -47,14 +52,8 @@ interface ServiceRequest {
   providerRating?: number;
 }
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: "info" | "success" | "warning";
-  timestamp: string;
-  read: boolean;
-}
+// Notification interface matches API response
+type Notification = ApiNotification;
 
 // Helper function to format Job from API to ServiceRequest display format
 function formatJobToServiceRequest(job: ApiJob): ServiceRequest {
@@ -80,44 +79,15 @@ function formatJobToServiceRequest(job: ApiJob): ServiceRequest {
   };
 }
 
-// Helper function to generate notifications from job status changes
-function generateNotificationsFromJobs(jobs: ApiJob[]): Notification[] {
-  const notifications: Notification[] = [];
-  
-  jobs.forEach((job) => {
-    if (job.status === "accepted") {
-      notifications.push({
-        id: `notif-${job.id}-accepted`,
-        title: "Request Accepted",
-        message: `${job.provider?.businessName || 'Provider'} accepted your service request`,
-        type: "success" as const,
-        timestamp: new Date(job.updatedAt || job.createdAt).toLocaleString(),
-        read: false,
-      });
-    } else if (job.status === "in_progress") {
-      notifications.push({
-        id: `notif-${job.id}-started`,
-        title: "Job Started",
-        message: `${job.provider?.businessName || 'Provider'} has started working on your request`,
-        type: "info" as const,
-        timestamp: new Date(job.updatedAt || job.createdAt).toLocaleString(),
-        read: false,
-      });
-    } else if (job.status === "completed") {
-      notifications.push({
-        id: `notif-${job.id}-completed`,
-        title: "Job Completed",
-        message: `${job.provider?.businessName || 'Provider'} has completed your request`,
-        type: "success" as const,
-        timestamp: new Date(job.completedAt || job.updatedAt || job.createdAt).toLocaleString(),
-        read: false,
-      });
-    }
-  });
-
-  return notifications.sort((a, b) => 
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
+// Helper function to map API notification type to display type
+function mapNotificationType(type: string): "info" | "success" | "warning" {
+  if (type.includes('accepted') || type.includes('completed')) {
+    return 'success';
+  }
+  if (type.includes('rejected') || type.includes('cancelled')) {
+    return 'warning';
+  }
+  return 'info';
 }
 
 const DUMMY_CONVERSATIONS = [
@@ -385,6 +355,7 @@ export default function UserDashboard() {
   const [statusFilter, setStatusFilter] = useState<RequestStatus | "all">("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
 
   // Fetch user's jobs from backend
   useEffect(() => {
@@ -399,10 +370,6 @@ export default function UserDashboard() {
         // Format jobs to service requests
         const formattedRequests = response.data.map(formatJobToServiceRequest);
         setRequests(formattedRequests);
-        
-        // Generate notifications from jobs
-        const generatedNotifications = generateNotificationsFromJobs(response.data);
-        setNotifications(generatedNotifications);
       } catch (err) {
         console.error("Error fetching jobs:", err);
         setError(err instanceof Error ? err.message : "Failed to load service requests");
@@ -415,6 +382,111 @@ export default function UserDashboard() {
 
     fetchJobs();
   }, [statusFilter]);
+
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      console.log('[NOTIFICATIONS] Fetching notifications...');
+      console.log('[NOTIFICATIONS] notificationsService:', notificationsService);
+      console.log('[NOTIFICATIONS] Calling getNotifications...');
+      
+      const response = await notificationsService.getNotifications({
+        limit: 50,
+        offset: 0,
+      });
+      
+      console.log('[NOTIFICATIONS] Fetched notifications response:', response);
+      console.log('[NOTIFICATIONS] Notifications array:', response.notifications);
+      console.log('[NOTIFICATIONS] Setting notifications state with', response.notifications.length, 'notifications');
+      
+      setNotifications(response.notifications || []);
+      console.log('[NOTIFICATIONS] State updated successfully');
+    } catch (err) {
+      console.error('[NOTIFICATIONS] Error fetching notifications:', err);
+      console.error('[NOTIFICATIONS] Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        response: (err as any)?.response,
+      });
+      // Don't set error state for notifications, just log it
+      setNotifications([]);
+    }
+  };
+
+  // Initial fetch and fallback polling (only if WebSocket fails)
+  const [usePolling, setUsePolling] = useState(false);
+  
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Only poll if WebSocket is not connected (fallback)
+    if (usePolling) {
+      const interval = setInterval(fetchNotifications, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [usePolling]);
+
+  // WebSocket for real-time notifications
+  const { isConnected: wsConnected, connectionError: wsError } = useWebSocketNotifications({
+    enabled: true,
+    onNotification: (notification) => {
+      console.log('[NOTIFICATIONS] 📬 New notification via WebSocket:', notification);
+      // Add new notification to the list (prepend)
+      setNotifications(prev => {
+        // Check if notification already exists
+        if (prev.find(n => n.id === notification.id)) {
+          return prev;
+        }
+        return [notification, ...prev];
+      });
+    },
+    onUnreadCount: (count) => {
+      console.log('[NOTIFICATIONS] 📊 Unread count update:', count);
+    },
+  });
+
+  // Fallback to polling if WebSocket fails
+  useEffect(() => {
+    if (wsError && !wsConnected) {
+      console.warn('[NOTIFICATIONS] WebSocket failed, falling back to polling');
+      setUsePolling(true);
+    } else if (wsConnected) {
+      console.log('[NOTIFICATIONS] WebSocket connected, using real-time updates');
+      setUsePolling(false);
+    }
+  }, [wsConnected, wsError]);
+  
+  // Also refresh notifications when page becomes visible (user switches tabs back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Browser push notifications and sound alerts
+  useNotificationAlerts(notifications, true);
+
+  // Handle notification click from browser push notification
+  useEffect(() => {
+    const handleNotificationClick = (event: CustomEvent) => {
+      const { jobId } = event.detail;
+      if (jobId) {
+        const relatedRequest = requests.find(r => r.id === jobId);
+        if (relatedRequest) {
+          setSelectedRequest(relatedRequest);
+          setActiveTab("requests");
+          setShowNotificationDropdown(false);
+        }
+      }
+    };
+
+    window.addEventListener('notification-clicked', handleNotificationClick as EventListener);
+    return () => window.removeEventListener('notification-clicked', handleNotificationClick as EventListener);
+  }, [requests]);
 
   const filteredRequests = statusFilter === "all" 
     ? requests 
@@ -434,7 +506,7 @@ export default function UserDashboard() {
     console.log(`Rated request ${id} with ${rating} stars`);
   };
 
-  const unreadNotifications = notifications.filter(n => !n.read).length;
+  const unreadNotifications = notifications.filter(n => !n.isRead).length;
   const unreadMessages = DUMMY_CONVERSATIONS.filter(c => c.unread).length;
 
   return (
@@ -460,21 +532,180 @@ export default function UserDashboard() {
               <h1 className="text-2xl font-bold">My Dashboard</h1>
               <p className="text-blue-100">Track your service requests</p>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="p-2 bg-white/20 rounded-lg relative">
+            <div className="flex items-center gap-3 relative">
+              <button 
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('[BELL CLICK] Bell icon clicked, current dropdown state:', showNotificationDropdown);
+                  try {
+                    const newState = !showNotificationDropdown;
+                    console.log('[BELL CLICK] Setting dropdown state to:', newState);
+                    setShowNotificationDropdown(newState);
+                    // Refresh notifications when opening dropdown
+                    if (newState) {
+                      console.log('[BELL CLICK] Opening dropdown, fetching notifications...');
+                      await fetchNotifications();
+                    } else {
+                      console.log('[BELL CLICK] Closing dropdown');
+                    }
+                  } catch (error) {
+                    console.error('[BELL CLICK] Error in click handler:', error);
+                  }
+                }}
+                className="p-2 bg-white/20 rounded-lg relative hover:bg-white/30 transition-colors"
+              >
                 <Bell className="w-5 h-5" />
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
-                    {unreadNotifications}
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
                   </span>
                 )}
               </button>
+              
+              {/* Notification Dropdown */}
+              {showNotificationDropdown && (
+                <>
+                  {/* Backdrop to close on outside click */}
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowNotificationDropdown(false)}
+                  />
+                  {/* Dropdown Panel */}
+                  <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col">
+                    {/* Header */}
+                    <div className="p-4 border-b flex items-center justify-between bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-xl">
+                      <div>
+                        <h3 className="font-bold text-lg">Notifications</h3>
+                        {unreadNotifications > 0 && (
+                          <p className="text-sm text-blue-100">{unreadNotifications} unread</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {unreadNotifications > 0 && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await notificationsService.markAllAsRead();
+                                const response = await notificationsService.getNotifications({ limit: 50 });
+                                setNotifications(response.notifications);
+                              } catch (err) {
+                                console.error("Error marking all as read:", err);
+                              }
+                            }}
+                            className="text-xs text-blue-100 hover:text-white underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => setShowNotificationDropdown(false)}
+                          className="p-1 hover:bg-white/20 rounded"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Notifications List */}
+                    <div className="overflow-y-auto flex-1">
+                      {notifications.length > 0 ? (
+                        <div className="divide-y">
+                          {notifications.map((notif) => (
+                            <div
+                              key={notif.id}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!notif.isRead) {
+                                  try {
+                                    await notificationsService.markAsRead(notif.id);
+                                    setNotifications(notifications.map(n => 
+                                      n.id === notif.id ? { ...n, isRead: true } : n
+                                    ));
+                                  } catch (err) {
+                                    console.error("Error marking notification as read:", err);
+                                  }
+                                }
+                              }}
+                              className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                !notif.isRead ? "bg-blue-50/50" : ""
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                  mapNotificationType(notif.type) === "success" ? "bg-green-100" :
+                                  mapNotificationType(notif.type) === "warning" ? "bg-yellow-100" : "bg-blue-100"
+                                }`}>
+                                  {mapNotificationType(notif.type) === "success" ? (
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                  ) : mapNotificationType(notif.type) === "warning" ? (
+                                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                                  ) : (
+                                    <Bell className="w-5 h-5 text-blue-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1">
+                                      <p className={`font-semibold text-sm ${!notif.isRead ? "text-gray-900" : "text-gray-600"}`}>
+                                        {notif.title}
+                                      </p>
+                                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                        {notif.message}
+                                      </p>
+                                      <p className="text-xs text-gray-400 mt-2">
+                                        {new Date(notif.createdAt).toLocaleString()}
+                                      </p>
+                                    </div>
+                                    {!notif.isRead && (
+                                      <span className="w-2 h-2 bg-blue-500 rounded-full mt-1 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center">
+                          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500 text-sm">No notifications</p>
+                          <p className="text-gray-400 text-xs mt-1">You&apos;re all caught up!</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Footer */}
+                    {notifications.length > 0 && (
+                      <div className="p-3 border-t bg-gray-50 rounded-b-xl">
+                        <button
+                          onClick={() => {
+                            setShowNotificationDropdown(false);
+                            setActiveTab("notifications");
+                          }}
+                          className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          View all notifications
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+              
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5" />
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Notification Permission Banner */}
+      <div className="container mx-auto px-4 pt-6">
+        <NotificationPermissionBanner />
+        <NotificationPermissionSuccess />
       </div>
 
       {/* Quick Stats */}
@@ -693,28 +924,98 @@ export default function UserDashboard() {
         {/* NOTIFICATIONS TAB */}
         {activeTab === "notifications" && (
           <div className="space-y-3">
-            {notifications.map((notif) => (
-              <div 
-                key={notif.id}
-                className={`bg-white rounded-xl p-4 shadow-sm ${!notif.read ? "border-l-4 border-blue-500" : ""}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    notif.type === "success" ? "bg-green-100" :
-                    notif.type === "warning" ? "bg-yellow-100" : "bg-blue-100"
-                  }`}>
-                    {notif.type === "success" ? <CheckCircle className="w-5 h-5 text-green-600" /> :
-                     notif.type === "warning" ? <AlertCircle className="w-5 h-5 text-yellow-600" /> :
-                     <Bell className="w-5 h-5 text-blue-600" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{notif.title}</p>
-                    <p className="text-sm text-gray-500 mt-1">{notif.message}</p>
-                    <p className="text-xs text-gray-400 mt-2">{notif.timestamp}</p>
-                  </div>
+            {notifications.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">
+                    {unreadNotifications > 0 && `${unreadNotifications} unread`}
+                  </h3>
+                  {unreadNotifications > 0 && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await notificationsService.markAllAsRead();
+                          // Refresh notifications
+                          const response = await notificationsService.getNotifications({ limit: 50 });
+                          setNotifications(response.notifications);
+                        } catch (err) {
+                          console.error("Error marking all as read:", err);
+                        }
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
                 </div>
+                {notifications.map((notif) => (
+                  <div 
+                    key={notif.id}
+                    onClick={async () => {
+                      // Mark as read
+                      if (!notif.isRead) {
+                        try {
+                          await notificationsService.markAsRead(notif.id);
+                          // Update local state
+                          setNotifications(notifications.map(n => 
+                            n.id === notif.id ? { ...n, isRead: true } : n
+                          ));
+                        } catch (err) {
+                          console.error("Error marking notification as read:", err);
+                        }
+                      }
+                      
+                      // Navigate to related job if available
+                      if (notif.data?.jobId) {
+                        setShowNotificationDropdown(false);
+                        // Find and select the related request
+                        const relatedRequest = requests.find(r => r.id === notif.data.jobId);
+                        if (relatedRequest) {
+                          setSelectedRequest(relatedRequest);
+                          setActiveTab("requests");
+                        }
+                      }
+                    }}
+                    className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors ${
+                      !notif.isRead ? "border-l-4 border-blue-500" : ""
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        mapNotificationType(notif.type) === "success" ? "bg-green-100" :
+                        mapNotificationType(notif.type) === "warning" ? "bg-yellow-100" : "bg-blue-100"
+                      }`}>
+                        {mapNotificationType(notif.type) === "success" ? <CheckCircle className="w-5 h-5 text-green-600" /> :
+                         mapNotificationType(notif.type) === "warning" ? <AlertCircle className="w-5 h-5 text-yellow-600" /> :
+                         <Bell className="w-5 h-5 text-blue-600" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className={`font-medium ${!notif.isRead ? "text-gray-900" : "text-gray-600"}`}>
+                              {notif.title}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">{notif.message}</p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              {new Date(notif.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          {!notif.isRead && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full mt-1" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl">
+                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
+                <p className="text-gray-500">You&apos;re all caught up!</p>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

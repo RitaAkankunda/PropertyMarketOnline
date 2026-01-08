@@ -1,12 +1,17 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { providerService, propertyService } from "@/services";
+import { providerService, propertyService, notificationsService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
 import { useToastContext } from "@/components/ui/toast-provider";
+import { useNotificationAlerts } from "@/hooks/use-notifications";
+import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
+import { NotificationPermissionBanner } from "@/components/notifications/notification-permission-banner";
+import { NotificationPermissionSuccess } from "@/components/notifications/notification-permission-success";
 import type { Job as ApiJob, JobStatus as ApiJobStatus } from "@/types";
+import type { Notification as ApiNotification } from "@/services/notifications.service";
 import {
   Briefcase,
   Clock,
@@ -568,6 +573,8 @@ export default function ProviderDashboard() {
     businessLicense?: string;
     general?: string;
   }>({});
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
 
   // Fetch provider profile
   useEffect(() => {
@@ -606,6 +613,108 @@ export default function ProviderDashboard() {
     }
   }, [isAuthenticated, user]);
 
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      console.log('[PROVIDER NOTIFICATIONS] Fetching notifications...');
+      const response = await notificationsService.getNotifications({
+        limit: 50,
+        offset: 0,
+      });
+      console.log('[PROVIDER NOTIFICATIONS] Fetched notifications:', response);
+      setNotifications(response.notifications || []);
+    } catch (err) {
+      console.error('[PROVIDER NOTIFICATIONS] Error fetching notifications:', err);
+      setNotifications([]);
+    }
+  };
+
+  // Initial fetch and fallback polling (only if WebSocket fails)
+  const [usePolling, setUsePolling] = useState(false);
+  
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchNotifications();
+      
+      // Only poll if WebSocket is not connected (fallback)
+      if (usePolling) {
+        const interval = setInterval(fetchNotifications, 10000);
+        return () => clearInterval(interval);
+      }
+    }
+  }, [isAuthenticated, user, usePolling]);
+
+  // WebSocket for real-time notifications
+  const { isConnected: wsConnected, connectionError: wsError } = useWebSocketNotifications({
+    enabled: isAuthenticated && user ? true : false,
+    onNotification: (notification) => {
+      console.log('[PROVIDER NOTIFICATIONS] 📬 New notification via WebSocket:', notification);
+      // Add new notification to the list (prepend)
+      setNotifications(prev => {
+        // Check if notification already exists
+        if (prev.find(n => n.id === notification.id)) {
+          return prev;
+        }
+        return [notification, ...prev];
+      });
+    },
+    onUnreadCount: (count) => {
+      console.log('[PROVIDER NOTIFICATIONS] 📊 Unread count update:', count);
+      // Optionally update unread count badge
+    },
+  });
+
+  // Fallback to polling if WebSocket fails
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (wsError && !wsConnected) {
+        console.warn('[PROVIDER NOTIFICATIONS] WebSocket failed, falling back to polling');
+        setUsePolling(true);
+      } else if (wsConnected) {
+        console.log('[PROVIDER NOTIFICATIONS] WebSocket connected, using real-time updates');
+        setUsePolling(false);
+      }
+    }
+  }, [wsConnected, wsError, isAuthenticated, user]);
+  
+  // Also refresh notifications when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isAuthenticated && user) {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isAuthenticated, user]);
+
+  // Browser push notifications and sound alerts
+  useNotificationAlerts(notifications, isAuthenticated && user ? true : false);
+
+  // Handle notification click from browser push notification
+  useEffect(() => {
+    const handleNotificationClick = (event: CustomEvent) => {
+      const { jobId } = event.detail;
+      if (jobId) {
+        const relatedJob = jobs.find(j => j.id === jobId);
+        if (relatedJob) {
+          setSelectedJob(relatedJob);
+          setShowNotificationDropdown(false);
+        } else {
+          // Fetch job if not in current list
+          providerService.getJob(jobId).then(job => {
+            const formattedJob = formatJobForDisplay(job);
+            setSelectedJob(formattedJob);
+            setShowNotificationDropdown(false);
+          }).catch(err => console.error('Error fetching job:', err));
+        }
+      }
+    };
+
+    window.addEventListener('notification-clicked', handleNotificationClick as EventListener);
+    return () => window.removeEventListener('notification-clicked', handleNotificationClick as EventListener);
+  }, [jobs]);
+
   // Fetch jobs from backend
   useEffect(() => {
     const fetchJobs = async () => {
@@ -640,9 +749,9 @@ export default function ProviderDashboard() {
     ? jobsWithRatings.reduce((sum, j) => sum + (j.rating || 0), 0) / jobsWithRatings.length
     : 0;
   
-  const totalEarnings = completedJobs.reduce((sum, j) => sum + j.amount, 0);
+  const totalEarnings = completedJobs.reduce((sum, j) => sum + (j.amount ?? 0), 0);
   const pendingPayments = jobs.filter(j => j.status === "accepted" || j.status === "in_progress")
-    .reduce((sum, j) => sum + j.amount, 0);
+    .reduce((sum, j) => sum + (j.amount ?? 0), 0);
   
   const stats = {
     totalEarnings,
@@ -664,17 +773,27 @@ export default function ProviderDashboard() {
       // Update job status via API
       if (newStatus === "accepted") {
         await providerService.acceptJob(jobId);
+      } else if (newStatus === "in_progress") {
+        await providerService.startJob(jobId);
+      } else if (newStatus === "completed") {
+        // For completed, you might want to show a modal to add completion notes/photos
+        await providerService.completeJob(jobId);
       } else if (newStatus === "cancelled") {
         await providerService.rejectJob(jobId, "Cancelled by provider");
       } else {
-        await providerService.updateJobStatus(jobId, newStatus as "in_progress" | "completed");
+        await providerService.updateJobStatus(jobId, newStatus);
       }
       
-      // Update local state
-      setJobs(jobs.map(j => j.id === jobId ? { ...j, status: newStatus } : j));
+      // Refresh jobs to get updated data and format them properly
+      const status = jobFilter === "all" ? undefined : jobFilter;
+      const updatedJobs = await providerService.getProviderJobs(status, 1, 100);
+      const formattedJobs = (updatedJobs.data || []).map(formatJobForDisplay);
+      setJobs(formattedJobs);
+      
+      success(`Job ${newStatus} successfully!`);
     } catch (err) {
       console.error("Error updating job status:", err);
-      alert(err instanceof Error ? err.message : "Failed to update job status");
+      showError(err instanceof Error ? err.message : "Failed to update job status");
     }
   };
 
@@ -714,15 +833,162 @@ export default function ProviderDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2 bg-white/20 rounded-lg relative">
-                <Bell className="w-5 h-5" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const newState = !showNotificationDropdown;
+                    setShowNotificationDropdown(newState);
+                    if (newState) {
+                      await fetchNotifications();
+                    }
+                  }}
+                  className="p-2 bg-white/20 rounded-lg relative hover:bg-white/30 transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {notifications.filter(n => !n.isRead).length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                      {notifications.filter(n => !n.isRead).length > 9 ? '9+' : notifications.filter(n => !n.isRead).length}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Notification Dropdown */}
+                {showNotificationDropdown && (
+                  <>
+                    {/* Backdrop */}
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowNotificationDropdown(false)}
+                    />
+                    
+                    {/* Dropdown Panel */}
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-hidden flex flex-col">
+                      {/* Header */}
+                      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Notifications</h3>
+                          <p className="text-sm text-gray-500">
+                            {notifications.filter(n => !n.isRead).length} unread
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowNotificationDropdown(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      
+                      {/* Notifications List */}
+                      <div className="overflow-y-auto flex-1">
+                        {notifications.length === 0 ? (
+                          <div className="p-8 text-center text-gray-500">
+                            <Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p>No notifications</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-gray-100">
+                            {notifications.map((notification) => (
+                              <div
+                                key={notification.id}
+                                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                  !notification.isRead ? 'bg-blue-50' : ''
+                                }`}
+                                onClick={async () => {
+                                  // Mark as read
+                                  if (!notification.isRead) {
+                                    try {
+                                      await notificationsService.markAsRead(notification.id);
+                                      setNotifications(prev =>
+                                        prev.map(n =>
+                                          n.id === notification.id ? { ...n, isRead: true } : n
+                                        )
+                                      );
+                                    } catch (err) {
+                                      console.error('Error marking notification as read:', err);
+                                    }
+                                  }
+                                  
+                                  // Navigate to related job if available
+                                  if (notification.data?.jobId) {
+                                    setShowNotificationDropdown(false);
+                                    // Find the job in the jobs list and open it
+                                    const relatedJob = jobs.find(j => j.id === notification.data.jobId);
+                                    if (relatedJob) {
+                                      setSelectedJob(relatedJob);
+                                    } else {
+                                      // If job not in current list, fetch it
+                                      try {
+                                        const job = await providerService.getJob(notification.data.jobId);
+                                        const formattedJob = formatJobForDisplay(job);
+                                        setSelectedJob(formattedJob);
+                                      } catch (err) {
+                                        console.error('Error fetching job:', err);
+                                      }
+                                    }
+                                  }
+                                }}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                    !notification.isRead ? 'bg-blue-500' : 'bg-transparent'
+                                  }`} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`font-medium text-sm ${
+                                      !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                                    }`}>
+                                      {notification.title}
+                                    </p>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-2">
+                                      {new Date(notification.createdAt).toLocaleString()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Footer */}
+                      {notifications.length > 0 && (
+                        <div className="p-3 border-t border-gray-200">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await notificationsService.markAllAsRead();
+                                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                              } catch (err) {
+                                console.error('Error marking all as read:', err);
+                              }
+                            }}
+                            className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            Mark all as read
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5" />
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Notification Permission Banner */}
+      <div className="container mx-auto px-4 pt-6">
+        <NotificationPermissionBanner />
+        <NotificationPermissionSuccess />
       </div>
 
       {/* Stats Cards */}
@@ -871,8 +1137,8 @@ export default function ProviderDashboard() {
                         <p className="text-sm text-gray-500 mt-1">{job.clientName}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-blue-600">UGX {job.amount.toLocaleString()}</p>
-                        <p className="text-xs text-gray-400">{new Date(job.scheduledDate).toLocaleDateString()}</p>
+                        <p className="font-bold text-blue-600">UGX {(job.amount ?? 0).toLocaleString()}</p>
+                        <p className="text-xs text-gray-400">{job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 mt-3 pt-3 border-t text-sm text-gray-500">

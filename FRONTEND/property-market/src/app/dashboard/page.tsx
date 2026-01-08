@@ -31,13 +31,19 @@ import {
   BadgeCheck,
   AlertCircle,
   Shield,
+  X,
 } from "lucide-react";
 import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
-import { propertyService, authService, dashboardService, providerService } from "@/services";
+import { propertyService, authService, dashboardService, providerService, notificationsService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
+import { useNotificationAlerts } from "@/hooks/use-notifications";
+import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
+import { NotificationPermissionBanner } from "@/components/notifications/notification-permission-banner";
+import { NotificationPermissionSuccess } from "@/components/notifications/notification-permission-success";
 import type { Property, User as UserType } from "@/types";
+import type { Notification as ApiNotification } from "@/services/notifications.service";
 
 // Types for dashboard data
 interface DashboardStats {
@@ -173,7 +179,99 @@ export default function DashboardPage() {
   const [recentProperties, setRecentProperties] = useState<Property[]>([]);
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      console.log('[NOTIFICATIONS] Fetching notifications...');
+      const response = await notificationsService.getNotifications({
+        limit: 50,
+        offset: 0,
+      });
+      console.log('[NOTIFICATIONS] Fetched notifications:', response);
+      setNotifications(response.notifications || []);
+    } catch (err) {
+      console.error('[NOTIFICATIONS] Error fetching notifications:', err);
+      setNotifications([]);
+    }
+  };
+
+  // Initial fetch and fallback polling (only if WebSocket fails)
+  const [usePolling, setUsePolling] = useState(false);
+  
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchNotifications();
+      
+      // Only poll if WebSocket is not connected (fallback)
+      if (usePolling) {
+        const interval = setInterval(fetchNotifications, 10000);
+        return () => clearInterval(interval);
+      }
+    }
+  }, [isAuthenticated, user, usePolling]);
+
+  // WebSocket for real-time notifications
+  const { isConnected: wsConnected, connectionError: wsError } = useWebSocketNotifications({
+    enabled: isAuthenticated && user ? true : false,
+    onNotification: (notification) => {
+      console.log('[NOTIFICATIONS] 📬 New notification via WebSocket:', notification);
+      // Add new notification to the list (prepend)
+      setNotifications(prev => {
+        // Check if notification already exists
+        if (prev.find(n => n.id === notification.id)) {
+          return prev;
+        }
+        return [notification, ...prev];
+      });
+    },
+    onUnreadCount: (count) => {
+      console.log('[NOTIFICATIONS] 📊 Unread count update:', count);
+    },
+  });
+
+  // Fallback to polling if WebSocket fails
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (wsError && !wsConnected) {
+        console.warn('[NOTIFICATIONS] WebSocket failed, falling back to polling');
+        setUsePolling(true);
+      } else if (wsConnected) {
+        console.log('[NOTIFICATIONS] WebSocket connected, using real-time updates');
+        setUsePolling(false);
+      }
+    }
+  }, [wsConnected, wsError, isAuthenticated, user]);
+  
+  // Also refresh notifications when page becomes visible (user switches tabs back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isAuthenticated && user) {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isAuthenticated, user]);
+
+  // Browser push notifications and sound alerts
+  useNotificationAlerts(notifications, isAuthenticated && user ? true : false);
+
+  // Handle notification click from browser push notification
+  useEffect(() => {
+    const handleNotificationClick = (event: CustomEvent) => {
+      const { jobId } = event.detail;
+      if (jobId) {
+        router.push(`/dashboard/user?tab=requests&jobId=${jobId}`);
+      }
+    };
+
+    window.addEventListener('notification-clicked', handleNotificationClick as EventListener);
+    return () => window.removeEventListener('notification-clicked', handleNotificationClick as EventListener);
+  }, [router]);
+
   // Debug logging - MUST be before any conditional returns
   useEffect(() => {
     console.log('[DASHBOARD] Auth state:', {
@@ -428,15 +526,145 @@ export default function DashboardPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 ml-4">
-              <Button variant="outline" size="icon" className="relative">
+            <div className="flex items-center gap-3 ml-4 relative">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="relative"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('[BELL CLICK] Bell icon clicked');
+                  const newState = !showNotificationDropdown;
+                  setShowNotificationDropdown(newState);
+                  // Always fetch fresh notifications when opening dropdown
+                  if (newState) {
+                    await fetchNotifications();
+                  }
+                }}
+              >
                 <Bell className="w-5 h-5" />
-                {stats.totalMessages > 0 && (
+                {notifications.filter(n => !n.isRead).length > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {stats.totalMessages > 9 ? '9+' : stats.totalMessages}
+                    {notifications.filter(n => !n.isRead).length > 9 ? '9+' : notifications.filter(n => !n.isRead).length}
                   </span>
                 )}
               </Button>
+              
+              {/* Notification Dropdown */}
+              {showNotificationDropdown && (
+                <>
+                  {/* Backdrop */}
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowNotificationDropdown(false)}
+                  />
+                  {/* Dropdown Panel */}
+                  <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
+                    {/* Header */}
+                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-lg">Notifications</h3>
+                          {notifications.filter(n => !n.isRead).length > 0 && (
+                            <p className="text-sm text-blue-100">
+                              {notifications.filter(n => !n.isRead).length} unread
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-white hover:bg-white/20"
+                          onClick={() => setShowNotificationDropdown(false)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Notifications List */}
+                    <div className="flex-1 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        <div className="divide-y divide-gray-100">
+                          {notifications.map((notif) => (
+                            <div
+                              key={notif.id}
+                              className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                !notif.isRead ? 'bg-blue-50' : ''
+                              }`}
+                              onClick={async () => {
+                                // Mark as read
+                                if (!notif.isRead) {
+                                  try {
+                                    await notificationsService.markAsRead(notif.id);
+                                    setNotifications(notifications.map(n =>
+                                      n.id === notif.id ? { ...n, isRead: true } : n
+                                    ));
+                                  } catch (err) {
+                                    console.error("Error marking notification as read:", err);
+                                  }
+                                }
+                                
+                                // Navigate to related job if available
+                                if (notif.data?.jobId) {
+                                  setShowNotificationDropdown(false);
+                                  router.push(`/dashboard/user?tab=requests&jobId=${notif.data.jobId}`);
+                                }
+                              }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                                  !notif.isRead ? 'bg-blue-100' : 'bg-gray-100'
+                                }`}>
+                                  <Bell className={`w-5 h-5 ${!notif.isRead ? 'text-blue-600' : 'text-gray-400'}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium ${!notif.isRead ? 'text-gray-900' : 'text-gray-600'}`}>
+                                    {notif.title}
+                                  </p>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    {notif.message}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(notif.createdAt).toLocaleString()}
+                                  </p>
+                                </div>
+                                {!notif.isRead && (
+                                  <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center">
+                          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500 text-sm">No notifications</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Footer */}
+                    {notifications.length > 0 && (
+                      <div className="p-3 border-t border-gray-200 bg-gray-50">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-sm"
+                          onClick={() => {
+                            setShowNotificationDropdown(false);
+                            router.push('/dashboard/user?tab=notifications');
+                          }}
+                        >
+                          View all notifications
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+              
               <Link
                 href="/listings/create"
                 className="inline-flex items-center justify-center h-10 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
@@ -460,6 +688,11 @@ export default function DashboardPage() {
             </p>
           </div>
 
+          {/* Notification Permission Banner */}
+          <div className="mb-6">
+            <NotificationPermissionBanner />
+            <NotificationPermissionSuccess />
+          </div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
