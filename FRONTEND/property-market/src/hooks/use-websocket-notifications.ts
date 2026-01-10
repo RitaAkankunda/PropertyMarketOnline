@@ -49,7 +49,7 @@ export function useWebSocketNotifications(
         setConnectionError(null);
       });
 
-      socket.on('disconnect', (reason) => {
+      socket.on('disconnect', (reason: string) => {
         console.log('[WS] ❌ Disconnected from WebSocket server:', reason);
         setIsConnected(false);
         
@@ -59,7 +59,7 @@ export function useWebSocketNotifications(
         }
       });
 
-      socket.on('connect_error', (error) => {
+      socket.on('connect_error', (error: Error) => {
         console.error('[WS] Connection error:', error.message);
         setConnectionError(error.message);
         setIsConnected(false);

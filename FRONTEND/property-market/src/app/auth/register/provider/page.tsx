@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { providerService, authService } from "@/services";
 import { useAuthStore } from "@/store";
+import type { ServiceType } from "@/types";
 import {
   User,
   Mail,
@@ -272,10 +273,10 @@ export default function ProviderRegistration() {
           lastName: formData.lastName,
           phone: formData.phone,
           businessName: formData.businessName,
-          serviceTypes: mappedServiceTypes,
+          serviceTypes: mappedServiceTypes as ServiceType[],
           description: formData.description,
           pricing: {
-            type: formData.pricingType,
+            type: formData.pricingType as "hourly" | "fixed" | "custom",
             hourlyRate: hourlyRate,
             minimumCharge: minimumCharge,
             currency: formData.currency || "UGX",
@@ -386,10 +387,10 @@ export default function ProviderRegistration() {
       
       const providerData = {
         businessName: formData.businessName,
-        serviceTypes: mappedServiceTypes,
+        serviceTypes: mappedServiceTypes as ServiceType[],
         description: formData.description,
         pricing: {
-          type: formData.pricingType,
+          type: formData.pricingType as "hourly" | "fixed" | "custom",
           hourlyRate: hourlyRate,
           minimumCharge: minimumCharge,
           currency: formData.currency || "UGX",

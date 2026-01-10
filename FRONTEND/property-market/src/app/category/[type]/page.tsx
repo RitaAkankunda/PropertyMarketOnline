@@ -7,9 +7,20 @@ import { propertyService } from "@/services/property.service";
 import { Button } from "@/components/ui";
 import type { Property, ListingType } from "@/types";
 
+// Map URL-friendly types to backend API values
+const typeToApiMapping: Record<string, ListingType> = {
+  buy: "sale",
+  sale: "sale",
+  rent: "rent",
+  lease: "lease",
+};
+
 export default function CategoryPage() {
   const params = useParams();
-  const type = (params.type as ListingType) || "rent";
+  const urlType = params.type as string || "rent";
+  // Map "buy" to "sale" for the API
+  const type = typeToApiMapping[urlType] || (urlType as ListingType);
+  const displayType = urlType === "sale" ? "buy" : urlType; // For display purposes
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +47,8 @@ export default function CategoryPage() {
     <div className="flex flex-col min-h-screen">
       {/* Banner */}
       <div className="bg-gradient-to-br from-blue-900 to-blue-600 py-12 text-center text-white">
-        <h1 className="text-4xl font-bold mb-2 capitalize">{type} Properties</h1>
-        <p className="text-lg">Browse the latest {type} properties in Uganda</p>
+        <h1 className="text-4xl font-bold mb-2 capitalize">{displayType} Properties</h1>
+        <p className="text-lg">Browse the latest {displayType} properties in Uganda</p>
       </div>
       {/* Property Grid */}
       <main className="flex-1 container mx-auto px-4 py-8">

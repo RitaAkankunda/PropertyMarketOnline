@@ -88,7 +88,11 @@ export default function RegisterPage() {
       });
       router.push("/dashboard");
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      // Check for 409 Conflict (email already exists)
+      const axiosError = err as { response?: { status?: number; data?: { message?: string } } };
+      if (axiosError.response?.status === 409) {
+        setError("An account with this email already exists. Please login instead.");
+      } else if (err instanceof Error) {
         setError(err.message || "Registration failed. Please try again.");
       } else {
         setError("An error occurred. Please try again.");
@@ -129,6 +133,11 @@ export default function RegisterPage() {
               {error && (
                 <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
                   {error}
+                  {error.includes("already exists") && (
+                    <Link href="/auth/login" className="block mt-2 text-blue-600 hover:underline font-medium">
+                      → Click here to login
+                    </Link>
+                  )}
                 </div>
               )}
 

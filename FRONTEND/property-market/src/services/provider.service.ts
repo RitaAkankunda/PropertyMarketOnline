@@ -43,6 +43,10 @@ export interface CreateJobData {
   scheduledDate: string;
   scheduledTime: string;
   images?: File[];
+  isRecurring?: boolean;
+  recurringFrequency?: string;
+  recurringEndDate?: string;
+  sendReminder?: boolean;
 }
 
 export interface ProviderFilters {
@@ -261,10 +265,20 @@ export const providerService = {
       }
     });
 
-    // Don't set Content-Type manually - axios will set it with the boundary for FormData
-    // The Authorization header will be added by the interceptor automatically
-    const response = await api.post<Job>("/jobs/create", formData);
-    return response.data;
+    // Use fetch instead of axios to avoid Content-Type issues with FormData
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/jobs/create`, {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Request failed with status code ${response.status}`);
+    }
+
+    return response.json();
   },
 
   // Get job by ID
@@ -310,6 +324,16 @@ export const providerService = {
   // Accept job (provider)
   async acceptJob(jobId: string): Promise<void> {
     await api.patch(`/jobs/${jobId}/status`, { status: "accepted" });
+  },
+
+  // Start job (provider)
+  async startJob(jobId: string): Promise<void> {
+    await api.patch(`/jobs/${jobId}/status`, { status: "in_progress" });
+  },
+
+  // Complete job (provider)
+  async completeJob(jobId: string, notes?: string, photos?: string[]): Promise<void> {
+    await api.patch(`/jobs/${jobId}/status`, { status: "completed", completionNotes: notes, completionPhotos: photos });
   },
 
   // Reject job (provider)

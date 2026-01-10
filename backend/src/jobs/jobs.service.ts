@@ -40,18 +40,28 @@ export class JobsService {
     }
 
     // If providerId is provided, verify provider exists
-    let provider = null;
+    let providerUserId = null;
     if (createJobDto.providerId) {
-      provider = await this.usersService.findOneById(createJobDto.providerId);
-      if (!provider) {
-        throw new NotFoundException('Provider not found');
-      }
-      // Optionally verify provider role
-      if (
-        provider.role !== UserRole.PROPERTY_MANAGER &&
-        provider.role !== UserRole.LISTER
-      ) {
-        throw new BadRequestException('Selected user is not a service provider');
+      // First try to find by provider table ID
+      const providerEntity = await this.providerRepository.findOne({
+        where: { id: createJobDto.providerId },
+        relations: ['user'],
+      });
+      
+      if (providerEntity) {
+        // Found provider by provider ID, use the user ID
+        providerUserId = providerEntity.userId;
+      } else {
+        // Try to find by user ID (backwards compatibility)
+        const user = await this.usersService.findOneById(createJobDto.providerId);
+        if (!user) {
+          throw new NotFoundException('Provider not found');
+        }
+        // Verify provider role
+        if (user.role !== UserRole.SERVICE_PROVIDER && user.role !== UserRole.PROPERTY_MANAGER) {
+          throw new BadRequestException('Selected user is not a service provider');
+        }
+        providerUserId = user.id;
       }
     }
 
@@ -72,7 +82,7 @@ export class JobsService {
     const job = this.jobRepository.create({
       ...createJobDto,
       clientId,
-      providerId: createJobDto.providerId || null,
+      providerId: providerUserId || null,
       images: imageUrls.length > 0 ? imageUrls : null,
       currency: createJobDto.currency || 'UGX',
       status: JobStatus.PENDING,

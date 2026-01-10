@@ -105,8 +105,6 @@ const completeProviderSchema = accountSchema.merge(providerSchema);
 type ProviderFormData = z.infer<typeof providerSchema>;
 type CompleteProviderFormData = z.infer<typeof completeProviderSchema>;
 
-type ProviderFormData = z.infer<typeof providerSchema>;
-
 const daysOfWeek = [
   { value: "monday", label: "Mon" },
   { value: "tuesday", label: "Tue" },
@@ -159,17 +157,18 @@ export default function ProviderRegisterPage() {
   // Use appropriate schema based on auth status
   // Update schema when auth state changes
   const formSchema = needsAccount ? completeProviderSchema : providerSchema;
-  type FormData = typeof needsAccount extends true ? CompleteProviderFormData : ProviderFormData;
+  // Use union type for form data to handle both logged-in and not logged-in cases
+  type FormData = ProviderFormData | CompleteProviderFormData;
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const {
-    register,
+    register: registerField,
     handleSubmit,
-    watch,
+    watch: watchAny,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors: errorsAny, isSubmitting },
   } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       pricingType: "hourly",
       serviceRadius: 10,
@@ -177,6 +176,11 @@ export default function ProviderRegisterPage() {
       endTime: "17:00",
     } as any,
   });
+
+  // Cast watch, errors, and register to any to allow accessing fields that may not exist in all form variants
+  const watch = watchAny as (name: string) => any;
+  const errors = errorsAny as Record<string, any>;
+  const register = registerField as any;
 
   // Update form schema when auth state changes
   useEffect(() => {
@@ -722,7 +726,7 @@ export default function ProviderRegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit, (errors) => {
+        <form onSubmit={handleSubmit(onSubmit as any, (errors) => {
           console.error('[PROVIDER REGISTRATION] Form validation errors:', errors);
           setError('Please fill in all required fields correctly.');
           // Scroll to first error

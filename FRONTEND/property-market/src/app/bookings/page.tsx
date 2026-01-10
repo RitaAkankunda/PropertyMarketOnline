@@ -40,9 +40,9 @@ export default function BookingsPage() {
     try {
       setLoading(true);
       // TODO: Replace with actual API call to fetch user's bookings
-      const jobs = await providerService.getMyJobs();
+      const response = await providerService.getMyJobs();
       
-      const mappedBookings: Booking[] = jobs.map((job: any) => ({
+      const mappedBookings: Booking[] = (response.data || []).map((job: any) => ({
         id: job.id,
         serviceType: job.serviceType,
         providerName: job.provider?.businessName || "Provider",

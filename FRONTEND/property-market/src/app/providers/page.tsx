@@ -349,9 +349,22 @@ function RequestFormModal({
       });
 
       setIsSuccess(true);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error creating job request:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to send request. Please try again.";
+      // More detailed error handling
+      const axiosError = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      let errorMessage = "Failed to send request. Please try again.";
+      
+      if (axiosError.response?.status === 401) {
+        errorMessage = "Please login to submit a service request.";
+      } else if (axiosError.response?.status === 404) {
+        errorMessage = "Service not available. Please ensure you are logged in.";
+      } else if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      } else if (axiosError.message) {
+        errorMessage = axiosError.message;
+      }
+      
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -867,7 +880,10 @@ function RequestFormModal({
         <div className="border-t bg-gray-50 px-6 py-4 flex gap-3">
           {step > 1 && (
             <button
-              onClick={() => setStep(step - 1)}
+              onClick={() => {
+                setError(null);
+                setStep(step - 1);
+              }}
               className="flex items-center justify-center gap-2 px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-white transition-all"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -876,7 +892,29 @@ function RequestFormModal({
           )}
           {step < 3 ? (
             <button
-              onClick={() => setStep(step + 1)}
+              onClick={() => {
+                setError(null);
+                // Validate step 2 before proceeding to step 3
+                if (step === 2) {
+                  const scheduledDate = formData["date"];
+                  const scheduledTime = formData["time"];
+                  const serviceAddress = formData["address"];
+                  
+                  if (!scheduledDate) {
+                    setError("Please select a date for the service");
+                    return;
+                  }
+                  if (!scheduledTime) {
+                    setError("Please select a time slot for the service");
+                    return;
+                  }
+                  if (!serviceAddress) {
+                    setError("Please provide a service location address");
+                    return;
+                  }
+                }
+                setStep(step + 1);
+              }}
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all"
             >
               Continue

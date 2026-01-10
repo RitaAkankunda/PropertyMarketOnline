@@ -968,8 +968,9 @@ export default function UserDashboard() {
                       // Navigate to related job if available
                       if (notif.data?.jobId) {
                         setShowNotificationDropdown(false);
+                        const jobId = notif.data.jobId;
                         // Find and select the related request
-                        const relatedRequest = requests.find(r => r.id === notif.data.jobId);
+                        const relatedRequest = requests.find(r => r.id === jobId);
                         if (relatedRequest) {
                           setSelectedRequest(relatedRequest);
                           setActiveTab("requests");

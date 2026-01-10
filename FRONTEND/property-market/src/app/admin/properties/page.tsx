@@ -302,7 +302,7 @@ export default function AdminPropertiesPage() {
                   {propertyToDelete.images && propertyToDelete.images.length > 0 && (
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
                       <img
-                        src={propertyToDelete.images[0]?.url || propertyToDelete.images[0]}
+                        src={typeof propertyToDelete.images[0] === 'string' ? propertyToDelete.images[0] : propertyToDelete.images[0]?.url}
                         alt={propertyToDelete.title}
                         className="w-full h-full object-cover"
                       />

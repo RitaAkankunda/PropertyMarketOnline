@@ -217,12 +217,13 @@ export const propertyService = {
     
     // Get latitude and longitude - required by backend
     // Check multiple possible locations and ensure they are numbers
+    const locationAny = data.location as any;
     const latitude = data.location?.latitude || 
-                     data.location?.coordinates?.lat || 
+                     locationAny?.coordinates?.lat || 
                      (data as any).latitude || 
                      0.3476; // Default to Kampala
     const longitude = data.location?.longitude || 
-                      data.location?.coordinates?.lng || 
+                      locationAny?.coordinates?.lng || 
                       (data as any).longitude || 
                       32.5825; // Default to Kampala
     

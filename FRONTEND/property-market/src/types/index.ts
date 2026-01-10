@@ -12,7 +12,7 @@ export interface User {
   updatedAt: string;
 }
 
-export type UserRole = "buyer" | "renter" | "lister" | "property_manager" | "admin";
+export type UserRole = "buyer" | "renter" | "lister" | "property_manager" | "admin" | "service_provider";
 
 export interface AuthState {
   user: User | null;

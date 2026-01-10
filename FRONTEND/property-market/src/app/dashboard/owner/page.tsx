@@ -454,7 +454,27 @@ export default function OwnerDashboard() {
         );
         
         // Format tickets for display
-        const formattedTickets = response.data.map(formatTicketForDisplay);
+        const formattedTickets = response.data.map((ticket: ApiMaintenanceTicket): MaintenanceTicket => ({
+          id: ticket.id,
+          title: ticket.title,
+          description: ticket.description,
+          category: ticket.category,
+          priority: ticket.priority as "low" | "medium" | "high" | "urgent",
+          status: ticket.status as TicketStatus,
+          property: ticket.property || "Unknown Property",
+          unit: ticket.unit || "N/A",
+          tenant: ticket.tenant ? `${ticket.tenant.firstName || ""} ${ticket.tenant.lastName || ""}`.trim() : "Unknown",
+          tenantPhone: ticket.tenant?.phone || ticket.tenantPhone || "N/A",
+          createdAt: ticket.createdAt,
+          suggestedProviders: [],
+          assignedProvider: ticket.assignedProvider ? {
+            id: ticket.assignedProvider.id,
+            name: ticket.assignedProvider.businessName || `${ticket.assignedProvider.firstName || ""} ${ticket.assignedProvider.lastName || ""}`.trim() || "Provider",
+            phone: ticket.assignedProvider.phone || "N/A",
+            rating: 0,
+          } : undefined,
+          escrowAmount: ticket.escrowAmount,
+        }));
         setTickets(formattedTickets);
       } catch (err) {
         console.error("Error fetching tickets:", err);

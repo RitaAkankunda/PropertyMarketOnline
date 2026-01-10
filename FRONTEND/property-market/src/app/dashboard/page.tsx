@@ -165,6 +165,7 @@ export default function DashboardPage() {
   );
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalProperties: 0,
@@ -677,7 +678,7 @@ export default function DashboardPage() {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-8">
+        <main className="p-4 lg:p-8 pb-20 lg:pb-8">
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-slate-900 mb-1">
@@ -1001,7 +1002,126 @@ export default function DashboardPage() {
             </div>
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t lg:hidden z-50">
+          <div className="flex">
+            <Link href="/" className="flex-1 flex flex-col items-center py-3 text-slate-500 hover:text-blue-600">
+              <Home className="w-5 h-5" />
+              <span className="text-xs mt-1">Home</span>
+            </Link>
+            <Link href="/properties" className="flex-1 flex flex-col items-center py-3 text-slate-500 hover:text-blue-600">
+              <Building2 className="w-5 h-5" />
+              <span className="text-xs mt-1">Properties</span>
+            </Link>
+            <Link href="/dashboard" className="flex-1 flex flex-col items-center py-3 text-blue-600">
+              <BarChart3 className="w-5 h-5" />
+              <span className="text-xs mt-1">Dashboard</span>
+            </Link>
+            <Link href="/dashboard/messages" className="flex-1 flex flex-col items-center py-3 text-slate-500 hover:text-blue-600">
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-xs mt-1">Messages</span>
+            </Link>
+            <Link href="/dashboard/settings" className="flex-1 flex flex-col items-center py-3 text-slate-500 hover:text-blue-600">
+              <Settings className="w-5 h-5" />
+              <span className="text-xs mt-1">Settings</span>
+            </Link>
+          </div>
+        </div>
       </div>
+
+      {/* Mobile Sidebar Toggle Button */}
+      <button
+        onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          {/* Sidebar */}
+          <aside className="absolute inset-y-0 left-0 w-64 bg-white shadow-xl">
+            <div className="flex flex-col h-full">
+              {/* Logo */}
+              <div className="h-16 flex items-center justify-between px-6 border-b">
+                <Link href="/" className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
+                    <Home className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-lg font-bold text-slate-900">PropertyMarket</span>
+                </Link>
+                <button onClick={() => setMobileSidebarOpen(false)} className="p-1">
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              {/* Navigation */}
+              <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                {baseNavigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition",
+                      item.current
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.name}
+                    {item.badge && (
+                      <Badge className="ml-auto bg-red-500 text-white text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </Link>
+                ))}
+                {/* Admin Panel Link - Only visible to admins */}
+                {user?.role === "admin" && (
+                  <Link
+                    href={adminNavigationItem.href}
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition border-t border-slate-200 mt-2 pt-4",
+                      "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <adminNavigationItem.icon className="w-5 h-5" />
+                    {adminNavigationItem.name}
+                  </Link>
+                )}
+              </nav>
+
+              {/* User Profile */}
+              <div className="p-4 border-t">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                    {userInitials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p className="text-sm font-medium text-slate-900 truncate">{displayName}</p>
+                      {user?.isVerified && <BadgeCheck className="w-4 h-4 text-green-500" />}
+                    </div>
+                    <p className="text-xs text-slate-500 truncate">{userEmail}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

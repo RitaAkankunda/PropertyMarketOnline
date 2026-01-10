@@ -48,9 +48,9 @@ export default function AdminDashboardPage() {
       ]);
       setStats(statsData);
       setActivities(activitiesData);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to fetch admin data:", err);
-      setError(err.message || "Failed to load statistics");
+      setError(err instanceof Error ? err.message : "Failed to load statistics");
     } finally {
       setIsLoading(false);
     }

@@ -47,7 +47,7 @@ export class JobsController {
     @UploadedFiles() images?: MulterFile[],
   ) {
     console.log('[JOBS] Create job request received:', {
-      userId: req.user?.id,
+      userId: req.user?.sub || req.user?.id,
       serviceType: createJobDto.serviceType,
       title: createJobDto.title,
       description: createJobDto.description?.substring(0, 50),
@@ -116,7 +116,9 @@ export class JobsController {
       imageCount: images?.length || 0,
     });
 
-    return this.jobsService.create(dto, req.user.id, images);
+    // Use req.user.sub (from JWT payload) as clientId
+    const clientId = req.user.sub || req.user.id;
+    return this.jobsService.create(dto, clientId, images);
   }
 
   @Get()

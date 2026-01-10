@@ -10,7 +10,7 @@ import { useNotificationAlerts } from "@/hooks/use-notifications";
 import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
 import { NotificationPermissionBanner } from "@/components/notifications/notification-permission-banner";
 import { NotificationPermissionSuccess } from "@/components/notifications/notification-permission-success";
-import type { Job as ApiJob, JobStatus as ApiJobStatus } from "@/types";
+import type { Job as ApiJob } from "@/types";
 import type { Notification as ApiNotification } from "@/services/notifications.service";
 import {
   Briefcase,
@@ -39,7 +39,7 @@ import {
 // =============================================
 // TYPES
 // =============================================
-type JobStatus = "pending" | "accepted" | "in_progress" | "completed" | "cancelled";
+type JobStatus = "pending" | "accepted" | "in_progress" | "completed" | "cancelled" | "disputed";
 type TabType = "jobs" | "earnings" | "messages" | "ratings" | "withdraw" | "verification";
 
 // DisplayJob type (for UI display)
@@ -58,6 +58,10 @@ type DisplayJob = {
   images?: string[];
   rating?: number;
   review?: string;
+  title?: string;
+  currency?: string;
+  depositPaid?: boolean;
+  completedAt?: string;
 };
 
 interface Message {
@@ -114,6 +118,7 @@ function StatusBadge({ status }: { status: JobStatus }) {
     in_progress: { color: "bg-purple-100 text-purple-700", label: "In Progress" },
     completed: { color: "bg-green-100 text-green-700", label: "Completed" },
     cancelled: { color: "bg-red-100 text-red-700", label: "Cancelled" },
+    disputed: { color: "bg-orange-100 text-orange-700", label: "Disputed" },
   };
   
   return (
@@ -131,7 +136,7 @@ function JobDetailModal({
   onClose,
   onUpdateStatus 
 }: { 
-  job: Job; 
+  job: DisplayJob; 
   onClose: () => void;
   onUpdateStatus: (jobId: string, status: JobStatus) => void;
 }) {
@@ -540,7 +545,7 @@ export default function ProviderDashboard() {
   const { success, error: showError } = useToastContext();
   
   // Protect route: Only SERVICE_PROVIDER can access
-  const { hasAccess } = useRequireRole(['service_provider'], '/dashboard');
+  useRequireRole(['service_provider'], '/dashboard');
   
   // Redirect non-providers to regular dashboard
   useEffect(() => {
@@ -561,7 +566,7 @@ export default function ProviderDashboard() {
   const [providerProfile, setProviderProfile] = useState<{ businessName?: string; isVerified?: boolean; isKycVerified?: boolean } | null>(null);
   const [messages] = useState<Message[]>([]); // TODO: Implement real messages API
   const [transactions] = useState<Transaction[]>([]); // TODO: Implement real transactions API
-  const [verificationRequest, setVerificationRequest] = useState<any>(null);
+  const [verificationRequest, setVerificationRequest] = useState<{ status?: string; submittedAt?: string; rejectionReason?: string; reviewedAt?: string } | null>(null);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [verificationFiles, setVerificationFiles] = useState<{
     idDocument?: File;
@@ -599,9 +604,10 @@ export default function ProviderDashboard() {
       try {
         const request = await providerService.getMyVerificationRequest();
         setVerificationRequest(request);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // 404 means no request exists yet, which is fine
-        if (err?.response?.status !== 404) {
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr?.response?.status !== 404) {
           console.error("Error fetching verification request:", err);
         }
         setVerificationRequest(null);
@@ -780,9 +786,8 @@ export default function ProviderDashboard() {
         await providerService.completeJob(jobId);
       } else if (newStatus === "cancelled") {
         await providerService.rejectJob(jobId, "Cancelled by provider");
-      } else {
-        await providerService.updateJobStatus(jobId, newStatus);
       }
+      // Note: "pending" and "disputed" statuses are handled elsewhere or not changeable by provider
       
       // Refresh jobs to get updated data and format them properly
       const status = jobFilter === "all" ? undefined : jobFilter;
@@ -914,14 +919,15 @@ export default function ProviderDashboard() {
                                   // Navigate to related job if available
                                   if (notification.data?.jobId) {
                                     setShowNotificationDropdown(false);
+                                    const jobId = notification.data.jobId;
                                     // Find the job in the jobs list and open it
-                                    const relatedJob = jobs.find(j => j.id === notification.data.jobId);
+                                    const relatedJob = jobs.find(j => j.id === jobId);
                                     if (relatedJob) {
                                       setSelectedJob(relatedJob);
                                     } else {
                                       // If job not in current list, fetch it
                                       try {
-                                        const job = await providerService.getJob(notification.data.jobId);
+                                        const job = await providerService.getJob(jobId);
                                         const formattedJob = formatJobForDisplay(job);
                                         setSelectedJob(formattedJob);
                                       } catch (err) {
@@ -1047,7 +1053,7 @@ export default function ProviderDashboard() {
           {[
             { id: "jobs", label: "Jobs", icon: Briefcase },
             { id: "earnings", label: "Earnings", icon: TrendingUp },
-            { id: "messages", label: "Messages", icon: MessageCircle, badge: 2 },
+            { id: "messages", label: "Messages", icon: MessageCircle },
             { id: "ratings", label: "Ratings", icon: Star },
             { id: "withdraw", label: "Withdraw", icon: Wallet },
             { id: "verification", label: "Verification", icon: Shield },
@@ -1063,13 +1069,6 @@ export default function ProviderDashboard() {
             >
               <tab.icon className="w-4 h-4" />
               <span className="hidden sm:inline">{tab.label}</span>
-              {tab.badge && (
-                <span className={`w-5 h-5 rounded-full text-xs flex items-center justify-center ${
-                  activeTab === tab.id ? "bg-white text-blue-500" : "bg-red-500 text-white"
-                }`}>
-                  {tab.badge}
-                </span>
-              )}
             </button>
           ))}
         </div>
@@ -1401,10 +1400,10 @@ export default function ProviderDashboard() {
                   <div>
                     <p className="font-semibold text-yellow-900">Verification Pending</p>
                     <p className="text-sm text-yellow-700">
-                      Your verification request is under review. We'll notify you once it's processed.
+                      Your verification request is under review. We&apos;ll notify you once it&apos;s processed.
                     </p>
                     <p className="text-xs text-yellow-600 mt-1">
-                      Submitted: {new Date(verificationRequest.submittedAt).toLocaleDateString()}
+                      Submitted: {verificationRequest.submittedAt ? new Date(verificationRequest.submittedAt).toLocaleDateString() : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -1579,9 +1578,10 @@ export default function ProviderDashboard() {
                             "Verification request submitted successfully! We'll review your documents and notify you via email.",
                             6000
                           );
-                        } catch (error: any) {
+                        } catch (error: unknown) {
                           console.error("Failed to submit verification request:", error);
-                          const errorMessage = error?.response?.data?.message || "Failed to submit verification request";
+                          const axiosError = error as { response?: { data?: { message?: string } } };
+                          const errorMessage = axiosError?.response?.data?.message || "Failed to submit verification request";
                           setVerificationErrors({ general: errorMessage });
                           
                           // Show error toast
