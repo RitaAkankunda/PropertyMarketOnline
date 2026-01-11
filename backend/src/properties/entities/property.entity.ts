@@ -18,6 +18,7 @@ export enum PropertyType {
   WAREHOUSE = 'warehouse',
   OFFICE = 'office',
   AIRBNB = 'airbnb',
+  HOTEL = 'hotel',
 }
 
 export enum ListingType {

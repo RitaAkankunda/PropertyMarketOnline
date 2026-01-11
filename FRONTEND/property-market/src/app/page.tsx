@@ -109,6 +109,11 @@ const propertyTypes = [
     icon: Home,
   },
   { 
+    name: "Hotels", 
+    type: "hotel" as PropertyType,
+    icon: Building2,
+  },
+  { 
     name: "Villas", 
     type: "villa" as PropertyType,
     icon: Home,

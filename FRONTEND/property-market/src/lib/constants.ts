@@ -28,6 +28,7 @@ export const PROPERTY_TYPES = [
   { value: "warehouse", label: "Warehouse" },
   { value: "office", label: "Office Space" },
   { value: "airbnb", label: "Airbnb" },
+  { value: "hotel", label: "Hotel" },
 ] as const;
 
 // Listing Types
@@ -113,6 +114,41 @@ export const KAMPALA_DIVISIONS = [
   { value: "makindye", label: "Makindye Division" },
   { value: "nakawa", label: "Nakawa Division" },
   { value: "rubaga", label: "Rubaga Division" },
+] as const;
+
+// Hotel-Specific Amenities
+export const HOTEL_AMENITIES = [
+  "24/7 Front Desk",
+  "Concierge Service",
+  "Room Service",
+  "Housekeeping",
+  "Laundry Service",
+  "Restaurant",
+  "Bar/Lounge",
+  "Spa & Wellness",
+  "Fitness Center",
+  "Swimming Pool",
+  "Business Center",
+  "Conference Rooms",
+  "Free WiFi",
+  "Parking",
+  "Airport Shuttle",
+  "Valet Parking",
+  "Elevator",
+  "Air Conditioning",
+  "Safe Deposit Box",
+  "Currency Exchange",
+] as const;
+
+// Hotel Room Types
+export const HOTEL_ROOM_TYPES = [
+  { value: "single", label: "Single Room" },
+  { value: "double", label: "Double Room" },
+  { value: "twin", label: "Twin Room" },
+  { value: "suite", label: "Suite" },
+  { value: "deluxe", label: "Deluxe Room" },
+  { value: "executive", label: "Executive Room" },
+  { value: "presidential", label: "Presidential Suite" },
 ] as const;
 
 // Popular Areas/Neighborhoods in Kampala

@@ -54,7 +54,8 @@ export type PropertyType =
   | "commercial"
   | "warehouse"
   | "office"
-  | "airbnb";
+  | "airbnb"
+  | "hotel";
 
 export type ListingType = "sale" | "rent" | "lease";
 
