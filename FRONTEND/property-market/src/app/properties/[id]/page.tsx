@@ -23,7 +23,7 @@ import { Button, Badge, Card } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
 import { propertyService } from "@/services/property.service";
 import { useAuth } from "@/hooks";
-import { PropertyInquiryModal } from "@/components/properties";
+import { PropertyViewingModal, PropertyInquiryModal, PropertyPaymentModal } from "@/components/properties";
 import type { Property } from "@/types";
 
 // Mockup property data
@@ -251,7 +251,9 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const { user, isAuthenticated } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isViewingModalOpen, setIsViewingModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -593,25 +595,33 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Three Action Buttons */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Schedule Viewing Button */}
               <Button
-                onClick={() => setIsInquiryModalOpen(true)}
-                className="w-full py-6 text-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                onClick={() => setIsViewingModalOpen(true)}
+                className="w-full py-6 text-base bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
               >
                 <Calendar className="w-5 h-5 mr-2" />
-                {property.listingType === "sale" 
-                  ? "Schedule Viewing" 
-                  : property.propertyType === "airbnb"
-                  ? "Check Availability"
-                  : "Apply Now"}
+                Schedule Viewing
               </Button>
-              
+
+              {/* Send Inquiry Button */}
               <Button
                 onClick={() => setIsInquiryModalOpen(true)}
-                className="w-full py-6 text-lg bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+                className="w-full py-6 text-base bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
               >
                 <MessageSquare className="w-5 h-5 mr-2" />
                 Send Inquiry
+              </Button>
+
+              {/* Buy Now / Make Offer Button */}
+              <Button
+                onClick={() => setIsPaymentModalOpen(true)}
+                className="w-full py-6 text-base bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+              >
+                <Check className="w-5 h-5 mr-2" />
+                {property.listingType === "sale" ? "Make Offer" : "Proceed to Payment"}
               </Button>
             </div>
 
@@ -622,11 +632,25 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         </Card>
       </div>
 
+      {/* Property Viewing Modal */}
+      <PropertyViewingModal
+        property={property}
+        isOpen={isViewingModalOpen}
+        onClose={() => setIsViewingModalOpen(false)}
+      />
+
       {/* Property Inquiry Modal */}
       <PropertyInquiryModal
         property={property}
         isOpen={isInquiryModalOpen}
         onClose={() => setIsInquiryModalOpen(false)}
+      />
+
+      {/* Property Payment Modal */}
+      <PropertyPaymentModal
+        property={property}
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
       />
     </div>
   );
