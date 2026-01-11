@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { X, CreditCard, Check, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui";
+import { propertyService } from "@/services";
+import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 import type { Property } from "@/types";
 
@@ -13,6 +15,7 @@ interface PropertyPaymentModalProps {
 }
 
 export function PropertyPaymentModal({ property, isOpen, onClose }: PropertyPaymentModalProps) {
+  const { user, isAuthenticated } = useAuthStore();
   const [step, setStep] = useState(1); // 2 steps: payment, success
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
@@ -54,22 +57,45 @@ export function PropertyPaymentModal({ property, isOpen, onClose }: PropertyPaym
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedPaymentMethod) {
+      alert("Please select a payment method");
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate API call to process payment
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    try {
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        alert("Please login to proceed with payment");
+        onClose();
+        return;
+      }
 
-    console.log("Payment processed:", {
-      propertyId: property.id,
-      propertyType: property.propertyType,
-      listingType: property.listingType,
-      paymentMethod: selectedPaymentMethod,
-      paymentOption,
-      amount: paymentOption === "full" ? totalAmount : depositAmount,
-    });
+      // Create booking with payment information
+      await propertyService.createBooking({
+        propertyId: property.id,
+        type: isForSale ? 'inquiry' : 'booking',
+        name: user ? `${user.firstName} ${user.lastName}` : '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        paymentAmount: paymentOption === "full" ? totalAmount : depositAmount,
+        paymentMethod: selectedPaymentMethod,
+        currency: 'UGX',
+      });
 
-    setIsSubmitting(false);
-    setStep(2); // Success step
+      // TODO: Process actual payment through payment gateway
+      // For now, we'll just create the booking with payment info
+      // In production, you'd integrate with MTN MoMo, Airtel Money, or Stripe
+
+      setStep(2); // Success step
+    } catch (error: any) {
+      console.error("Error processing payment:", error);
+      alert(error?.response?.data?.message || "Failed to process payment. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {

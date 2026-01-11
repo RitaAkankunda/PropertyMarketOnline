@@ -152,13 +152,20 @@ export default function DashboardPage() {
           router.replace('/dashboard/provider');
           return;
         }
+        
+        // If user is a buyer or renter, redirect to user dashboard
+        if (user.role === 'buyer' || user.role === 'renter') {
+          console.log('[DASHBOARD] User is a buyer/renter, redirecting to user dashboard');
+          router.replace('/dashboard/user');
+          return;
+        }
       }
     };
     
     checkAndSyncRole();
   }, [authLoading, isAuthenticated, user, router]);
   
-  // Protect route: Only LISTER, PROPERTY_MANAGER can access (admins and service_providers are redirected above)
+  // Protect route: Only LISTER, PROPERTY_MANAGER can access (admins, service_providers, and buyers are redirected above)
   const { hasAccess } = useRequireRole(
     ['lister', 'property_manager'],
     '/'

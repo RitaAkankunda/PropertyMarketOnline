@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
+import { Job } from 'src/jobs/entities/job.entity';
 
 export enum TicketCategory {
   ELECTRICAL = 'electrical',
@@ -104,6 +105,13 @@ export class MaintenanceTicket {
 
   @Column({ nullable: true })
   ownerId?: string;
+
+  @ManyToOne(() => Job, { nullable: true })
+  @JoinColumn({ name: 'jobId' })
+  job: Job;
+
+  @Column({ nullable: true })
+  jobId?: string;
 
   @CreateDateColumn()
   createdAt: Date;

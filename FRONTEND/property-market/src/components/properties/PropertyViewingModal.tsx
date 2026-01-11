@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { X, Calendar, Clock, MessageSquare, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { X, Calendar, Clock, MessageSquare, AlertCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui";
+import Link from "next/link";
+import { useAuthStore } from "@/store/auth.store";
+import { propertyService } from "@/services";
 import type { Property } from "@/types";
 
 interface PropertyViewingModalProps {
@@ -12,34 +16,137 @@ interface PropertyViewingModalProps {
 }
 
 export function PropertyViewingModal({ property, isOpen, onClose }: PropertyViewingModalProps) {
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
   const [step, setStep] = useState(1); // 2 steps: details, success
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
+    name: user ? `${user.firstName} ${user.lastName}` : "",
+    email: user?.email || "",
+    phone: user?.phone || "",
     viewingDate: "",
     viewingTime: "",
     notes: "",
   });
 
+  // Restore form data after login/registration
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && isOpen) {
+      const savedViewing = sessionStorage.getItem('pendingPropertyViewing');
+      if (savedViewing) {
+        try {
+          const viewingState = JSON.parse(savedViewing);
+          if (viewingState.propertyId === property.id) {
+            setFormData(viewingState.formData || {
+              name: user ? `${user.firstName} ${user.lastName}` : "",
+              email: user?.email || "",
+              phone: user?.phone || "",
+              viewingDate: viewingState.formData?.viewingDate || "",
+              viewingTime: viewingState.formData?.viewingTime || "",
+              notes: viewingState.formData?.notes || "",
+            });
+            console.log('[PROPERTY VIEWING] Form data restored after login for property:', property.title);
+            sessionStorage.removeItem('pendingPropertyViewing');
+          }
+        } catch (err) {
+          console.error('[PROPERTY VIEWING] Failed to restore form data:', err);
+        }
+      }
+    }
+  }, [isAuthenticated, authLoading, isOpen, property.id, property.title, user]);
+
+  // Update form data when user changes
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      setFormData(prev => ({
+        ...prev,
+        name: prev.name || `${user.firstName} ${user.lastName}`,
+        email: prev.email || user.email || "",
+        phone: prev.phone || user.phone || "",
+      }));
+    }
+  }, [user, isAuthenticated]);
+
+  const handleLoginClick = () => {
+    // Save form data before redirecting
+    const viewingState = {
+      propertyId: property.id,
+      formData: {
+        ...formData,
+        name: formData.name || "",
+        email: formData.email || "",
+        phone: formData.phone || "",
+        viewingDate: formData.viewingDate,
+        viewingTime: formData.viewingTime,
+        notes: formData.notes,
+      },
+    };
+    sessionStorage.setItem('pendingPropertyViewing', JSON.stringify(viewingState));
+    
+    // Redirect to login with return URL
+    const returnUrl = `/properties/${property.id}?restoreViewing=true`;
+    router.push(`/auth/login?return=${encodeURIComponent(returnUrl)}`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     setIsSubmitting(true);
+    setError(null);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Allow booking without authentication - use form data or user data
+      const bookingData = {
+        propertyId: property.id,
+        type: 'viewing' as const,
+        name: formData.name || (user ? `${user.firstName} ${user.lastName}` : ''),
+        email: formData.email || user?.email || '',
+        phone: formData.phone || user?.phone || '',
+        message: formData.notes,
+        scheduledDate: formData.viewingDate,
+        scheduledTime: formData.viewingTime,
+      };
 
-    console.log("Viewing appointment submitted:", {
-      propertyId: property.id,
-      propertyType: property.propertyType,
-      listingType: property.listingType,
-      formData,
-    });
+      console.log('[PROPERTY VIEWING] Submitting booking to backend:', bookingData);
+      const result = await propertyService.createBooking(bookingData);
+      console.log('[PROPERTY VIEWING] ✅ Backend response received:', {
+        id: result.id,
+        type: result.type,
+        status: result.status,
+        propertyId: result.propertyId,
+        createdAt: result.createdAt,
+      });
 
-    setIsSubmitting(false);
-    setStep(2); // Success step
+      // Clear any saved viewing data
+      sessionStorage.removeItem('pendingPropertyViewing');
+      setStep(2); // Success step
+    } catch (error: any) {
+      console.error("Error scheduling viewing:", error);
+      console.error("Error response:", error?.response);
+      console.error("Error data:", error?.response?.data);
+      
+      // Extract error message from various possible formats
+      let errorMessage = "Failed to schedule viewing. Please try again.";
+      if (error?.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else if (Array.isArray(error.response.data.errors)) {
+          errorMessage = error.response.data.errors.join(', ');
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -89,6 +196,31 @@ export function PropertyViewingModal({ property, isOpen, onClose }: PropertyView
         {/* Step 1: Viewing Details */}
         {step === 1 && (
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Optional: Show info banner if not authenticated (but allow submission) */}
+            {!authLoading && !isAuthenticated && (
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-800 mb-1">Guest Booking</p>
+                    <p className="text-sm text-blue-700 mb-3">
+                      You can schedule a viewing without an account. Or <Link href={`/auth/login?return=${encodeURIComponent(`/properties/${property.id}`)}`} className="underline font-medium">login</Link> to track your bookings.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Show error message */}
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name
@@ -232,11 +364,37 @@ export function PropertyViewingModal({ property, isOpen, onClose }: PropertyView
                 <li>✓ Contact owner 30 minutes before viewing</li>
               </ul>
             </div>
+            
+            {/* Optional account creation for guests */}
+            {!isAuthenticated && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mb-6">
+                <p className="text-sm font-semibold text-gray-900 mb-2">💡 Create a free account</p>
+                <p className="text-sm text-gray-700 mb-4">
+                  Track all your bookings, save favorite properties, and get faster responses from property owners.
+                </p>
+                <div className="flex gap-2">
+                  <Link
+                    href={`/auth/register?simple=true&email=${encodeURIComponent(formData.email)}&name=${encodeURIComponent(formData.name)}`}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors text-center"
+                  >
+                    Create Account
+                  </Link>
+                  <Button
+                    onClick={handleClose}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Maybe Later
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <Button
               onClick={handleClose}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              Close
+              {isAuthenticated ? "Close" : "Done"}
             </Button>
           </div>
         )}

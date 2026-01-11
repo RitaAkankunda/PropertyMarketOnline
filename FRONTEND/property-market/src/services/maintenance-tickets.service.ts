@@ -39,6 +39,13 @@ export interface MaintenanceTicket {
     firstName: string;
     lastName: string;
   };
+  jobId?: string;
+  job?: {
+    id: string;
+    title: string;
+    status: string;
+    serviceType: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -152,6 +159,42 @@ export const maintenanceTicketsService = {
   // Delete a ticket
   async deleteTicket(id: string): Promise<void> {
     await api.delete(`/maintenance-tickets/${id}`);
+  },
+
+  // Link an existing job to a ticket
+  async linkJob(ticketId: string, jobId: string): Promise<MaintenanceTicket> {
+    const response = await api.post<MaintenanceTicket>(
+      `/maintenance-tickets/${ticketId}/link-job`,
+      { jobId }
+    );
+    return response.data;
+  },
+
+  // Create a job from a ticket
+  async createJobFromTicket(
+    ticketId: string,
+    jobData: {
+      providerId?: string;
+      serviceType: string;
+      title: string;
+      description: string;
+      location: {
+        address: string;
+        city: string;
+        latitude?: number;
+        longitude?: number;
+      };
+      scheduledDate: string;
+      scheduledTime: string;
+      price?: number;
+      currency?: string;
+    }
+  ): Promise<{ ticket: MaintenanceTicket; job: any }> {
+    const response = await api.post<{ ticket: MaintenanceTicket; job: any }>(
+      `/maintenance-tickets/${ticketId}/create-job`,
+      jobData
+    );
+    return response.data;
   },
 };
 

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Job, JobStatus } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
@@ -16,6 +17,16 @@ import { UsersService } from 'src/users/users.service';
 import { UserRole } from 'src/users/enums/user-role.enum';
 import { R2Service } from 'src/common/r2.service';
 import { Provider } from 'src/providers/entities/provider.entity';
+import {
+  JobCreatedEvent,
+  JobAssignedEvent,
+  JobAcceptedEvent,
+  JobRejectedEvent,
+  JobStartedEvent,
+  JobCompletedEvent,
+  JobCancelledEvent,
+  JobStatusUpdatedEvent,
+} from 'src/notifications/events/job.events';
 
 @Injectable()
 export class JobsService {
@@ -26,6 +37,7 @@ export class JobsService {
     private readonly providerRepository: Repository<Provider>,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -33,11 +45,14 @@ export class JobsService {
     clientId: string,
     images?: any[],
   ): Promise<Job> {
+    console.log('[JOBS SERVICE] Creating job for clientId:', clientId);
     // Verify client exists
     const client = await this.usersService.findOneById(clientId);
     if (!client) {
+      console.error('[JOBS SERVICE] Client not found for clientId:', clientId);
       throw new NotFoundException('Client not found');
     }
+    console.log('[JOBS SERVICE] Client verified:', { id: client.id, email: client.email, firstName: client.firstName });
 
     // If providerId is provided, verify provider exists
     let providerUserId = null;
@@ -69,26 +84,121 @@ export class JobsService {
     let imageUrls: string[] = [];
     if (images && images.length > 0) {
       try {
-        imageUrls = await Promise.all(
+        const uploadResults = await Promise.all(
           images.map((file) => this.r2Service.uploadFile(file, 'jobs')),
         );
+        // Filter out any null/undefined results and ensure all are strings
+        imageUrls = uploadResults.filter((url): url is string => typeof url === 'string' && url.length > 0);
+        console.log('[JOBS] Images uploaded successfully:', imageUrls.length, 'images');
       } catch (error) {
-        console.error('Error uploading images:', error);
+        console.error('[JOBS] Error uploading images:', error);
         // Continue without images if upload fails
+        imageUrls = [];
       }
     }
 
     // Create job
-    const job = this.jobRepository.create({
+    // TypeORM simple-array requires an array of strings or null/undefined
+    // Empty array should be converted to null to avoid issues
+    const jobData: any = {
       ...createJobDto,
       clientId,
       providerId: providerUserId || null,
-      images: imageUrls.length > 0 ? imageUrls : null,
       currency: createJobDto.currency || 'UGX',
       status: JobStatus.PENDING,
+    };
+
+    // Only set images if we have valid URLs
+    // TypeORM simple-array stores arrays as comma-separated strings in PostgreSQL
+    // The issue is that URLs with special characters can break the array parsing
+    // We need to ensure proper array formatting
+    if (imageUrls.length > 0) {
+      // Ensure all URLs are properly formatted strings
+      const sanitizedUrls = imageUrls
+        .map(url => String(url).trim())
+        .filter(url => url.length > 0);
+      
+      // TypeORM simple-array will convert this to comma-separated string
+      // But we need to make sure it's a proper array
+      jobData.images = sanitizedUrls;
+      
+      console.log('[JOBS] Setting images array:', {
+        count: sanitizedUrls.length,
+        urls: sanitizedUrls,
+        isArray: Array.isArray(sanitizedUrls),
+      });
+    } else {
+      // Explicitly set to null for empty array
+      jobData.images = null;
+    }
+
+    console.log('[JOBS] Creating job entity:', {
+      clientId,
+      providerId: providerUserId,
+      serviceType: createJobDto.serviceType,
+      imageCount: imageUrls.length,
+      images: jobData.images,
+      imagesType: Array.isArray(jobData.images) ? 'array' : typeof jobData.images,
     });
 
-    return await this.jobRepository.save(job);
+    try {
+      const job = this.jobRepository.create(jobData);
+      
+      // Ensure job is a single entity, not an array
+      const jobEntity = Array.isArray(job) ? job[0] : job;
+      
+      // Log the job entity before saving to debug
+      console.log('[JOBS] Job entity created:', {
+        id: jobEntity.id,
+        images: jobEntity.images,
+        imagesType: Array.isArray(jobEntity.images) ? 'array' : typeof jobEntity.images,
+        imagesValue: jobEntity.images,
+      });
+
+      const savedJob = await this.jobRepository.save(jobEntity);
+      console.log('[JOBS] Job saved successfully:', {
+        id: savedJob.id,
+        clientId: savedJob.clientId,
+        title: savedJob.title,
+        status: savedJob.status,
+      });
+      
+      // Emit job created event
+      this.eventEmitter.emit('job.created', new JobCreatedEvent(savedJob));
+      
+      // If provider was assigned, emit assigned event
+      if (savedJob.providerId) {
+        this.eventEmitter.emit('job.assigned', new JobAssignedEvent(savedJob, savedJob.providerId));
+      }
+      
+      return savedJob;
+    } catch (saveError: any) {
+      console.error('[JOBS] Error saving job:', {
+        error: saveError.message,
+        stack: saveError.stack,
+        jobData: {
+          ...jobData,
+          images: jobData.images,
+        },
+      });
+      
+      // If it's an array literal error, try saving without images first
+      if (saveError.message && saveError.message.includes('malformed array literal')) {
+        console.log('[JOBS] Attempting to save without images due to array literal error');
+        const jobWithoutImages = this.jobRepository.create({
+          ...jobData,
+          images: null,
+        });
+        const jobEntityWithoutImages = Array.isArray(jobWithoutImages) ? jobWithoutImages[0] : jobWithoutImages;
+        const savedJob = await this.jobRepository.save(jobEntityWithoutImages);
+        console.log('[JOBS] Job saved without images:', savedJob.id);
+        // Note: Images were uploaded but couldn't be saved - this is a workaround
+        // TODO: Fix the simple-array issue with URLs containing special characters
+        return savedJob;
+      }
+      
+      throw saveError;
+    }
   }
 
   async findAll(query: QueryJobDto) {
@@ -102,7 +212,7 @@ export class JobsService {
 
     const [jobs, total] = await this.jobRepository.findAndCount({
       where,
-      relations: ['client', 'provider'],
+      relations: ['client', 'provider'], // provider is already a User entity, not Provider entity
       order: { createdAt: 'DESC' },
       skip,
       take: pageSize,
@@ -122,7 +232,7 @@ export class JobsService {
   async findOne(id: string): Promise<Job> {
     const job = await this.jobRepository.findOne({
       where: { id },
-      relations: ['client', 'provider'],
+      relations: ['client', 'provider'], // provider is already a User entity
     });
 
     if (!job) {
@@ -141,13 +251,17 @@ export class JobsService {
       where.status = status;
     }
 
+    console.log('[JOBS SERVICE] Finding jobs for clientId:', userId, 'with filters:', where);
+
     const [jobs, total] = await this.jobRepository.findAndCount({
       where,
-      relations: ['client', 'provider'],
+      relations: ['client', 'provider'], // provider is already a User entity, not Provider entity
       order: { createdAt: 'DESC' },
       skip,
       take: pageSize,
     });
+
+    console.log('[JOBS SERVICE] Found', total, 'jobs for clientId:', userId);
 
     return {
       data: jobs,
@@ -171,7 +285,7 @@ export class JobsService {
 
     const [jobs, total] = await this.jobRepository.findAndCount({
       where,
-      relations: ['client', 'provider'],
+      relations: ['client', 'provider'], // provider is already a User entity, not Provider entity
       order: { createdAt: 'DESC' },
       skip,
       take: pageSize,
@@ -236,6 +350,7 @@ export class JobsService {
     }
 
     // Update job
+    const previousStatus = job.status;
     job.status = updateStatusDto.status;
     if (updateStatusDto.reason) {
       job.cancellationReason = updateStatusDto.reason;
@@ -244,7 +359,20 @@ export class JobsService {
       job.completedAt = new Date();
     }
 
-    return await this.jobRepository.save(job);
+    const savedJob = await this.jobRepository.save(job);
+    
+    // Emit events based on status change
+    if (updateStatusDto.status === JobStatus.CANCELLED) {
+      this.eventEmitter.emit('job.cancelled', new JobCancelledEvent(savedJob, updateStatusDto.reason));
+    }
+    // Note: REJECTED status doesn't exist in JobStatus enum, removed that check
+    
+    // Always emit status updated event
+    if (previousStatus !== updateStatusDto.status) {
+      this.eventEmitter.emit('job.status.updated', new JobStatusUpdatedEvent(savedJob, previousStatus));
+    }
+    
+    return savedJob;
   }
 
   async updateProgress(
@@ -357,9 +485,16 @@ export class JobsService {
     }
 
     // Update status to accepted
+    const previousStatus = job.status;
     job.status = JobStatus.ACCEPTED;
 
-    return await this.jobRepository.save(job);
+    const savedJob = await this.jobRepository.save(job);
+    
+    // Emit events
+    this.eventEmitter.emit('job.accepted', new JobAcceptedEvent(savedJob));
+    this.eventEmitter.emit('job.status.updated', new JobStatusUpdatedEvent(savedJob, previousStatus));
+    
+    return savedJob;
   }
 
   /**
@@ -414,9 +549,16 @@ export class JobsService {
     }
 
     // Update status to in progress
+    const previousStatus = job.status;
     job.status = JobStatus.IN_PROGRESS;
 
-    return await this.jobRepository.save(job);
+    const savedJob = await this.jobRepository.save(job);
+    
+    // Emit events
+    this.eventEmitter.emit('job.started', new JobStartedEvent(savedJob));
+    this.eventEmitter.emit('job.status.updated', new JobStatusUpdatedEvent(savedJob, previousStatus));
+    
+    return savedJob;
   }
 }
 

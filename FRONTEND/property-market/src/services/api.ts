@@ -107,16 +107,42 @@ api.interceptors.response.use(
       // Don't auto-redirect for provider registration - let the component handle it
       const isProviderRegistration = error.config?.url?.includes('/providers/register');
       
+      // Don't auto-redirect for public endpoints (homepage stats, properties list, etc.)
+      const isPublicEndpoint = 
+        error.config?.url?.includes('/bookings/verify') ||
+        error.config?.url?.includes('/properties') ||
+        error.config?.url?.includes('/providers') ||
+        error.config?.url?.includes('/jobs') && !error.config?.url?.includes('/jobs/my') && !error.config?.url?.includes('/jobs/provider');
+      
       if (isProviderRegistration) {
         // Let the component handle the error display
         // Don't remove token - let the component decide what to do
         error.message = error.response?.data?.message || "Authentication required. Please login to continue.";
         console.log("[API] 401 error on provider registration - letting component handle it");
+      } else if (isPublicEndpoint) {
+        // For public endpoints, just reject the promise - don't redirect
+        // The component will handle the error gracefully
+        if (process.env.NODE_ENV === 'development') {
+          console.log("[API] 401 error on public endpoint - not redirecting:", error.config?.url);
+        }
+        // Don't remove token or redirect - just let the error propagate
       } else {
-        // Auto-redirect for other endpoints
+        // Auto-redirect for protected endpoints only
+        // Check if we're on a public page (homepage, properties list, etc.)
         if (typeof window !== "undefined") {
-          localStorage.removeItem("token");
-          window.location.href = "/auth/login";
+          const currentPath = window.location.pathname;
+          const isPublicPage = currentPath === "/" || 
+                              currentPath.startsWith("/properties") || 
+                              currentPath.startsWith("/providers") ||
+                              currentPath.startsWith("/category");
+          
+          // Only redirect if we're NOT on a public page
+          // This prevents redirecting when user is browsing public content
+          if (!isPublicPage) {
+            localStorage.removeItem("token");
+            window.location.href = "/auth/login";
+          }
+          // If on public page, just let the error propagate - don't redirect
         }
       }
     }

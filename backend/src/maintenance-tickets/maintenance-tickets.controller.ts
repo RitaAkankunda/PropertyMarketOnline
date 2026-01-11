@@ -16,6 +16,7 @@ import { CreateMaintenanceTicketDto } from './dto/create-maintenance-ticket.dto'
 import { UpdateMaintenanceTicketDto } from './dto/update-maintenance-ticket.dto';
 import { QueryMaintenanceTicketDto } from './dto/query-maintenance-ticket.dto';
 import { TicketStatus } from './entities/maintenance-ticket.entity';
+import { CreateJobDto } from '../jobs/dto/create-job.dto';
 
 @Controller('maintenance-tickets')
 @UseGuards(AuthGuard('jwt'))
@@ -95,6 +96,40 @@ export class MaintenanceTicketsController {
   async remove(@Param('id') id: string, @Request() req) {
     await this.maintenanceTicketsService.remove(id, req.user.id, req.user.role);
     return { message: 'Maintenance ticket deleted successfully' };
+  }
+
+  /**
+   * Link an existing job to a maintenance ticket
+   */
+  @Post(':id/link-job')
+  async linkJob(
+    @Param('id') ticketId: string,
+    @Body() body: { jobId: string },
+    @Request() req,
+  ) {
+    return this.maintenanceTicketsService.linkJob(
+      ticketId,
+      body.jobId,
+      req.user.id,
+      req.user.role,
+    );
+  }
+
+  /**
+   * Create a job from a maintenance ticket
+   */
+  @Post(':id/create-job')
+  async createJobFromTicket(
+    @Param('id') ticketId: string,
+    @Body() createJobDto: CreateJobDto,
+    @Request() req,
+  ) {
+    return this.maintenanceTicketsService.createJobFromTicket(
+      ticketId,
+      createJobDto,
+      req.user.id,
+      req.user.role,
+    );
   }
 }
 

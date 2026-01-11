@@ -274,8 +274,24 @@ export const providerService = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Request failed with status code ${response.status}`);
+      let errorMessage = `Request failed with status code ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+        
+        // Add more context for 500 errors
+        if (response.status === 500) {
+          console.error('[JOB CREATION] Server error details:', errorData);
+          errorMessage = errorData.message || 'Internal server error. Please check that all required fields are filled correctly.';
+        }
+      } catch (e) {
+        // If response is not JSON, try to get text
+        const text = await response.text().catch(() => '');
+        if (text) {
+          errorMessage = text.substring(0, 200);
+        }
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -351,7 +367,7 @@ export const providerService = {
 
   // Rate and review completed job
   async rateJob(jobId: string, rating: number, review: string): Promise<void> {
-    await api.post(`/jobs/${jobId}/review`, { rating, review });
+    await api.post(`/jobs/${jobId}/rate`, { rating, review });
   },
 
   // Cancel job

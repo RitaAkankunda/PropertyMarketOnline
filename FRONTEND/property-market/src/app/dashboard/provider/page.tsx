@@ -10,6 +10,7 @@ import { useNotificationAlerts } from "@/hooks/use-notifications";
 import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
 import { NotificationPermissionBanner } from "@/components/notifications/notification-permission-banner";
 import { NotificationPermissionSuccess } from "@/components/notifications/notification-permission-success";
+import { JobStatusTimeline } from "@/components/jobs/JobStatusTimeline";
 import type { Job as ApiJob } from "@/types";
 import type { Notification as ApiNotification } from "@/services/notifications.service";
 import {
@@ -206,6 +207,15 @@ function JobDetailModal({
           <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
             <span className="text-gray-700">Amount</span>
             <span className="text-xl font-bold text-blue-600">UGX {job.amount.toLocaleString()}</span>
+          </div>
+
+          {/* Status Timeline */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <JobStatusTimeline
+              status={job.status}
+              createdAt={job.createdAt}
+              completedAt={job.completedAt}
+            />
           </div>
         </div>
 
@@ -620,6 +630,7 @@ export default function ProviderDashboard() {
   }, [isAuthenticated, user]);
 
   // Fetch notifications from API
+  // Service providers should ONLY see job-related notifications, not property bookings
   const fetchNotifications = async () => {
     try {
       console.log('[PROVIDER NOTIFICATIONS] Fetching notifications...');
@@ -628,7 +639,28 @@ export default function ProviderDashboard() {
         offset: 0,
       });
       console.log('[PROVIDER NOTIFICATIONS] Fetched notifications:', response);
-      setNotifications(response.notifications || []);
+      
+      // Filter out property booking notifications - service providers only need job notifications
+      const jobRelatedTypes = [
+        'job_created',
+        'job_accepted',
+        'job_rejected',
+        'job_started',
+        'job_completed',
+        'job_cancelled',
+        'job_status_updated',
+        'maintenance_ticket_created',
+        'maintenance_ticket_assigned',
+        'maintenance_ticket_status_updated',
+        'maintenance_ticket_job_linked',
+      ];
+      
+      const filteredNotifications = (response.notifications || []).filter((n: ApiNotification) => 
+        jobRelatedTypes.includes(n.type)
+      );
+      
+      console.log('[PROVIDER NOTIFICATIONS] Filtered to job-related notifications:', filteredNotifications.length);
+      setNotifications(filteredNotifications);
     } catch (err) {
       console.error('[PROVIDER NOTIFICATIONS] Error fetching notifications:', err);
       setNotifications([]);
@@ -651,10 +683,32 @@ export default function ProviderDashboard() {
   }, [isAuthenticated, user, usePolling]);
 
   // WebSocket for real-time notifications
+  // Filter to only show job-related notifications for service providers
+  const jobRelatedTypes = [
+    'job_created',
+    'job_accepted',
+    'job_rejected',
+    'job_started',
+    'job_completed',
+    'job_cancelled',
+    'job_status_updated',
+    'maintenance_ticket_created',
+    'maintenance_ticket_assigned',
+    'maintenance_ticket_status_updated',
+    'maintenance_ticket_job_linked',
+  ];
+  
   const { isConnected: wsConnected, connectionError: wsError } = useWebSocketNotifications({
     enabled: isAuthenticated && user ? true : false,
     onNotification: (notification) => {
       console.log('[PROVIDER NOTIFICATIONS] 📬 New notification via WebSocket:', notification);
+      
+      // Only add job-related notifications, ignore property booking notifications
+      if (!jobRelatedTypes.includes(notification.type)) {
+        console.log('[PROVIDER NOTIFICATIONS] Ignoring non-job notification:', notification.type);
+        return;
+      }
+      
       // Add new notification to the list (prepend)
       setNotifications(prev => {
         // Check if notification already exists
@@ -837,155 +891,9 @@ export default function ProviderDashboard() {
                 {providerProfile?.businessName || user?.firstName + ' ' + user?.lastName || 'Service Provider'}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <button 
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const newState = !showNotificationDropdown;
-                    setShowNotificationDropdown(newState);
-                    if (newState) {
-                      await fetchNotifications();
-                    }
-                  }}
-                  className="p-2 bg-white/20 rounded-lg relative hover:bg-white/30 transition-colors"
-                >
-                  <Bell className="w-5 h-5" />
-                  {notifications.filter(n => !n.isRead).length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                      {notifications.filter(n => !n.isRead).length > 9 ? '9+' : notifications.filter(n => !n.isRead).length}
-                    </span>
-                  )}
-                </button>
-                
-                {/* Notification Dropdown */}
-                {showNotificationDropdown && (
-                  <>
-                    {/* Backdrop */}
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setShowNotificationDropdown(false)}
-                    />
-                    
-                    {/* Dropdown Panel */}
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-hidden flex flex-col">
-                      {/* Header */}
-                      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">Notifications</h3>
-                          <p className="text-sm text-gray-500">
-                            {notifications.filter(n => !n.isRead).length} unread
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setShowNotificationDropdown(false)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                      
-                      {/* Notifications List */}
-                      <div className="overflow-y-auto flex-1">
-                        {notifications.length === 0 ? (
-                          <div className="p-8 text-center text-gray-500">
-                            <Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                            <p>No notifications</p>
-                          </div>
-                        ) : (
-                          <div className="divide-y divide-gray-100">
-                            {notifications.map((notification) => (
-                              <div
-                                key={notification.id}
-                                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                  !notification.isRead ? 'bg-blue-50' : ''
-                                }`}
-                                onClick={async () => {
-                                  // Mark as read
-                                  if (!notification.isRead) {
-                                    try {
-                                      await notificationsService.markAsRead(notification.id);
-                                      setNotifications(prev =>
-                                        prev.map(n =>
-                                          n.id === notification.id ? { ...n, isRead: true } : n
-                                        )
-                                      );
-                                    } catch (err) {
-                                      console.error('Error marking notification as read:', err);
-                                    }
-                                  }
-                                  
-                                  // Navigate to related job if available
-                                  if (notification.data?.jobId) {
-                                    setShowNotificationDropdown(false);
-                                    const jobId = notification.data.jobId;
-                                    // Find the job in the jobs list and open it
-                                    const relatedJob = jobs.find(j => j.id === jobId);
-                                    if (relatedJob) {
-                                      setSelectedJob(relatedJob);
-                                    } else {
-                                      // If job not in current list, fetch it
-                                      try {
-                                        const job = await providerService.getJob(jobId);
-                                        const formattedJob = formatJobForDisplay(job);
-                                        setSelectedJob(formattedJob);
-                                      } catch (err) {
-                                        console.error('Error fetching job:', err);
-                                      }
-                                    }
-                                  }
-                                }}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                                    !notification.isRead ? 'bg-blue-500' : 'bg-transparent'
-                                  }`} />
-                                  <div className="flex-1 min-w-0">
-                                    <p className={`font-medium text-sm ${
-                                      !notification.isRead ? 'text-gray-900' : 'text-gray-700'
-                                    }`}>
-                                      {notification.title}
-                                    </p>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                      {notification.message}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-2">
-                                      {new Date(notification.createdAt).toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Footer */}
-                      {notifications.length > 0 && (
-                        <div className="p-3 border-t border-gray-200">
-                          <button
-                            onClick={async () => {
-                              try {
-                                await notificationsService.markAllAsRead();
-                                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                              } catch (err) {
-                                console.error('Error marking all as read:', err);
-                              }
-                            }}
-                            className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium"
-                          >
-                            Mark all as read
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5" />
-              </div>
+            {/* Removed notification bell - already available in main header navigation */}
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <User className="w-5 h-5" />
             </div>
           </div>
         </div>

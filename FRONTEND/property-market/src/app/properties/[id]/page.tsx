@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, use, useEffect } from "react";
+import { useState, use, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Heart,
@@ -245,9 +245,10 @@ const getMockProperty = (id: string) => {
   };
 };
 
-export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -257,6 +258,20 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Restore viewing modal after login/registration
+  useEffect(() => {
+    const shouldRestore = searchParams.get("restoreViewing") === "true";
+    if (shouldRestore && isAuthenticated && property) {
+      console.log('[PROPERTY DETAIL] Restoring viewing modal for property:', property.title);
+      setIsViewingModalOpen(true);
+      
+      // Clean up URL parameters
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('restoreViewing');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, [searchParams, isAuthenticated, property]);
 
   useEffect(() => {
     async function fetchProperty() {
@@ -300,9 +315,9 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <Link href="/properties">
             <Button>Back to Properties</Button>
           </Link>
-        </div>
       </div>
-    );
+    </div>
+  );
   }
 
   // Check if user is the owner - check both owner.id and ownerId
@@ -653,5 +668,17 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         onClose={() => setIsPaymentModalOpen(false)}
       />
     </div>
+  );
+}
+
+export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    }>
+      <PropertyDetailPageContent params={params} />
+    </Suspense>
   );
 }

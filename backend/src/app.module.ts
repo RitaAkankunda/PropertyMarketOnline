@@ -19,6 +19,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { DatabaseConfig } from './config/database.config';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { BookingsModule } from './bookings/bookings.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     ReviewsModule,
     HealthModule,
     NotificationsModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

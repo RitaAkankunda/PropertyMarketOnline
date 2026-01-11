@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -28,7 +29,8 @@ import {
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { APP_NAME } from "@/lib/constants";
-import { propertyService } from "@/services";
+import { propertyService, providerService } from "@/services";
+import api from "@/services/api";
 import type { Property, PropertyType } from "@/types";
 
 // Hero Section Categories
@@ -168,13 +170,16 @@ const whyChooseUs = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+  const hasFetchedStats = useRef(false);
+  const hasFetchedProperties = useRef(false);
   const [propertiesByType, setPropertiesByType] = useState<Record<PropertyType, Property[]>>({} as Record<PropertyType, Property[]>);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState([
     { value: "-", label: "Properties Listed" },
-    { value: "-", label: "Happy Customers" },
+    { value: "-", label: "Total Bookings" },
     { value: "-", label: "Service Providers" },
-    { value: "-", label: "Satisfaction Rate" },
+    { value: "-", label: "Active Listings" },
   ]);
 
   // Build ranked list of property types with counts and pick top 4 for display
@@ -191,23 +196,46 @@ export default function HomePage() {
     .slice(0, 4);
 
   useEffect(() => {
+    // Prevent multiple fetches
+    if (hasFetchedStats.current) return;
+    hasFetchedStats.current = true;
+
     const fetchStats = async () => {
       try {
         // Fetch properties count
         const propertiesResponse = await propertyService.getProperties({}, 1, 1);
         const totalProperties = propertiesResponse.meta?.total || 0;
         
-        // Fetch providers count (this would need an API endpoint)
-        // For now, we'll use a placeholder
+        // Fetch providers count
+        const providersResponse = await providerService.getProviders({}, 1, 1);
+        const totalProviders = providersResponse.meta?.total || 0;
+        
+        // Fetch bookings count (using verify endpoint which returns total)
+        let totalBookings = 0;
+        try {
+          const bookingsResponse = await api.get('/bookings/verify');
+          totalBookings = bookingsResponse.data?.total || 0;
+        } catch (error) {
+          // Silently handle - bookings count will show "-"
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[HOME PAGE] Failed to fetch bookings count:', error);
+          }
+        }
+        
+        // Note: Jobs endpoint requires authentication, so we skip it for public homepage
+        // If you want to show completed jobs, create a public stats endpoint on the backend
         
         setStats([
           { value: totalProperties.toLocaleString(), label: "Properties Listed" },
-          { value: "-", label: "Happy Customers" },
-          { value: "-", label: "Service Providers" },
-          { value: "-", label: "Satisfaction Rate" },
+          { value: totalBookings > 0 ? totalBookings.toLocaleString() : "-", label: "Total Bookings" },
+          { value: totalProviders.toLocaleString(), label: "Service Providers" },
+          { value: "-", label: "Active Listings" },
         ]);
       } catch (error) {
-        console.error('[HOME PAGE] Failed to fetch stats:', error);
+        // Silently handle errors - stats will show "-"
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[HOME PAGE] Failed to fetch stats:', error);
+        }
       }
     };
 
@@ -215,32 +243,21 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    // Prevent multiple fetches
+    if (hasFetchedProperties.current) return;
+    hasFetchedProperties.current = true;
+
     const fetchProperties = async () => {
       setIsLoading(true);
       try {
-        console.log('[HOME PAGE] Starting to fetch properties...');
-        
-        // First, fetch ALL properties without category filter to get all available properties
+        // Fetch ALL properties without category filter to get all available properties
         const allPropertiesResponse = await propertyService.getProperties(
           undefined, // No filters - get all properties
           1,
           100 // Get more properties to ensure we see all of them
         );
         
-        console.log('[HOME PAGE] API Response:', {
-          total: allPropertiesResponse.meta?.total,
-          dataLength: allPropertiesResponse.data?.length,
-          fullResponse: allPropertiesResponse
-        });
-        
         const allProperties = allPropertiesResponse.data || [];
-        console.log('[HOME PAGE] All properties fetched:', allProperties.length);
-        console.log('[HOME PAGE] Properties:', allProperties.map(p => ({
-          id: p.id,
-          title: p.title,
-          propertyType: p.propertyType,
-          listingType: p.listingType
-        })));
 
         // Group properties by type
         const grouped = {} as Record<PropertyType, Property[]>;
@@ -258,25 +275,16 @@ export default function HomePage() {
             const matchingType = propertyTypes.find(pt => pt.type.toLowerCase() === normalizedType);
             if (matchingType && grouped[matchingType.type]) {
               grouped[matchingType.type].push(property);
-            } else {
-              console.warn('[HOME PAGE] Property type not found in propertyTypes:', property.propertyType, property);
             }
-          } else {
-            console.warn('[HOME PAGE] Property missing propertyType:', property);
           }
         });
 
-        console.log('[HOME PAGE] Properties grouped by type:', Object.keys(grouped).map(key => ({
-          type: key,
-          count: grouped[key as PropertyType].length
-        })));
         setPropertiesByType(grouped);
       } catch (err) {
-        console.error("[HOME PAGE] Failed to fetch properties:", err);
-        console.error("[HOME PAGE] Error details:", {
-          message: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined
-        });
+        // Silently handle errors - properties will just be empty
+        if (process.env.NODE_ENV === 'development') {
+          console.error("[HOME PAGE] Failed to fetch properties:", err);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -313,7 +321,7 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
+        <div className="container mx-auto px-4 py-16 md:py-24 pb-32 md:pb-40 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
             <div className="inline-flex items-center mb-6 bg-white/10 text-white border border-white/20 px-4 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm">
@@ -349,31 +357,46 @@ export default function HomePage() {
             </div>
 
             {/* Search Box */}
-            <div className="bg-white rounded-2xl p-2 shadow-2xl max-w-3xl mx-auto">
+            <form 
+              className="bg-white rounded-2xl p-2 shadow-2xl max-w-3xl mx-auto"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const query = formData.get('search') as string;
+                if (query?.trim()) {
+                  router.push(`/properties?search=${encodeURIComponent(query.trim())}`);
+                } else {
+                  router.push('/properties');
+                }
+              }}
+            >
               <div className="flex flex-col md:flex-row gap-2">
                 <div className="flex-1 relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
                     type="text"
+                    name="search"
                     placeholder="Search by location, property type..."
                     className="w-full pl-12 pr-4 py-4 text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <Button size="xl" className="md:px-8 rounded-xl">
+                <Button type="submit" size="xl" className="md:px-8 rounded-xl">
                   <Search className="w-5 h-5 mr-2" />
                   Search
                 </Button>
               </div>
-            </div>
+            </form>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 max-w-3xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mt-12 mb-16 md:mb-20 max-w-3xl mx-auto px-2 md:px-4">
               {stats.map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="text-2xl md:text-3xl font-bold text-white">
+                <div key={stat.label} className="text-center flex flex-col items-center justify-center py-3 md:py-4">
+                  <div className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-1.5 md:mb-2 leading-none">
                     {stat.value}
                   </div>
-                  <div className="text-sm text-slate-400">{stat.label}</div>
+                  <div className="text-[10px] sm:text-xs md:text-sm text-slate-200 md:text-slate-300 font-medium leading-snug px-1 break-words hyphens-auto">
+                    {stat.label}
+                  </div>
                 </div>
               ))}
             </div>
@@ -381,11 +404,13 @@ export default function HomePage() {
         </div>
 
         {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
+        <div className="absolute bottom-0 left-0 right-0 h-20 md:h-28 lg:h-32 pointer-events-none">
           <svg
             viewBox="0 0 1440 120"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-full"
+            preserveAspectRatio="none"
           >
             <path
               d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
@@ -454,8 +479,30 @@ export default function HomePage() {
           </div>
 
           {isLoading ? (
-            <div className="text-center py-12">
-              <p className="text-slate-500">Loading properties...</p>
+            <div className="space-y-16">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 bg-slate-200 rounded-2xl"></div>
+                    <div>
+                      <div className="h-7 w-48 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-5 w-32 bg-slate-200 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map((j) => (
+                      <div key={j} className="bg-white rounded-xl overflow-hidden shadow-md">
+                        <div className="h-48 bg-slate-200"></div>
+                        <div className="p-4">
+                          <div className="h-5 bg-slate-200 rounded mb-2"></div>
+                          <div className="h-6 w-24 bg-slate-200 rounded mb-3"></div>
+                          <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-16">
@@ -570,24 +617,28 @@ export default function HomePage() {
               </p>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
-                {serviceCategories.map((category) => (
-                  <div
-                    key={category.name}
-                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <category.icon className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {category.name}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        Find providers
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {serviceCategories.map((category) => {
+                  const categorySlug = category.name.toLowerCase().replace(/\s+/g, '-');
+                  return (
+                    <Link
+                      key={category.name}
+                      href={`/providers?category=${encodeURIComponent(categorySlug)}`}
+                      className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
+                    >
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        <category.icon className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">
+                          {category.name}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          Find providers
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">

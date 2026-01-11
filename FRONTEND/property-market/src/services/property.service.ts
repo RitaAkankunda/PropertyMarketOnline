@@ -468,4 +468,64 @@ export const propertyService = {
   ): Promise<void> {
     await api.post(`/listings/${propertyId}/inquiry`, data);
   },
+
+  // Create property booking (viewing, inquiry, or booking)
+  async createBooking(data: {
+    propertyId: string;
+    type: 'viewing' | 'inquiry' | 'booking';
+    name: string;
+    email: string;
+    phone: string;
+    message?: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    checkInDate?: string;
+    checkOutDate?: string;
+    guests?: number;
+    moveInDate?: string;
+    leaseDuration?: string;
+    occupants?: number;
+    offerAmount?: number;
+    financingType?: string;
+    businessType?: string;
+    spaceRequirements?: string;
+    leaseTerm?: string;
+    paymentAmount?: number;
+    paymentMethod?: string;
+    currency?: string;
+  }): Promise<any> {
+    const response = await api.post('/bookings', data);
+    return response.data;
+  },
+
+  // Get user's bookings
+  async getMyBookings(): Promise<any[]> {
+    const response = await api.get('/bookings/my');
+    return response.data;
+  },
+
+  // Get bookings for a property (owner only)
+  async getPropertyBookings(propertyId: string): Promise<any[]> {
+    const response = await api.get(`/bookings?propertyId=${propertyId}`);
+    return response.data;
+  },
+
+  // Update booking status (owner only)
+  async updateBookingStatus(
+    bookingId: string,
+    status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected',
+    notes?: string
+  ): Promise<any> {
+    const response = await api.patch(`/bookings/${bookingId}/status`, {
+      status,
+      notes,
+    });
+    return response.data;
+  },
+
+  // Cancel booking
+  async cancelBooking(bookingId: string): Promise<any> {
+    const response = await api.patch(`/bookings/${bookingId}/cancel`);
+    return response.data;
+  },
 };

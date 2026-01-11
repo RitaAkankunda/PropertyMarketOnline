@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -75,11 +75,16 @@ export default function LoginPage() {
       
       // Small delay to ensure state is updated before redirect
       setTimeout(() => {
-        // Check for return URL in localStorage (set by protected pages)
-        const returnUrl = localStorage.getItem("returnUrl");
-        if (returnUrl) {
+        // Check for return URL from query params first
+        const returnUrlParam = searchParams.get("return");
+        const returnUrlStorage = localStorage.getItem("returnUrl");
+        
+        if (returnUrlParam) {
           localStorage.removeItem("returnUrl");
-          router.push(returnUrl);
+          router.push(returnUrlParam);
+        } else if (returnUrlStorage) {
+          localStorage.removeItem("returnUrl");
+          router.push(returnUrlStorage);
         } else {
           // Redirect based on user role
           if (loginResponse?.user?.role === 'admin') {
@@ -288,7 +293,14 @@ export default function LoginPage() {
                   variant="outline" 
                   type="button"
                   className="w-full"
-                  onClick={() => window.location.href = `${API_BASE_URL}/auth/google`}
+                  onClick={() => {
+                    // Store return URL if present
+                    const returnUrl = searchParams.get("return");
+                    if (returnUrl) {
+                      localStorage.setItem("returnUrl", returnUrl);
+                    }
+                    window.location.href = `${API_BASE_URL}/auth/google`;
+                  }}
                 >
                   <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -316,7 +328,10 @@ export default function LoginPage() {
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
               <Link
-                href="/auth/register"
+                href={searchParams.get("return") 
+                  ? `/auth/register?simple=true&return=${encodeURIComponent(searchParams.get("return") || "")}`
+                  : "/auth/register"
+                }
                 className="text-primary font-medium hover:underline"
               >
                 Sign up for free

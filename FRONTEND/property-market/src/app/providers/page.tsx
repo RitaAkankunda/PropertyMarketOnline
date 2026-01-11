@@ -1,9 +1,11 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { providerService } from "@/services";
 import type { ServiceProvider } from "@/types";
+import { useAuthStore } from "@/store/auth.store";
 import {
   Search,
   MapPin,
@@ -26,6 +28,7 @@ import {
   CheckCircle,
   Users,
   X,
+  AlertCircle,
   Calendar,
   Clock,
   Repeat,
@@ -216,6 +219,8 @@ function RequestFormModal({
   provider: ServiceProvider; 
   onClose: () => void;
 }) {
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
   const [step, setStep] = useState(1); // 1: Details, 2: Schedule, 3: Payment
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -228,6 +233,30 @@ function RequestFormModal({
   const [recurringFrequency, setRecurringFrequency] = useState<string>("");
   const [recurringEndDate, setRecurringEndDate] = useState<string>("");
   const [sendReminder, setSendReminder] = useState(true);
+
+  // Restore form data after login/registration
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      const savedRequest = sessionStorage.getItem('pendingJobRequest');
+      if (savedRequest) {
+        try {
+          const formState = JSON.parse(savedRequest);
+          if (formState.providerId === provider.id) {
+            // Restore form data
+            setFormData(formState.formData || {});
+            setStep(formState.step || 1);
+            setImagePreviews(formState.images || []);
+            // Note: We can't restore actual File objects, but previews are restored
+            console.log('[PROVIDER REQUEST] Form data restored after login for provider:', provider.businessName);
+            // Clear the saved data
+            sessionStorage.removeItem('pendingJobRequest');
+          }
+        } catch (err) {
+          console.error('[PROVIDER REQUEST] Failed to restore form data:', err);
+        }
+      }
+    }
+  }, [isAuthenticated, authLoading, provider.id, provider.businessName]);
 
   // Cleanup image previews on unmount
   useEffect(() => {
@@ -301,6 +330,13 @@ function RequestFormModal({
     setIsSubmitting(true);
     setError(null);
 
+    // Check authentication before submitting
+    if (!authLoading && !isAuthenticated) {
+      setError("login_required");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // Validate required fields
       const scheduledDate = formData["Preferred Date"] || formData["date"];
@@ -327,48 +363,74 @@ function RequestFormModal({
         return;
       }
 
+      // Get city from provider location with fallback
+      const providerCity = provider.location?.city || 
+                           provider.location?.district || 
+                           "Kampala"; // Default fallback
+
+      // Ensure we have a valid title
+      const jobTitle = formData["Type of Work"] || 
+                      formData["title"] || 
+                      `Service request for ${provider.businessName}`;
+
       // Create job request using real API with images
+      // Only send fields that are part of the CreateJobData interface
       await providerService.createJob({
         providerId: provider.id,
         serviceType: primaryServiceType,
-        title: formData["Type of Work"] || `Service request for ${provider.businessName}`,
+        title: jobTitle,
         description: description,
         location: {
           address: serviceAddress,
-          city: provider.location.city,
-          latitude: undefined,
-          longitude: undefined,
+          city: providerCity,
         },
         scheduledDate: scheduledDate,
         scheduledTime: scheduledTime,
-        images: images, // Include uploaded images
-        isRecurring: isRecurring,
-        recurringFrequency: isRecurring ? recurringFrequency : undefined,
-        recurringEndDate: isRecurring ? recurringEndDate : undefined,
-        sendReminder: sendReminder,
+        images: images.length > 0 ? images : undefined, // Only send if there are images
       });
 
       setIsSuccess(true);
+      
+      // Redirect to bookings page after a short delay to show success message
+      setTimeout(() => {
+        router.push('/bookings');
+      }, 2000);
     } catch (err: unknown) {
       console.error("Error creating job request:", err);
-      // More detailed error handling
-      const axiosError = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
       let errorMessage = "Failed to send request. Please try again.";
       
-      if (axiosError.response?.status === 401) {
-        errorMessage = "Please login to submit a service request.";
-      } else if (axiosError.response?.status === 404) {
-        errorMessage = "Service not available. Please ensure you are logged in.";
-      } else if (axiosError.response?.data?.message) {
-        errorMessage = axiosError.response.data.message;
-      } else if (axiosError.message) {
-        errorMessage = axiosError.message;
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        // Handle specific error cases
+        if (err.message.includes("login") || err.message.includes("Unauthorized") || err.message.includes("401")) {
+          errorMessage = "login_required";
+        } else if (err.message.includes("500") || err.message.includes("Internal server error")) {
+          errorMessage = "Server error occurred. Please check that all fields are filled correctly and try again. If the problem persists, contact support.";
+        } else if (err.message.includes("404") || err.message.includes("not found")) {
+          errorMessage = "Service not available. Please ensure you are logged in and the provider is still active.";
+        }
       }
       
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleLoginClick = () => {
+    // Save current form data to sessionStorage so user can resume after login
+    const formState = {
+      formData,
+      images: imagePreviews, // Save previews, not files (files can't be serialized)
+      step,
+      providerId: provider.id,
+      provider: provider, // Save provider info too
+    };
+    sessionStorage.setItem('pendingJobRequest', JSON.stringify(formState));
+    // Include provider ID in return URL so we can restore the modal
+    const returnUrl = `/providers?providerId=${provider.id}&restore=true`;
+    router.push(`/auth/login?return=${encodeURIComponent(returnUrl)}`);
   };
 
   const steps = [
@@ -394,12 +456,23 @@ function RequestFormModal({
             <p className="text-xs font-medium text-gray-500 mb-1">Reference Number</p>
             <p className="font-mono font-bold text-xl text-blue-700">REQ-{Date.now().toString().slice(-8)}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all"
-          >
-            Done
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3.5 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                router.push('/bookings');
+              }}
+              className="flex-1 py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 transition-all"
+            >
+              View My Bookings
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -434,12 +507,6 @@ function RequestFormModal({
               </p>
             </div>
           </div>
-          
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
 
           {/* Progress Steps */}
           <div className="flex items-center justify-between">
@@ -483,6 +550,69 @@ function RequestFormModal({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto max-h-[50vh]">
+          {/* Show warning if not authenticated */}
+          {!authLoading && !isAuthenticated && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-yellow-800 mb-1">Login Required</p>
+                  <p className="text-sm text-yellow-700 mb-3">
+                    You need to be logged in to submit a service request. Don't worry, your form data will be saved.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleLoginClick}
+                      className="px-4 py-2 bg-yellow-600 text-white text-sm rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Login
+                    </button>
+                    <Link
+                      href={`/auth/register?simple=true&return=${encodeURIComponent(`/providers?providerId=${provider.id}&restore=true`)}`}
+                      className="px-4 py-2 bg-white border border-yellow-300 text-yellow-700 text-sm rounded-lg hover:bg-yellow-50 transition-colors"
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {error && error !== "login_required" && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-lg">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+          
+          {error === "login_required" && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800 mb-1">Authentication Required</p>
+                  <p className="text-sm text-red-700 mb-3">
+                    You must be logged in to submit a service request. Your form data will be saved so you can continue after logging in.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleLoginClick}
+                      className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Login Now
+                    </button>
+                    <Link
+                      href={`/auth/register?simple=true&return=${encodeURIComponent(`/providers?providerId=${provider.id}&restore=true`)}`}
+                      className="px-4 py-2 bg-white border border-red-300 text-red-700 text-sm rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Step 1: Service Details */}
           {step === 1 && (
             <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -1018,7 +1148,9 @@ function ProviderCard({
 // =============================================
 // MAIN PAGE COMPONENT
 // =============================================
-export default function ServiceProvidersPage() {
+function ServiceProvidersPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   // State for selected category
   const [selectedCategory, setSelectedCategory] = useState("all");
   // State for search query
@@ -1030,6 +1162,44 @@ export default function ServiceProvidersPage() {
   const [providers, setProviders] = useState<ServiceProvider[]>([]); // Filtered providers for display
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Restore modal and form data after login/registration
+  useEffect(() => {
+    const providerId = searchParams.get("providerId");
+    const shouldRestore = searchParams.get("restore") === "true";
+    
+    if (shouldRestore && providerId) {
+      // Try to find provider in current lists, or fetch it
+      const provider = providers.find(p => p.id === providerId) || 
+                      allProviders.find(p => p.id === providerId);
+      
+      if (provider) {
+        console.log('[PROVIDERS PAGE] Restoring modal for provider:', provider.businessName);
+        setSelectedProvider(provider);
+        
+        // Clean up URL parameters
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('providerId');
+        newUrl.searchParams.delete('restore');
+        window.history.replaceState({}, '', newUrl.toString());
+      } else if (providerId && !isLoading) {
+        // Provider not in current list, fetch it directly
+        console.log('[PROVIDERS PAGE] Fetching provider by ID:', providerId);
+        providerService.getProvider(providerId)
+          .then(provider => {
+            setSelectedProvider(provider);
+            // Clean up URL parameters
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('providerId');
+            newUrl.searchParams.delete('restore');
+            window.history.replaceState({}, '', newUrl.toString());
+          })
+          .catch(err => {
+            console.error('[PROVIDERS PAGE] Failed to fetch provider:', err);
+          });
+      }
+    }
+  }, [searchParams, providers, allProviders, isLoading]);
 
   // Fetch ALL providers for category counts (no filters)
   // This should run every time the component mounts to ensure fresh data
@@ -1319,4 +1489,18 @@ export default function ServiceProvidersPage() {
   );
 }
 
+export default function ServiceProvidersPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ServiceProvidersPageContent />
+    </Suspense>
+  );
+}
 

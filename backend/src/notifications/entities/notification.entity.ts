@@ -21,6 +21,10 @@ export enum NotificationType {
   MAINTENANCE_TICKET_ASSIGNED = 'maintenance_ticket_assigned',
   MAINTENANCE_TICKET_STATUS_UPDATED = 'maintenance_ticket_status_updated',
   MAINTENANCE_TICKET_JOB_LINKED = 'maintenance_ticket_job_linked',
+  BOOKING_CREATED = 'booking_created',
+  BOOKING_CONFIRMED = 'booking_confirmed',
+  BOOKING_CANCELLED = 'booking_cancelled',
+  BOOKING_STATUS_UPDATED = 'booking_status_updated',
 }
 
 @Entity('notifications')

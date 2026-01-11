@@ -118,6 +118,13 @@ export class JobsController {
 
     // Use req.user.sub (from JWT payload) as clientId
     const clientId = req.user.sub || req.user.id;
+    console.log('[JOBS CONTROLLER] Creating job for user:', {
+      sub: req.user.sub,
+      id: req.user.id,
+      email: req.user.email,
+      role: req.user.role,
+      usingClientId: clientId,
+    });
     return this.jobsService.create(dto, clientId, images);
   }
 
@@ -128,12 +135,17 @@ export class JobsController {
 
   @Get('my')
   async findMyJobs(@Query() query: QueryJobDto, @Request() req) {
-    return this.jobsService.findMyJobs(req.user.id, query);
+    // Use same ID extraction as job creation for consistency
+    const userId = req.user.sub || req.user.id;
+    console.log('[JOBS CONTROLLER] Finding my jobs for user:', userId);
+    return this.jobsService.findMyJobs(userId, query);
   }
 
   @Get('provider')
   async findProviderJobs(@Query() query: QueryJobDto, @Request() req) {
-    return this.jobsService.findProviderJobs(req.user.id, query);
+    // Use same ID extraction as job creation for consistency
+    const userId = req.user.sub || req.user.id;
+    return this.jobsService.findProviderJobs(userId, query);
   }
 
   @Get(':id')

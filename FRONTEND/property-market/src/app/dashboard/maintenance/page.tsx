@@ -1,8 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
-import { maintenanceTicketsService } from "@/services";
+import { maintenanceTicketsService, providerService, propertyService } from "@/services";
+import { useAuthStore } from "@/store/auth.store";
 import type { MaintenanceTicket as ApiMaintenanceTicket, TicketCategory, TicketPriority, TicketStatus } from "@/services/maintenance-tickets.service";
+import type { Job } from "@/types";
+import { CreateJobFromTicketModal } from "@/components/maintenance/CreateJobFromTicketModal";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -28,6 +31,11 @@ import {
   Star,
   Settings,
   Bell,
+  Briefcase,
+  Link as LinkIcon,
+  ExternalLink,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 
 // =============================================
@@ -70,6 +78,13 @@ interface MaintenanceTicket {
     date: string;
     note?: string;
   }>;
+  jobId?: string;
+  job?: {
+    id: string;
+    title: string;
+    status: string;
+    serviceType: string;
+  };
 }
 
 // Helper function to format API ticket to display format
@@ -90,7 +105,7 @@ function formatTicketForDisplay(ticket: ApiMaintenanceTicket): MaintenanceTicket
       ? {
           name: ticket.assignedProvider.businessName || `${ticket.assignedProvider.firstName} ${ticket.assignedProvider.lastName}`,
           phone: ticket.assignedProvider.phone || "N/A",
-          rating: 0, // TODO: Get from provider profile
+          rating: (ticket.assignedProvider as any)?.rating || 0, // Get from provider if available
           serviceType: "Service Provider",
         }
       : undefined,
@@ -464,7 +479,77 @@ function CreateTicketModal({ onClose, onSubmit }: { onClose: () => void; onSubmi
 // =============================================
 // TICKET DETAIL MODAL
 // =============================================
-function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onClose: () => void }) {
+function TicketDetailModal({ 
+  ticket, 
+  onClose,
+  onRefresh 
+}: { 
+  ticket: MaintenanceTicket; 
+  onClose: () => void;
+  onRefresh?: () => void;
+}) {
+  const [showLinkJobModal, setShowLinkJobModal] = useState(false);
+  const [showCreateJobModal, setShowCreateJobModal] = useState(false);
+  const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  // Fetch available jobs when modal opens
+  useEffect(() => {
+    if (showLinkJobModal) {
+      fetchAvailableJobs();
+    }
+  }, [showLinkJobModal]);
+
+  const fetchAvailableJobs = async () => {
+    try {
+      setIsLoadingJobs(true);
+      const response = await providerService.getMyJobs(undefined, 1, 50);
+      setAvailableJobs(response.data || []);
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      setAvailableJobs([]);
+    } finally {
+      setIsLoadingJobs(false);
+    }
+  };
+
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 5000);
+  };
+
+  const handleLinkJob = async (jobId: string) => {
+    try {
+      setIsLinking(true);
+      await maintenanceTicketsService.linkJob(ticket.id, jobId);
+      if (onRefresh) onRefresh();
+      setShowLinkJobModal(false);
+      showToast('success', 'Job linked successfully!');
+    } catch (error) {
+      console.error("Error linking job:", error);
+      showToast('error', error instanceof Error ? error.message : "Failed to link job");
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleCreateJob = async (jobData: any) => {
+    try {
+      setIsLinking(true);
+      await maintenanceTicketsService.createJobFromTicket(ticket.id, jobData);
+      if (onRefresh) onRefresh();
+      setShowCreateJobModal(false);
+      alert("Job created and linked successfully!");
+    } catch (error) {
+      console.error("Error creating job:", error);
+      alert(error instanceof Error ? error.message : "Failed to create job");
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
@@ -557,6 +642,50 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
             </div>
           )}
 
+          {/* Linked Job */}
+          {ticket.jobId && (
+            <div className="bg-blue-50 rounded-xl p-4">
+              <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-blue-600" />
+                Linked Job
+              </h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">{ticket.job?.title || `Job #${ticket.jobId.substring(0, 8)}`}</p>
+                  <p className="text-xs text-gray-500 capitalize">{ticket.job?.status || "Unknown status"}</p>
+                </div>
+                <Link href={`/dashboard/provider?jobId=${ticket.jobId}`}>
+                  <button className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Link Job Section (for owners) */}
+          {!ticket.jobId && (
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+              <h3 className="font-medium text-gray-900 mb-2">Job Management</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowLinkJobModal(true)}
+                  className="flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm flex items-center justify-center gap-2"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  Link Existing Job
+                </button>
+                <button
+                  onClick={() => setShowCreateJobModal(true)}
+                  className="flex-1 py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New Job
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Timeline */}
           {ticket.timeline && (
             <div>
@@ -580,10 +709,127 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
           )}
         </div>
 
+        {/* Link Job Modal */}
+        {showLinkJobModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6">
+              <h3 className="font-bold text-lg mb-4">Link Existing Job</h3>
+              {isLoadingJobs ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-500">Loading jobs...</p>
+                </div>
+              ) : availableJobs.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {availableJobs.map((job) => (
+                    <button
+                      key={job.id}
+                      onClick={() => handleLinkJob(job.id)}
+                      disabled={isLinking}
+                      className="w-full p-3 border rounded-lg hover:bg-gray-50 text-left disabled:opacity-50"
+                    >
+                      <p className="font-medium text-sm">{job.title}</p>
+                      <p className="text-xs text-gray-500 capitalize">{job.status}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-8 text-gray-500">No jobs available to link</p>
+              )}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setShowLinkJobModal(false)}
+                  className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Job Modal */}
+        {showCreateJobModal && (
+          <CreateJobFromTicketModal
+            ticket={ticket}
+            onClose={() => setShowCreateJobModal(false)}
+            onSubmit={handleCreateJob}
+            isSubmitting={isLinking}
+          />
+        )}
+
         {/* Footer */}
         <div className="border-t p-4">
           <button onClick={onClose} className="w-full py-3 border border-gray-300 rounded-lg hover:bg-gray-50">
             Close
+          </button>
+        </div>
+      </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <ToastNotification
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// =============================================
+// TOAST NOTIFICATION COMPONENT
+// =============================================
+function ToastNotification({
+  type,
+  message,
+  onClose,
+}: {
+  type: 'success' | 'error' | 'info';
+  message: string;
+  onClose: () => void;
+}) {
+  const config = {
+    success: {
+      icon: CheckCircle,
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      textColor: 'text-green-800',
+      iconColor: 'text-green-500',
+    },
+    error: {
+      icon: XCircle,
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-800',
+      iconColor: 'text-red-500',
+    },
+    info: {
+      icon: AlertCircle,
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      textColor: 'text-blue-800',
+      iconColor: 'text-blue-500',
+    },
+  };
+
+  const { icon: Icon, bgColor, borderColor, textColor, iconColor } = config[type];
+
+  return (
+    <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-right">
+      <div className={`${bgColor} ${borderColor} border rounded-lg shadow-lg p-4 min-w-[300px] max-w-md`}>
+        <div className="flex items-start gap-3">
+          <Icon className={`w-5 h-5 ${iconColor} flex-shrink-0 mt-0.5`} />
+          <div className="flex-1">
+            <p className={`text-sm font-medium ${textColor}`}>{message}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className={`flex-shrink-0 ${textColor} hover:opacity-70 transition-opacity`}
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -595,12 +841,36 @@ function TicketDetailModal({ ticket, onClose }: { ticket: MaintenanceTicket; onC
 // MAIN MAINTENANCE DASHBOARD
 // =============================================
 export default function MaintenanceDashboard() {
+  const { user } = useAuthStore();
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userProperties, setUserProperties] = useState<Array<{ id: string; title: string }>>([]);
+
+  // Fetch user properties for ticket creation
+  useEffect(() => {
+    const fetchProperties = async () => {
+      if (!user?.id) return;
+      try {
+        // Get user's properties using the property service
+        const response = await propertyService.getMyListings(1, 100);
+        if (response.items && response.items.length > 0) {
+          setUserProperties(response.items.map(p => ({ id: p.id, title: p.title })));
+        } else {
+          setUserProperties([]);
+        }
+      } catch (err) {
+        console.error("Error fetching properties:", err);
+        // If user has no properties, that's okay - they can still create tickets
+        setUserProperties([]);
+      }
+    };
+
+    fetchProperties();
+  }, [user]);
 
   // Fetch maintenance tickets from backend
   useEffect(() => {
@@ -637,12 +907,16 @@ export default function MaintenanceDashboard() {
 
   const handleCreateTicket = async (data: Partial<MaintenanceTicket>) => {
     try {
+      // Use first property if available, otherwise use a default
+      const propertyId = userProperties.length > 0 ? userProperties[0].id : "default";
+      const propertyName = userProperties.length > 0 ? userProperties[0].title : "My Property";
+      
       const newTicket = await maintenanceTicketsService.create({
         title: data.title || "",
         description: data.description || "",
         category: data.category as IssueCategory,
         priority: data.priority || "medium",
-        property: "My Property", // TODO: Get from user context
+        property: propertyName,
         unit: data.unit || "",
         location: data.location || "",
         images: data.images,
@@ -663,7 +937,20 @@ export default function MaintenanceDashboard() {
         <CreateTicketModal onClose={() => setShowCreateModal(false)} onSubmit={handleCreateTicket} />
       )}
       {selectedTicket && (
-        <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+        <TicketDetailModal 
+          ticket={selectedTicket} 
+          onClose={() => setSelectedTicket(null)}
+          onRefresh={() => {
+            // Refresh tickets list
+            const status = statusFilter === "all" ? undefined : statusFilter;
+            maintenanceTicketsService.getTickets({ status }, 1, 100)
+              .then(response => {
+                const formattedTickets = response.data.map(formatTicketForDisplay);
+                setTickets(formattedTickets);
+              })
+              .catch(err => console.error("Error refreshing tickets:", err));
+          }}
+        />
       )}
 
       {/* Header */}
