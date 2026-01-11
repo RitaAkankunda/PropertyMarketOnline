@@ -19,7 +19,7 @@ import {
 import { Button, Input, Select, Textarea, Card, Badge } from "@/components/ui";
 import { useToastContext } from "@/components/ui/toast-provider";
 import { cn } from "@/lib/utils";
-import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS } from "@/lib/constants";
+import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS, HOTEL_AMENITIES, HOTEL_ROOM_TYPES } from "@/lib/constants";
 import { propertyService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
@@ -90,6 +90,13 @@ export default function CreateListingPage() {
     furnished: false,
     amenities: [] as string[],
 
+    // Hotel-specific fields
+    totalRooms: "",
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    starRating: "",
+    hotelAmenities: [] as string[],
+
     // Photos
     images: [] as { id: string; url: string; file?: File }[],
 
@@ -104,12 +111,21 @@ export default function CreateListingPage() {
   };
 
   const toggleAmenity = (amenity: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter((a) => a !== amenity)
-        : [...prev.amenities, amenity],
-    }));
+    if (formData.propertyType === "hotel") {
+      setFormData((prev) => ({
+        ...prev,
+        hotelAmenities: prev.hotelAmenities.includes(amenity)
+          ? prev.hotelAmenities.filter((a) => a !== amenity)
+          : [...prev.hotelAmenities, amenity],
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        amenities: prev.amenities.includes(amenity)
+          ? prev.amenities.filter((a) => a !== amenity)
+          : [...prev.amenities, amenity],
+      }));
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,15 +199,25 @@ export default function CreateListingPage() {
           latitude: 0.3476,
           longitude: 32.5825,
         },
-        features: {
-          bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
-          bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
-          area: formData.size ? parseFloat(formData.size) : undefined,
-          areaUnit: formData.sizeUnit,
-          parking: formData.parking ? parseInt(formData.parking) : undefined,
-          yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
-        },
-        amenities: formData.amenities,
+        features: formData.propertyType === "hotel" 
+          ? {
+              totalRooms: formData.totalRooms ? parseInt(formData.totalRooms) : undefined,
+              starRating: formData.starRating ? parseInt(formData.starRating) : undefined,
+              checkInTime: formData.checkInTime,
+              checkOutTime: formData.checkOutTime,
+              area: formData.size ? parseFloat(formData.size) : undefined,
+              areaUnit: formData.sizeUnit,
+              yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
+            }
+          : {
+              bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
+              bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
+              area: formData.size ? parseFloat(formData.size) : undefined,
+              areaUnit: formData.sizeUnit,
+              parking: formData.parking ? parseInt(formData.parking) : undefined,
+              yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
+            },
+        amenities: formData.propertyType === "hotel" ? formData.hotelAmenities : formData.amenities,
         images: uploadedImageUrls, // Use the uploaded image URLs
       };
 
@@ -490,136 +516,273 @@ export default function CreateListingPage() {
           {/* Step 3: Features */}
           {currentStep === 3 && (
             <Card className="p-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Property Features</h2>
-              <p className="text-slate-500 mb-6">Add details about your property</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                {formData.propertyType === "hotel" ? "Hotel Details" : "Property Features"}
+              </h2>
+              <p className="text-slate-500 mb-6">
+                {formData.propertyType === "hotel" 
+                  ? "Add details about your hotel"
+                  : "Add details about your property"}
+              </p>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Bedrooms
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      value={formData.bedrooms}
-                      onChange={(e) => updateFormData("bedrooms", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Bathrooms
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      value={formData.bathrooms}
-                      onChange={(e) => updateFormData("bathrooms", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Parking Spots
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      value={formData.parking}
-                      onChange={(e) => updateFormData("parking", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Year Built
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="2020"
-                      value={formData.yearBuilt}
-                      onChange={(e) => updateFormData("yearBuilt", e.target.value)}
-                    />
-                  </div>
-                </div>
+                {/* Hotel-specific fields */}
+                {formData.propertyType === "hotel" ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Rooms *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 50"
+                          min="1"
+                          value={formData.totalRooms}
+                          onChange={(e) => updateFormData("totalRooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Star Rating (1-5)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 4"
+                          min="1"
+                          max="5"
+                          value={formData.starRating}
+                          onChange={(e) => updateFormData("starRating", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Property Size
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 200"
-                      value={formData.size}
-                      onChange={(e) => updateFormData("size", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Size Unit
-                    </label>
-                    <Select
-                      options={[
-                        { value: "sqm", label: "Square Meters (sqm)" },
-                        { value: "sqft", label: "Square Feet (sqft)" },
-                        { value: "acres", label: "Acres" },
-                        { value: "hectares", label: "Hectares" },
-                      ]}
-                      value={formData.sizeUnit}
-                      onChange={(value) => updateFormData("sizeUnit", value)}
-                    />
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Check-in Time *
+                        </label>
+                        <Input
+                          type="time"
+                          value={formData.checkInTime}
+                          onChange={(e) => updateFormData("checkInTime", e.target.value)}
+                        />
+                        <p className="text-xs text-slate-400 mt-1">Typical: 2:00 PM</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Check-out Time *
+                        </label>
+                        <Input
+                          type="time"
+                          value={formData.checkOutTime}
+                          onChange={(e) => updateFormData("checkOutTime", e.target.value)}
+                        />
+                        <p className="text-xs text-slate-400 mt-1">Typical: 11:00 AM</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="furnished"
-                    checked={formData.furnished}
-                    onChange={(e) => updateFormData("furnished", e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="furnished" className="text-slate-700">
-                    This property is furnished
-                  </label>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Property Size (optional)
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Input
+                          type="number"
+                          placeholder="e.g., 5000"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                        <Select
+                          options={[
+                            { value: "sqm", label: "Square Meters (sqm)" },
+                            { value: "sqft", label: "Square Feet (sqft)" },
+                            { value: "acres", label: "Acres" },
+                            { value: "hectares", label: "Hectares" },
+                          ]}
+                          value={formData.sizeUnit}
+                          onChange={(value) => updateFormData("sizeUnit", value)}
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
-                    Amenities
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {amenitiesList.map((amenity) => (
-                      <button
-                        key={amenity}
-                        type="button"
-                        onClick={() => toggleAmenity(amenity)}
-                        className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
-                          formData.amenities.includes(amenity)
-                            ? "bg-blue-50 border-blue-500 text-blue-700"
-                            : "border-slate-200 hover:border-blue-500"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "w-5 h-5 rounded border flex items-center justify-center",
-                            formData.amenities.includes(amenity)
-                              ? "bg-blue-600 border-blue-600"
-                              : "border-slate-300"
-                          )}
-                        >
-                          {formData.amenities.includes(amenity) && (
-                            <Check className="w-3 h-3 text-white" />
-                          )}
-                        </div>
-                        {amenity}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Hotel Amenities
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {HOTEL_AMENITIES.map((amenity) => (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
+                              formData.hotelAmenities.includes(amenity)
+                                ? "bg-blue-50 border-blue-500 text-blue-700"
+                                : "border-slate-200 hover:border-blue-500"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center",
+                                formData.hotelAmenities.includes(amenity)
+                                  ? "bg-blue-600 border-blue-600"
+                                  : "border-slate-300"
+                              )}
+                            >
+                              {formData.hotelAmenities.includes(amenity) && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            {amenity}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Regular property fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Bedrooms
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.bedrooms}
+                          onChange={(e) => updateFormData("bedrooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Bathrooms
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.bathrooms}
+                          onChange={(e) => updateFormData("bathrooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spots
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Property Size
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 200"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Size Unit
+                        </label>
+                        <Select
+                          options={[
+                            { value: "sqm", label: "Square Meters (sqm)" },
+                            { value: "sqft", label: "Square Feet (sqft)" },
+                            { value: "acres", label: "Acres" },
+                            { value: "hectares", label: "Hectares" },
+                          ]}
+                          value={formData.sizeUnit}
+                          onChange={(value) => updateFormData("sizeUnit", value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="furnished"
+                        checked={formData.furnished}
+                        onChange={(e) => updateFormData("furnished", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="furnished" className="text-slate-700">
+                        This property is furnished
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Amenities
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {amenitiesList.map((amenity) => (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
+                              formData.amenities.includes(amenity)
+                                ? "bg-blue-50 border-blue-500 text-blue-700"
+                                : "border-slate-200 hover:border-blue-500"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center",
+                                formData.amenities.includes(amenity)
+                                  ? "bg-blue-600 border-blue-600"
+                                  : "border-slate-300"
+                              )}
+                            >
+                              {formData.amenities.includes(amenity) && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            {amenity}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
           )}
@@ -811,16 +974,96 @@ export default function CreateListingPage() {
                       For {formData.listingType || "-"}
                     </span>
                   </div>
+
+                  {/* Hotel-specific display */}
+                  {formData.propertyType === "hotel" ? (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Total Rooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.totalRooms || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Star Rating</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.starRating ? `${formData.starRating} ⭐` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Check-in Time</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.checkInTime || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Check-out Time</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.checkOutTime || "-"}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Bedrooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.bedrooms || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Bathrooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.bathrooms || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Parking</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.parking || "-"} spots
+                        </span>
+                      </div>
+                    </>
+                  )}
+
                   <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Bedrooms</span>
+                    <span className="text-slate-500">Size</span>
                     <span className="font-medium text-slate-900">
-                      {formData.bedrooms || "-"}
+                      {formData.size ? `${formData.size} ${formData.sizeUnit}` : "-"}
                     </span>
                   </div>
+                  {formData.propertyType !== "hotel" && (
+                    <div className="flex justify-between py-3 border-b">
+                      <span className="text-slate-500">Furnished</span>
+                      <span className="font-medium text-slate-900">
+                        {formData.furnished ? "Yes" : "No"}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Bathrooms</span>
+                    <span className="text-slate-500">Photos</span>
                     <span className="font-medium text-slate-900">
-                      {formData.bathrooms || "-"}
+                      {formData.images.length} images
+                    </span>
+                  </div>
+                  {(formData.amenities.length > 0 || formData.hotelAmenities.length > 0) && (
+                    <div className="py-3 border-b">
+                      <span className="text-slate-500 block mb-2">
+                        {formData.propertyType === "hotel" ? "Hotel Amenities" : "Amenities"}
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {(formData.propertyType === "hotel" 
+                          ? formData.hotelAmenities 
+                          : formData.amenities
+                        ).map((amenity) => (
+                          <Badge key={amenity} variant="secondary">
+                            {amenity}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>                      {formData.bathrooms || "-"}
                     </span>
                   </div>
                   <div className="flex justify-between py-3 border-b">
