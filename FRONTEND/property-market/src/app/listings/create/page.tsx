@@ -1063,39 +1063,6 @@ export default function CreateListingPage() {
                       </div>
                     </div>
                   )}
-                </div>                      {formData.bathrooms || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Size</span>
-                    <span className="font-medium text-slate-900">
-                      {formData.size ? `${formData.size} ${formData.sizeUnit}` : "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Furnished</span>
-                    <span className="font-medium text-slate-900">
-                      {formData.furnished ? "Yes" : "No"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Photos</span>
-                    <span className="font-medium text-slate-900">
-                      {formData.images.length} images
-                    </span>
-                  </div>
-                  {formData.amenities.length > 0 && (
-                    <div className="py-3 border-b">
-                      <span className="text-slate-500 block mb-2">Amenities</span>
-                      <div className="flex flex-wrap gap-2">
-                        {formData.amenities.map((amenity) => (
-                          <Badge key={amenity} variant="secondary">
-                            {amenity}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="p-4 bg-green-50 rounded-xl">
