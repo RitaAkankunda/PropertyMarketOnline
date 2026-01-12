@@ -62,11 +62,14 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               className
             )}
           >
-            <option value="" disabled>
-              {placeholder}
-            </option>
+            {/* Only show placeholder if first option doesn't have empty value */}
+            {(!options || options.length === 0 || options[0].value !== "") && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
             {options.map((option) => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value || "empty"} value={option.value}>
                 {option.label}
               </option>
             ))}

@@ -57,6 +57,40 @@ export class Property {
   @Column({ nullable: true })
   bedrooms: number;
 
+  @Column({ nullable: true })
+  bathrooms: number;
+
+  @Column({ nullable: true })
+  parking: number;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  area: number;
+
+  @Column({ nullable: true })
+  areaUnit: string; // sqm, sqft, acres, hectares
+
+  @Column({ nullable: true })
+  yearBuilt: number;
+
+  @Column({ nullable: true })
+  furnished: boolean;
+
+  @Column('simple-array', { nullable: true })
+  amenities: string[];
+
+  // Hotel-specific fields
+  @Column({ nullable: true })
+  totalRooms: number;
+
+  @Column({ nullable: true })
+  starRating: number;
+
+  @Column({ nullable: true })
+  checkInTime: string; // HH:mm format
+
+  @Column({ nullable: true })
+  checkOutTime: string; // HH:mm format
+
   @Column('decimal', { precision: 10, scale: 7 })
   latitude: number;
 

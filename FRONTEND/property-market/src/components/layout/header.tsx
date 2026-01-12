@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck, ChevronDown, Briefcase, Wallet, Settings, Calendar } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/hooks";
@@ -78,7 +78,7 @@ export function Header() {
   const roleBadge = getRoleBadge();
 
   // Fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated || !user) return;
     try {
       const response = await notificationsService.getNotifications({
@@ -113,11 +113,11 @@ export function Header() {
       console.error('Error fetching notifications:', err);
       setNotifications([]);
     }
-  };
+  }, [isAuthenticated, user, isServiceProvider]);
 
   // Fetch notifications on mount and when authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user?.id) {
       fetchNotifications();
       // Poll for new notifications every 30 seconds
       const interval = setInterval(() => {
@@ -125,7 +125,7 @@ export function Header() {
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, user, isServiceProvider]);
+  }, [isAuthenticated, user?.id, fetchNotifications]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
