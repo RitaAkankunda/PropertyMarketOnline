@@ -111,7 +111,7 @@ export const propertyService = {
       leads: item.leads || 0,
       isVerified: item.isVerified || false,
       isFeatured: item.isFeatured || false,
-      amenities: item.amenities || [],
+      amenities: item.amenities && Array.isArray(item.amenities) ? item.amenities.filter((a: any) => a && String(a).trim()) : (item.amenities ? String(item.amenities).split(',').map((a: string) => a.trim()).filter((a: string) => a) : []),
     }));
     
     return {
@@ -174,7 +174,7 @@ export const propertyService = {
       leads: item.leads || 0,
       isVerified: item.isVerified || false,
       isFeatured: item.isFeatured || false,
-      amenities: item.amenities || [],
+      amenities: item.amenities && Array.isArray(item.amenities) ? item.amenities.filter((a: any) => a && String(a).trim()) : (item.amenities ? String(item.amenities).split(',').map((a: string) => a.trim()).filter((a: string) => a) : []),
     };
   },
 
@@ -214,6 +214,7 @@ export const propertyService = {
     if (data.propertyType !== undefined) backendData.propertyType = data.propertyType;
     if (data.listingType !== undefined) backendData.listingType = data.listingType;
     if (data.features?.bedrooms !== undefined) backendData.bedrooms = data.features.bedrooms;
+    if (data.amenities !== undefined) backendData.amenities = data.amenities;
     
     // Get latitude and longitude - required by backend
     // Check multiple possible locations and ensure they are numbers
@@ -413,7 +414,7 @@ export const propertyService = {
       leads: item.leads || 0,
       isVerified: item.isVerified || false,
       isFeatured: item.isFeatured || false,
-      amenities: item.amenities || [],
+      amenities: item.amenities && Array.isArray(item.amenities) ? item.amenities.filter((a: any) => a && String(a).trim()) : (item.amenities ? String(item.amenities).split(',').map((a: string) => a.trim()).filter((a: string) => a) : []),
     }));
     
     // Transform to paginated response format

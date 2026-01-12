@@ -565,14 +565,18 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
             {/* Amenities */}
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-3">Amenities</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {property.amenities.map((amenity, index) => (
-                  <div key={index} className="flex items-center gap-2 text-slate-700">
-                    <Check className="w-5 h-5 text-green-500" />
-                    <span>{amenity}</span>
-                  </div>
-                ))}
-              </div>
+              {property.amenities && property.amenities.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {property.amenities.map((amenity, index) => (
+                    <div key={index} className="flex items-center gap-2 text-slate-700">
+                      <Check className="w-5 h-5 text-green-500" />
+                      <span>{amenity}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-500 text-sm">No amenities listed for this property</p>
+              )}
             </div>
           </div>
         </Card>
