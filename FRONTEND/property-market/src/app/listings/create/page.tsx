@@ -1797,7 +1797,7 @@ export default function CreateListingPage() {
                   </div>
 
                   {/* Hotel-specific display */}
-                  {formData.propertyType === "hotel" ? (
+                  {formData.propertyType === "hotel" && (
                     <>
                       <div className="flex justify-between py-3 border-b">
                         <span className="text-slate-500">Total Rooms</span>
@@ -1824,7 +1824,239 @@ export default function CreateListingPage() {
                         </span>
                       </div>
                     </>
-                  ) : (
+                  )}
+
+                  {/* Land-specific display */}
+                  {formData.propertyType === "land" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Land Use Type</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.landUseType || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Topography</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.topography || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Title Type</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.titleType || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Soil Quality</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.soilQuality || "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Utilities</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Road Access:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.roadAccess ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Water:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.waterAvailability ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Electricity:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.electricityAvailability ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Commercial-specific display */}
+                  {formData.propertyType === "commercial" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Total Floors</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.totalFloors || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Frontage Width</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.frontageWidth ? `${formData.frontageWidth}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Ceiling Height</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.ceilingHeight ? `${formData.ceilingHeight}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Loading Bays</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.loadingBays || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Foot Traffic Level</span>
+                        <span className="font-medium text-slate-900 capitalize">
+                          {formData.footTrafficLevel || "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Features</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">3-Phase Power:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.threePhasePower ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">HVAC:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.hvacSystem ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Fire Safety:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.fireSafety ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Warehouse-specific display */}
+                  {formData.propertyType === "warehouse" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Clear Height</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.clearHeight ? `${formData.clearHeight}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Loading Docks</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.loadingDocks || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Floor Load Capacity</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.floorLoadCapacity ? `${formData.floorLoadCapacity} kg/m²` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Column Spacing</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.columnSpacing ? `${formData.columnSpacing}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Office Area</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.officeArea ? `${formData.officeArea}m²` : "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Features</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Drive-in Access:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.driveInAccess ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Cold Storage:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.coldStorage ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Ramp Access:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.rampAccess ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Office-specific display */}
+                  {formData.propertyType === "office" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Workstation Capacity</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.workstationCapacity || "-"} workstations
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Meeting Rooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.meetingRooms || "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Amenities</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Reception Area:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.receptionArea ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Elevator:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.elevator ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Conference Room:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.conferenceRoom ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Facilities</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Server Room:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.serverRoom ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Cafeteria:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.cafeteria ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Residential-specific display (House, Apartment, Condo, Villa, Airbnb) */}
+                  {["house", "apartment", "condo", "villa", "airbnb"].includes(formData.propertyType) && (
                     <>
                       <div className="flex justify-between py-3 border-b">
                         <span className="text-slate-500">Bedrooms</span>
