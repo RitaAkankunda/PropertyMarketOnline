@@ -1702,14 +1702,14 @@ export default function CreateListingPage() {
                         <label className="block text-sm font-medium text-slate-700 mb-2">
                           Currency
                         </label>
-                        <Select
-                          options={[
-                            { value: "UGX", label: "UGX" },
-                            { value: "USD", label: "USD" },
-                          ]}
+                        <select
                           value={formData.currency}
-                          onChange={(value) => updateFormData("currency", value)}
-                        />
+                          onChange={(e) => updateFormData("currency", e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="UGX">UGX</option>
+                          <option value="USD">USD</option>
+                        </select>
                       </div>
                     </div>
 
@@ -1749,15 +1749,14 @@ export default function CreateListingPage() {
                           Nightly Rate *
                         </label>
                         <div className="flex gap-2">
-                          <Select
-                            options={[
-                              { value: "UGX", label: "UGX" },
-                              { value: "USD", label: "USD" },
-                            ]}
+                          <select
                             value={formData.currency}
-                            onChange={(value) => updateFormData("currency", value)}
-                            className="w-24"
-                          />
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
                           <Input
                             type="number"
                             placeholder="150000"
@@ -1853,15 +1852,14 @@ export default function CreateListingPage() {
                           Standard Room Rate (per night) *
                         </label>
                         <div className="flex gap-2">
-                          <Select
-                            options={[
-                              { value: "UGX", label: "UGX" },
-                              { value: "USD", label: "USD" },
-                            ]}
+                          <select
                             value={formData.currency}
-                            onChange={(value) => updateFormData("currency", value)}
-                            className="w-24"
-                          />
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
                           <Input
                             type="number"
                             placeholder="200000"
@@ -1930,15 +1928,14 @@ export default function CreateListingPage() {
                           Price per Acre
                         </label>
                         <div className="flex gap-2">
-                          <Select
-                            options={[
-                              { value: "UGX", label: "UGX" },
-                              { value: "USD", label: "USD" },
-                            ]}
+                          <select
                             value={formData.currency}
-                            onChange={(value) => updateFormData("currency", value)}
-                            className="w-24"
-                          />
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
                           <Input
                             type="number"
                             placeholder="50000000"
@@ -2023,15 +2020,14 @@ export default function CreateListingPage() {
                           {formData.listingType === "sale" ? "Total Price" : "Monthly Lease Rate"} *
                         </label>
                         <div className="flex gap-2">
-                          <Select
-                            options={[
-                              { value: "UGX", label: "UGX" },
-                              { value: "USD", label: "USD" },
-                            ]}
+                          <select
                             value={formData.currency}
-                            onChange={(value) => updateFormData("currency", value)}
-                            className="w-24"
-                          />
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
                           <Input
                             type="number"
                             placeholder="100000000"
@@ -2133,15 +2129,14 @@ export default function CreateListingPage() {
                           Monthly Lease Rate *
                         </label>
                         <div className="flex gap-2">
-                          <Select
-                            options={[
-                              { value: "UGX", label: "UGX" },
-                              { value: "USD", label: "USD" },
-                            ]}
+                          <select
                             value={formData.currency}
-                            onChange={(value) => updateFormData("currency", value)}
-                            className="w-24"
-                          />
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
                           <Input
                             type="number"
                             placeholder="15000000"
@@ -2222,15 +2217,14 @@ export default function CreateListingPage() {
                           Monthly Lease Rate *
                         </label>
                         <div className="flex gap-2">
-                          <Select
-                            options={[
-                              { value: "UGX", label: "UGX" },
-                              { value: "USD", label: "USD" },
-                            ]}
+                          <select
                             value={formData.currency}
-                            onChange={(value) => updateFormData("currency", value)}
-                            className="w-24"
-                          />
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
                           <Input
                             type="number"
                             placeholder="10000000"
