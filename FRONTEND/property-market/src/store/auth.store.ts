@@ -93,11 +93,18 @@ export const useAuthStore = create<AuthStore>()(
             email: user?.email,
             role: user?.role,
           });
-          set({ user });
+          set({ user, isAuthenticated: true });
         } catch (error) {
           console.error('[AUTH STORE] Failed to refresh profile:', error);
-          // If profile fetch fails, logout
-          get().logout();
+          // If profile fetch fails (401/403), clear auth state
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+          }
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+          });
         }
       },
     }),
@@ -111,3 +118,39 @@ export const useAuthStore = create<AuthStore>()(
     }
   )
 );
+
+// Initialize auth state on app load
+if (typeof window !== 'undefined') {
+  const token = localStorage.getItem('token');
+  const persistedState = localStorage.getItem('auth-storage');
+  
+  console.log('[AUTH STORE INIT] Checking stored auth:', {
+    hasToken: !!token,
+    hasPersistedState: !!persistedState,
+  });
+  
+  // If we have a token, verify it's valid by fetching profile
+  if (token && persistedState) {
+    try {
+      const state = JSON.parse(persistedState);
+      if (state?.state?.isAuthenticated) {
+        console.log('[AUTH STORE INIT] Found authenticated state, verifying token...');
+        // Verify token is still valid
+        authService.getProfile()
+          .then((user) => {
+            console.log('[AUTH STORE INIT] Token is valid, user:', user.email);
+            useAuthStore.setState({ user, token, isAuthenticated: true });
+          })
+          .catch((error) => {
+            console.error('[AUTH STORE INIT] Token is invalid, clearing auth state:', error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('auth-storage');
+            useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
+          });
+      }
+    } catch (error) {
+      console.error('[AUTH STORE INIT] Error parsing persisted state:', error);
+      localStorage.removeItem('auth-storage');
+    }
+  }
+}
