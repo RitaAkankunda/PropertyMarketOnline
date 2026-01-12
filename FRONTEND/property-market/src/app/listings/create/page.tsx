@@ -238,9 +238,36 @@ export default function CreateListingPage() {
   };
 
   const handleSubmit = async () => {
-    // Validate required fields
-    if (!formData.title || !formData.description || !formData.propertyType || !formData.price) {
-      showError("Please fill in all required fields (Title, Description, Property Type, and Price).");
+    // Determine a base price across all pricing models
+    const priceCandidates = [
+      formData.price,
+      formData.nightlyRate,
+      formData.weeklyRate,
+      formData.monthlyRate,
+      formData.standardRoomRate,
+      formData.pricePerAcre,
+      formData.pricePerHectare,
+      formData.totalLandPrice,
+      formData.pricePerSqm,
+      formData.serviceCharge,
+      formData.commercialDeposit,
+      formData.warehouseLeaseRate,
+      formData.warehousePricePerSqm,
+      formData.warehouseDeposit,
+      formData.pricePerWorkstation,
+      formData.officePricePerSqm,
+      formData.sharedFacilitiesCost,
+    ];
+
+    const basePrice = priceCandidates
+      .map((v) => (v !== undefined && v !== null && v !== '' ? Number(v) : NaN))
+      .find((v) => Number.isFinite(v) && v >= 0);
+
+    const missingCore = !formData.title || !formData.description || !formData.propertyType;
+    const missingPrice = !Number.isFinite(basePrice);
+
+    if (missingCore || missingPrice) {
+      showError("Please fill in all required fields (Title, Description, Property Type, and a price for this model).");
       return;
     }
 
@@ -263,8 +290,8 @@ export default function CreateListingPage() {
         description: formData.description,
         propertyType: formData.propertyType,
         listingType: formData.listingType,
-        price: parseFloat(formData.price),
-        currency: formData.currency,
+        price: basePrice,
+        currency: formData.currency || "UGX",
         location: {
           region: formData.region,
           city: formData.city,

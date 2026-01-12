@@ -289,7 +289,7 @@ export default function BookingsPage() {
       {showCancelModal && bookingToCancel && (
         <CancelBookingModal
           booking={bookingToCancel}
-          onClose={() => {
+          onCancel={() => {
             setShowCancelModal(false);
             setBookingToCancel(null);
           }}

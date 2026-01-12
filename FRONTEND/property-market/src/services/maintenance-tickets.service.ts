@@ -12,7 +12,7 @@ export interface MaintenanceTicket {
   category: TicketCategory;
   priority: TicketPriority;
   status: TicketStatus;
-  property: string;
+  property?: string;
   unit: string;
   location: string;
   tenantId?: string;
