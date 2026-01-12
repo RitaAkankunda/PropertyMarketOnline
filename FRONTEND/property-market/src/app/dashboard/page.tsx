@@ -134,36 +134,39 @@ const statsConfig = [
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const [hasRedirected, setHasRedirected] = useState(false);
   
   // Check if user has a provider profile and sync role if needed
   useEffect(() => {
-    const checkAndSyncRole = async () => {
-      if (!authLoading && isAuthenticated && user) {
-        // If user is admin, redirect to admin dashboard
-        if (user.role === 'admin') {
-          console.log('[DASHBOARD] User is an admin, redirecting to admin dashboard');
-          router.replace('/admin');
-          return;
-        }
-        
-        // If role is already service_provider, redirect to provider dashboard
-        if (user.role === 'service_provider') {
-          console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
-          router.replace('/dashboard/provider');
-          return;
-        }
-        
-        // If user is a buyer or renter, redirect to user dashboard
-        if (user.role === 'buyer' || user.role === 'renter') {
-          console.log('[DASHBOARD] User is a buyer/renter, redirecting to user dashboard');
-          router.replace('/dashboard/user');
-          return;
-        }
-      }
-    };
+    // Prevent infinite redirect loop
+    if (hasRedirected || authLoading || !isAuthenticated || !user) {
+      return;
+    }
+
+    // If user is admin, redirect to admin dashboard
+    if (user.role === 'admin') {
+      console.log('[DASHBOARD] User is an admin, redirecting to admin dashboard');
+      setHasRedirected(true);
+      router.replace('/admin');
+      return;
+    }
     
-    checkAndSyncRole();
-  }, [authLoading, isAuthenticated, user, router]);
+    // If role is already service_provider, redirect to provider dashboard
+    if (user.role === 'service_provider') {
+      console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
+      setHasRedirected(true);
+      router.replace('/dashboard/provider');
+      return;
+    }
+    
+    // If user is a buyer or renter, redirect to user dashboard
+    if (user.role === 'buyer' || user.role === 'renter') {
+      console.log('[DASHBOARD] User is a buyer/renter, redirecting to user dashboard');
+      setHasRedirected(true);
+      router.replace('/dashboard/user');
+      return;
+    }
+  }, [authLoading, isAuthenticated, user, router, hasRedirected]);
   
   // Protect route: Only LISTER, PROPERTY_MANAGER can access (admins, service_providers, and buyers are redirected above)
   const { hasAccess } = useRequireRole(
