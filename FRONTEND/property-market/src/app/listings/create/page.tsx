@@ -340,6 +340,55 @@ export default function CreateListingPage() {
           furnished: formData.furnished,
         }),
 
+        // Pricing fields - Hotel specific
+        ...(formData.propertyType === "hotel" && {
+          standardRoomRate: formData.standardRoomRate ? parseFloat(formData.standardRoomRate) : undefined,
+          peakSeasonRate: formData.peakSeasonRate ? parseFloat(formData.peakSeasonRate) : undefined,
+          offPeakSeasonRate: formData.offPeakSeasonRate ? parseFloat(formData.offPeakSeasonRate) : undefined,
+        }),
+
+        // Pricing fields - Airbnb specific
+        ...(formData.propertyType === "airbnb" && {
+          nightlyRate: formData.nightlyRate ? parseFloat(formData.nightlyRate) : undefined,
+          weeklyRate: formData.weeklyRate ? parseFloat(formData.weeklyRate) : undefined,
+          monthlyRate: formData.monthlyRate ? parseFloat(formData.monthlyRate) : undefined,
+          cleaningFee: formData.cleaningFee ? parseFloat(formData.cleaningFee) : undefined,
+          securityDeposit: formData.securityDeposit ? parseFloat(formData.securityDeposit) : undefined,
+        }),
+
+        // Pricing fields - Land specific
+        ...(formData.propertyType === "land" && {
+          pricePerAcre: formData.pricePerAcre ? parseFloat(formData.pricePerAcre) : undefined,
+          pricePerHectare: formData.pricePerHectare ? parseFloat(formData.pricePerHectare) : undefined,
+          totalLandPrice: formData.totalLandPrice ? parseFloat(formData.totalLandPrice) : undefined,
+        }),
+
+        // Pricing fields - Commercial specific
+        ...(formData.propertyType === "commercial" && {
+          pricePerSqm: formData.pricePerSqm ? parseFloat(formData.pricePerSqm) : undefined,
+          serviceCharge: formData.serviceCharge ? parseFloat(formData.serviceCharge) : undefined,
+          commercialDeposit: formData.commercialDeposit ? parseFloat(formData.commercialDeposit) : undefined,
+        }),
+
+        // Pricing fields - Warehouse specific
+        ...(formData.propertyType === "warehouse" && {
+          warehouseLeaseRate: formData.warehouseLeaseRate ? parseFloat(formData.warehouseLeaseRate) : undefined,
+          warehousePricePerSqm: formData.warehousePricePerSqm ? parseFloat(formData.warehousePricePerSqm) : undefined,
+          warehouseDeposit: formData.warehouseDeposit ? parseFloat(formData.warehouseDeposit) : undefined,
+          utilitiesIncluded: formData.utilitiesIncluded,
+        }),
+
+        // Pricing fields - Office specific
+        ...(formData.propertyType === "office" && {
+          pricePerWorkstation: formData.pricePerWorkstation ? parseFloat(formData.pricePerWorkstation) : undefined,
+          officePricePerSqm: formData.officePricePerSqm ? parseFloat(formData.officePricePerSqm) : undefined,
+          sharedFacilitiesCost: formData.sharedFacilitiesCost ? parseFloat(formData.sharedFacilitiesCost) : undefined,
+          officeUtilitiesIncluded: formData.officeUtilitiesIncluded,
+        }),
+
+        // General pricing fields
+        negotiable: formData.negotiable,
+
         // Common fields for all property types
         area: formData.size ? parseFloat(formData.size) : undefined,
         areaUnit: formData.sizeUnit,
@@ -2427,6 +2476,252 @@ export default function CreateListingPage() {
                           <span className="text-slate-600">Village:</span>
                           <span className="font-medium text-slate-900">{formData.village}</span>
                         </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pricing Summary */}
+                  <div className="py-3 border-b">
+                    <span className="text-slate-500 block mb-2">Pricing</span>
+                    <div className="space-y-2 text-sm">
+                      {/* Residential/Standard pricing */}
+                      {["house", "apartment", "condo", "villa"].includes(formData.propertyType) && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Price:</span>
+                          <span className="font-medium text-slate-900">
+                            {formData.currency} {Number(formData.price || 0).toLocaleString()}
+                            {formData.negotiable && " (Negotiable)"}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Hotel pricing */}
+                      {formData.propertyType === "hotel" && (
+                        <>
+                          {formData.standardRoomRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Standard Rate (per night):</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.standardRoomRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.peakSeasonRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Peak Season Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.peakSeasonRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.offPeakSeasonRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Off-Peak Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.offPeakSeasonRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Airbnb pricing */}
+                      {formData.propertyType === "airbnb" && (
+                        <>
+                          {formData.nightlyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Nightly Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.nightlyRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.weeklyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Weekly Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.weeklyRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.monthlyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Monthly Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.monthlyRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.cleaningFee && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Cleaning Fee:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.cleaningFee).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.securityDeposit && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Security Deposit:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.securityDeposit).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Land pricing */}
+                      {formData.propertyType === "land" && (
+                        <>
+                          {formData.pricePerAcre && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per Acre:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerAcre).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.pricePerHectare && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per Hectare:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerHectare).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.totalLandPrice && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Total Price:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.totalLandPrice).toLocaleString()}
+                                {formData.negotiable && " (Negotiable)"}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Commercial pricing */}
+                      {formData.propertyType === "commercial" && (
+                        <>
+                          {formData.price && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">{formData.listingType === "rent" ? "Monthly Lease" : "Total Price"}:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.price).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.pricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per m²:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerSqm).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.serviceCharge && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Service Charge:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.serviceCharge).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.commercialDeposit && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Deposit:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.commercialDeposit).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Warehouse pricing */}
+                      {formData.propertyType === "warehouse" && (
+                        <>
+                          {formData.warehouseLeaseRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Monthly Lease:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.warehouseLeaseRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.warehousePricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per m²:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.warehousePricePerSqm).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.warehouseDeposit && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Deposit:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.warehouseDeposit).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.utilitiesIncluded !== undefined && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Utilities:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.utilitiesIncluded ? "Included" : "Not Included"}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Office pricing */}
+                      {formData.propertyType === "office" && (
+                        <>
+                          {formData.price && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Monthly Lease:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.price).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.pricePerWorkstation && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per Workstation:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerWorkstation).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.officePricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per m²:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.officePricePerSqm).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.sharedFacilitiesCost && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Shared Facilities Cost:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.sharedFacilitiesCost).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.officeUtilitiesIncluded !== undefined && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Utilities:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.officeUtilitiesIncluded ? "Included" : "Not Included"}
+                              </span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
