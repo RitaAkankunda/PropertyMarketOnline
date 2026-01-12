@@ -185,6 +185,85 @@ export class Property {
   @Column({ nullable: true })
   cafeteria: boolean;
 
+  // Pricing fields - Hotel specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  standardRoomRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  peakSeasonRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  offPeakSeasonRate: number;
+
+  // Pricing fields - Airbnb specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  nightlyRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  weeklyRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  monthlyRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  cleaningFee: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  securityDeposit: number;
+
+  // Pricing fields - Land specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerAcre: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerHectare: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  totalLandPrice: number;
+
+  // Pricing fields - Commercial specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerSqm: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  serviceCharge: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  commercialDeposit: number;
+
+  // Pricing fields - Warehouse specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  warehouseLeaseRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  warehousePricePerSqm: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  warehouseDeposit: number;
+
+  @Column({ nullable: true })
+  utilitiesIncluded: boolean;
+
+  // Pricing fields - Office specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerWorkstation: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  officePricePerSqm: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  sharedFacilitiesCost: number;
+
+  @Column({ nullable: true })
+  officeUtilitiesIncluded: boolean;
+
+  // General pricing fields
+  @Column({ nullable: true })
+  currency: string; // UGX, USD, etc.
+
+  @Column({ nullable: true })
+  negotiable: boolean;
+
   // Location fields
   @Column({ nullable: true })
   region: string; // Central, Eastern, Northern, Western

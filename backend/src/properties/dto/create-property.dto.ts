@@ -256,6 +256,152 @@ export class CreatePropertyDto {
   @Type(() => Boolean)
   cafeteria?: boolean;
 
+  // Pricing fields - Hotel specific
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  standardRoomRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  peakSeasonRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  offPeakSeasonRate?: number;
+
+  // Pricing fields - Airbnb specific
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  nightlyRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  weeklyRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  monthlyRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  cleaningFee?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  securityDeposit?: number;
+
+  // Pricing fields - Land specific
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  pricePerAcre?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  pricePerHectare?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  totalLandPrice?: number;
+
+  // Pricing fields - Commercial specific
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  pricePerSqm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  serviceCharge?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  commercialDeposit?: number;
+
+  // Pricing fields - Warehouse specific
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  warehouseLeaseRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  warehousePricePerSqm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  warehouseDeposit?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  utilitiesIncluded?: boolean;
+
+  // Pricing fields - Office specific
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  pricePerWorkstation?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  officePricePerSqm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  sharedFacilitiesCost?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  officeUtilitiesIncluded?: boolean;
+
+  // General pricing fields
+  @IsOptional()
+  @IsString()
+  currency?: string; // UGX, USD, etc.
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  negotiable?: boolean;
+
   // Location fields
   @IsOptional()
   @IsString()
