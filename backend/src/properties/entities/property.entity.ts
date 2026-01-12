@@ -78,18 +78,27 @@ export class Property {
   @Column('simple-array', { nullable: true })
   amenities: string[];
 
-  // Hotel-specific fields
+  // Location fields
   @Column({ nullable: true })
-  totalRooms: number;
+  region: string; // Central, Eastern, Northern, Western
 
   @Column({ nullable: true })
-  starRating: number;
+  city: string; // One of 11 major cities
 
   @Column({ nullable: true })
-  checkInTime: string; // HH:mm format
+  district: string; // One of 137 districts
 
   @Column({ nullable: true })
-  checkOutTime: string; // HH:mm format
+  county: string; // County/Municipality
+
+  @Column({ nullable: true })
+  subcounty: string; // Subcounty/Division
+
+  @Column({ nullable: true })
+  parish: string; // Parish/Ward
+
+  @Column({ nullable: true })
+  village: string; // Village/Zone
 
   @Column('decimal', { precision: 10, scale: 7 })
   latitude: number;

@@ -96,6 +96,35 @@ export class CreatePropertyDto {
   @IsString()
   checkOutTime?: string; // HH:mm format
 
+  // Location fields
+  @IsOptional()
+  @IsString()
+  region?: string; // Central, Eastern, Northern, Western
+
+  @IsOptional()
+  @IsString()
+  city?: string; // One of 11 major cities
+
+  @IsOptional()
+  @IsString()
+  district?: string; // One of 137 districts
+
+  @IsOptional()
+  @IsString()
+  county?: string; // County/Municipality
+
+  @IsOptional()
+  @IsString()
+  subcounty?: string; // Subcounty/Division
+
+  @IsOptional()
+  @IsString()
+  parish?: string; // Parish/Ward
+
+  @IsOptional()
+  @IsString()
+  village?: string; // Village/Zone
+
   @IsNumber()
   @Type(() => Number)
   latitude: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -19,7 +19,7 @@ import {
 import { Button, Input, Select, Textarea, Card, Badge } from "@/components/ui";
 import { useToastContext } from "@/components/ui/toast-provider";
 import { cn } from "@/lib/utils";
-import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS, HOTEL_AMENITIES, HOTEL_ROOM_TYPES } from "@/lib/constants";
+import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS, HOTEL_AMENITIES, HOTEL_ROOM_TYPES, UGANDA_REGIONS, UGANDA_CITIES, UGANDA_DISTRICTS } from "@/lib/constants";
 import { propertyService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
@@ -75,10 +75,13 @@ export default function CreateListingPage() {
     description: "",
 
     // Location
+    region: "",
     city: "",
     district: "",
-    sector: "",
-    address: "",
+    county: "",
+    subcounty: "",
+    parish: "",
+    village: "",
 
     // Features
     bedrooms: "",
@@ -191,9 +194,13 @@ export default function CreateListingPage() {
         price: parseFloat(formData.price),
         currency: formData.currency,
         location: {
-          address: formData.address,
+          region: formData.region,
           city: formData.city,
           district: formData.district,
+          county: formData.county,
+          subcounty: formData.subcounty,
+          parish: formData.parish,
+          village: formData.village,
           country: "Uganda",
           // Default coordinates for Kampala if not provided
           latitude: 0.3476,
@@ -306,10 +313,30 @@ export default function CreateListingPage() {
     ...LISTING_TYPES.map((t) => ({ value: t.value, label: t.label })),
   ];
 
-  const cityOptions = [
-    { value: "", label: "Select City" },
-    ...LOCATIONS.map((loc) => ({ value: loc.value, label: loc.label })),
-  ];
+  // Memoize location options to prevent re-renders with new array references
+  const regionOptions = useMemo(
+    () => [
+      { value: "", label: "Select Region" },
+      ...UGANDA_REGIONS.map((region) => ({ value: region.value, label: region.label })),
+    ],
+    []
+  );
+
+  const cityOptions = useMemo(
+    () => [
+      { value: "", label: "Select City" },
+      ...UGANDA_CITIES.map((city) => ({ value: city.value, label: city.label })),
+    ],
+    []
+  );
+
+  const districtOptions = useMemo(
+    () => [
+      { value: "", label: "Select District" },
+      ...UGANDA_DISTRICTS.map((district) => ({ value: district.value, label: district.label })),
+    ],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -461,7 +488,17 @@ export default function CreateListingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      City/Province *
+                      Region *
+                    </label>
+                    <Select
+                      options={regionOptions}
+                      value={formData.region}
+                      onChange={(value) => updateFormData("region", value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      City *
                     </label>
                     <Select
                       options={cityOptions}
@@ -469,37 +506,62 @@ export default function CreateListingPage() {
                       onChange={(value) => updateFormData("city", value)}
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       District *
                     </label>
-                    <Input
-                      placeholder="e.g., Gasabo"
+                    <Select
+                      options={districtOptions}
                       value={formData.district}
-                      onChange={(e) => updateFormData("district", e.target.value)}
+                      onChange={(value) => updateFormData("district", value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      County/Municipality
+                    </label>
+                    <Input
+                      placeholder="e.g., Kampala County"
+                      value={formData.county}
+                      onChange={(e) => updateFormData("county", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Subcounty/Division
+                    </label>
+                    <Input
+                      placeholder="e.g., Kampala Sub County"
+                      value={formData.subcounty}
+                      onChange={(e) => updateFormData("subcounty", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Parish/Ward
+                    </label>
+                    <Input
+                      placeholder="e.g., Kampala Parish"
+                      value={formData.parish}
+                      onChange={(e) => updateFormData("parish", e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Sector *
+                    Village/Zone
                   </label>
                   <Input
-                    placeholder="e.g., Remera"
-                    value={formData.sector}
-                    onChange={(e) => updateFormData("sector", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Street Address
-                  </label>
-                  <Input
-                    placeholder="e.g., KG 123 Street, House 45"
-                    value={formData.address}
-                    onChange={(e) => updateFormData("address", e.target.value)}
+                    placeholder="e.g., Kololo Zone"
+                    value={formData.village}
+                    onChange={(e) => updateFormData("village", e.target.value)}
                   />
                 </div>
 
@@ -947,7 +1009,7 @@ export default function CreateListingPage() {
                     </h3>
                     <div className="flex items-center gap-2 text-slate-500 text-sm mb-4">
                       <MapPin className="w-4 h-4" />
-                      {[formData.sector, formData.district, formData.city]
+                      {[formData.village, formData.parish, formData.district, formData.city]
                         .filter(Boolean)
                         .join(", ") || "Location"}
                     </div>
@@ -973,6 +1035,55 @@ export default function CreateListingPage() {
                     <span className="font-medium text-slate-900 capitalize">
                       For {formData.listingType || "-"}
                     </span>
+                  </div>
+
+                  {/* Location Details */}
+                  <div className="py-3 border-b">
+                    <span className="text-slate-500 block mb-2">Location</span>
+                    <div className="space-y-1 text-sm">
+                      {formData.region && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Region:</span>
+                          <span className="font-medium text-slate-900">{formData.region}</span>
+                        </div>
+                      )}
+                      {formData.city && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">City:</span>
+                          <span className="font-medium text-slate-900">{formData.city}</span>
+                        </div>
+                      )}
+                      {formData.district && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">District:</span>
+                          <span className="font-medium text-slate-900">{formData.district}</span>
+                        </div>
+                      )}
+                      {formData.county && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">County:</span>
+                          <span className="font-medium text-slate-900">{formData.county}</span>
+                        </div>
+                      )}
+                      {formData.subcounty && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Subcounty:</span>
+                          <span className="font-medium text-slate-900">{formData.subcounty}</span>
+                        </div>
+                      )}
+                      {formData.parish && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Parish:</span>
+                          <span className="font-medium text-slate-900">{formData.parish}</span>
+                        </div>
+                      )}
+                      {formData.village && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Village:</span>
+                          <span className="font-medium text-slate-900">{formData.village}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Hotel-specific display */}
