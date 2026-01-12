@@ -38,6 +38,7 @@ class NotificationsService {
       console.log('[NOTIFICATIONS SERVICE] Fetching notifications with params:', params.toString());
       const response = await api.get<NotificationsResponse>(
         `/notifications?${params.toString()}`,
+        { timeout: 5000 } // Shorter timeout for notifications
       );
       console.log('[NOTIFICATIONS SERVICE] Received response:', {
         notificationsCount: response.data.notifications.length,
@@ -51,6 +52,11 @@ class NotificationsService {
         console.log('[NOTIFICATIONS SERVICE] User not authenticated, returning empty notifications');
         return { notifications: [], total: 0 };
       }
+      // Handle timeout errors
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        console.log('[NOTIFICATIONS SERVICE] Request timeout, returning empty notifications');
+        return { notifications: [], total: 0 };
+      }
       // Re-throw other errors
       throw error;
     }
@@ -61,11 +67,19 @@ class NotificationsService {
    */
   async getUnreadCount(): Promise<number> {
     try {
-      const response = await api.get<UnreadCountResponse>('/notifications/unread-count');
+      const response = await api.get<UnreadCountResponse>(
+        '/notifications/unread-count',
+        { timeout: 5000 } // Shorter timeout for notifications
+      );
       return response.data.count;
     } catch (error: any) {
       // Handle 401 Unauthorized silently (user not authenticated)
       if (error.response?.status === 401) {
+        return 0;
+      }
+      // Handle timeout errors
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        console.log('[NOTIFICATIONS SERVICE] Unread count timeout, returning 0');
         return 0;
       }
       // Re-throw other errors

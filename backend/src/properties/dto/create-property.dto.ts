@@ -96,6 +96,166 @@ export class CreatePropertyDto {
   @IsString()
   checkOutTime?: string; // HH:mm format
 
+  // Land-specific fields
+  @IsOptional()
+  @IsString()
+  landUseType?: string; // agricultural, residential, commercial, industrial, mixed
+
+  @IsOptional()
+  @IsString()
+  topography?: string; // flat, sloped, hilly, valley
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  roadAccess?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  waterAvailability?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  electricityAvailability?: boolean;
+
+  @IsOptional()
+  @IsString()
+  titleType?: string; // freehold, leasehold, mailo
+
+  @IsOptional()
+  @IsString()
+  soilQuality?: string;
+
+  // Commercial-specific fields
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  totalFloors?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  frontageWidth?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  ceilingHeight?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  loadingBays?: number;
+
+  @IsOptional()
+  @IsString()
+  footTrafficLevel?: string; // low, medium, high, very_high
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  threePhasePower?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  hvacSystem?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  fireSafety?: boolean;
+
+  // Warehouse-specific fields
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  clearHeight?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  loadingDocks?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  driveInAccess?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  floorLoadCapacity?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  columnSpacing?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  officeArea?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  coldStorage?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  rampAccess?: boolean;
+
+  // Office-specific fields
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  workstationCapacity?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  meetingRooms?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  receptionArea?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  elevator?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  conferenceRoom?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  serverRoom?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  cafeteria?: boolean;
+
   // Location fields
   @IsOptional()
   @IsString()

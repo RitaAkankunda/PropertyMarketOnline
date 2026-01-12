@@ -78,6 +78,113 @@ export class Property {
   @Column('simple-array', { nullable: true })
   amenities: string[];
 
+  // Hotel-specific fields
+  @Column({ nullable: true })
+  totalRooms: number;
+
+  @Column({ nullable: true })
+  starRating: number;
+
+  @Column({ nullable: true })
+  checkInTime: string;
+
+  @Column({ nullable: true })
+  checkOutTime: string;
+
+  // Land-specific fields
+  @Column({ nullable: true })
+  landUseType: string; // agricultural, residential, commercial, industrial, mixed
+
+  @Column({ nullable: true })
+  topography: string; // flat, sloped, hilly, valley
+
+  @Column({ nullable: true })
+  roadAccess: boolean;
+
+  @Column({ nullable: true })
+  waterAvailability: boolean;
+
+  @Column({ nullable: true })
+  electricityAvailability: boolean;
+
+  @Column({ nullable: true })
+  titleType: string; // freehold, leasehold, mailo
+
+  @Column({ nullable: true })
+  soilQuality: string;
+
+  // Commercial-specific fields
+  @Column({ nullable: true })
+  totalFloors: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  frontageWidth: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  ceilingHeight: number;
+
+  @Column({ nullable: true })
+  loadingBays: number;
+
+  @Column({ nullable: true })
+  footTrafficLevel: string; // low, medium, high, very_high
+
+  @Column({ nullable: true })
+  threePhasePower: boolean;
+
+  @Column({ nullable: true })
+  hvacSystem: boolean;
+
+  @Column({ nullable: true })
+  fireSafety: boolean;
+
+  // Warehouse-specific fields
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  clearHeight: number;
+
+  @Column({ nullable: true })
+  loadingDocks: number;
+
+  @Column({ nullable: true })
+  driveInAccess: boolean;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  floorLoadCapacity: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  columnSpacing: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  officeArea: number;
+
+  @Column({ nullable: true })
+  coldStorage: boolean;
+
+  @Column({ nullable: true })
+  rampAccess: boolean;
+
+  // Office-specific fields
+  @Column({ nullable: true })
+  workstationCapacity: number;
+
+  @Column({ nullable: true })
+  meetingRooms: number;
+
+  @Column({ nullable: true })
+  receptionArea: boolean;
+
+  @Column({ nullable: true })
+  elevator: boolean;
+
+  @Column({ nullable: true })
+  conferenceRoom: boolean;
+
+  @Column({ nullable: true })
+  serverRoom: boolean;
+
+  @Column({ nullable: true })
+  cafeteria: boolean;
+
   // Location fields
   @Column({ nullable: true })
   region: string; // Central, Eastern, Northern, Western

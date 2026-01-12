@@ -100,6 +100,44 @@ export default function CreateListingPage() {
     starRating: "",
     hotelAmenities: [] as string[],
 
+    // Land-specific fields
+    landUseType: "",
+    topography: "",
+    roadAccess: false,
+    waterAvailability: false,
+    electricityAvailability: false,
+    titleType: "",
+    soilQuality: "",
+
+    // Commercial-specific fields
+    totalFloors: "",
+    frontageWidth: "",
+    ceilingHeight: "",
+    loadingBays: "",
+    footTrafficLevel: "",
+    threePhasePower: false,
+    hvacSystem: false,
+    fireSafety: false,
+
+    // Warehouse-specific fields
+    clearHeight: "",
+    loadingDocks: "",
+    driveInAccess: false,
+    floorLoadCapacity: "",
+    columnSpacing: "",
+    officeArea: "",
+    coldStorage: false,
+    rampAccess: false,
+
+    // Office-specific fields
+    workstationCapacity: "",
+    meetingRooms: "",
+    receptionArea: false,
+    elevator: false,
+    conferenceRoom: false,
+    serverRoom: false,
+    cafeteria: false,
+
     // Photos
     images: [] as { id: string; url: string; file?: File }[],
 
@@ -206,24 +244,72 @@ export default function CreateListingPage() {
           latitude: 0.3476,
           longitude: 32.5825,
         },
-        features: formData.propertyType === "hotel" 
-          ? {
-              totalRooms: formData.totalRooms ? parseInt(formData.totalRooms) : undefined,
-              starRating: formData.starRating ? parseInt(formData.starRating) : undefined,
-              checkInTime: formData.checkInTime,
-              checkOutTime: formData.checkOutTime,
-              area: formData.size ? parseFloat(formData.size) : undefined,
-              areaUnit: formData.sizeUnit,
-              yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
-            }
-          : {
-              bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
-              bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
-              area: formData.size ? parseFloat(formData.size) : undefined,
-              areaUnit: formData.sizeUnit,
-              parking: formData.parking ? parseInt(formData.parking) : undefined,
-              yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
-            },
+        // Hotel-specific fields
+        ...(formData.propertyType === "hotel" && {
+          totalRooms: formData.totalRooms ? parseInt(formData.totalRooms) : undefined,
+          starRating: formData.starRating ? parseInt(formData.starRating) : undefined,
+          checkInTime: formData.checkInTime,
+          checkOutTime: formData.checkOutTime,
+        }),
+        
+        // Land-specific fields
+        ...(formData.propertyType === "land" && {
+          landUseType: formData.landUseType,
+          topography: formData.topography,
+          roadAccess: formData.roadAccess,
+          waterAvailability: formData.waterAvailability,
+          electricityAvailability: formData.electricityAvailability,
+          titleType: formData.titleType,
+          soilQuality: formData.soilQuality,
+        }),
+
+        // Commercial-specific fields
+        ...(formData.propertyType === "commercial" && {
+          totalFloors: formData.totalFloors ? parseInt(formData.totalFloors) : undefined,
+          frontageWidth: formData.frontageWidth ? parseFloat(formData.frontageWidth) : undefined,
+          ceilingHeight: formData.ceilingHeight ? parseFloat(formData.ceilingHeight) : undefined,
+          loadingBays: formData.loadingBays ? parseInt(formData.loadingBays) : undefined,
+          footTrafficLevel: formData.footTrafficLevel,
+          threePhasePower: formData.threePhasePower,
+          hvacSystem: formData.hvacSystem,
+          fireSafety: formData.fireSafety,
+        }),
+
+        // Warehouse-specific fields
+        ...(formData.propertyType === "warehouse" && {
+          clearHeight: formData.clearHeight ? parseFloat(formData.clearHeight) : undefined,
+          loadingDocks: formData.loadingDocks ? parseInt(formData.loadingDocks) : undefined,
+          driveInAccess: formData.driveInAccess,
+          floorLoadCapacity: formData.floorLoadCapacity ? parseFloat(formData.floorLoadCapacity) : undefined,
+          columnSpacing: formData.columnSpacing ? parseFloat(formData.columnSpacing) : undefined,
+          officeArea: formData.officeArea ? parseFloat(formData.officeArea) : undefined,
+          coldStorage: formData.coldStorage,
+          rampAccess: formData.rampAccess,
+        }),
+
+        // Office-specific fields
+        ...(formData.propertyType === "office" && {
+          workstationCapacity: formData.workstationCapacity ? parseInt(formData.workstationCapacity) : undefined,
+          meetingRooms: formData.meetingRooms ? parseInt(formData.meetingRooms) : undefined,
+          receptionArea: formData.receptionArea,
+          elevator: formData.elevator,
+          conferenceRoom: formData.conferenceRoom,
+          serverRoom: formData.serverRoom,
+          cafeteria: formData.cafeteria,
+        }),
+
+        // Residential-specific fields (for House, Apartment, Condo, Villa, Airbnb)
+        ...(["house", "apartment", "condo", "villa", "airbnb"].includes(formData.propertyType) && {
+          bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
+          bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
+          parking: formData.parking ? parseInt(formData.parking) : undefined,
+          furnished: formData.furnished,
+        }),
+
+        // Common fields for all property types
+        area: formData.size ? parseFloat(formData.size) : undefined,
+        areaUnit: formData.sizeUnit,
+        yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
         amenities: formData.propertyType === "hotel" ? formData.hotelAmenities : formData.amenities,
         images: uploadedImageUrls, // Use the uploaded image URLs
       };
@@ -579,12 +665,15 @@ export default function CreateListingPage() {
           {currentStep === 3 && (
             <Card className="p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                {formData.propertyType === "hotel" ? "Hotel Details" : "Property Features"}
+                {formData.propertyType === "hotel" ? "Hotel Details" :
+                 formData.propertyType === "land" ? "Land Details" :
+                 formData.propertyType === "commercial" ? "Commercial Property Details" :
+                 formData.propertyType === "warehouse" ? "Warehouse Details" :
+                 formData.propertyType === "office" ? "Office Space Details" :
+                 "Property Features"}
               </h2>
               <p className="text-slate-500 mb-6">
-                {formData.propertyType === "hotel" 
-                  ? "Add details about your hotel"
-                  : "Add details about your property"}
+                Add details about your {formData.propertyType || "property"}
               </p>
 
               <div className="space-y-6">
@@ -714,9 +803,630 @@ export default function CreateListingPage() {
                       </div>
                     </div>
                   </>
+                ) : formData.propertyType === "land" ? (
+                  <>
+                    {/* Land-specific fields */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Land Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 5"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Area Unit *
+                        </label>
+                        <Select
+                          options={[
+                            { value: "acres", label: "Acres" },
+                            { value: "hectares", label: "Hectares" },
+                            { value: "sqm", label: "Square Meters" },
+                          ]}
+                          value={formData.sizeUnit}
+                          onChange={(value) => updateFormData("sizeUnit", value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Land Use Type *
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Land Use" },
+                            { value: "agricultural", label: "Agricultural" },
+                            { value: "residential", label: "Residential" },
+                            { value: "commercial", label: "Commercial" },
+                            { value: "industrial", label: "Industrial" },
+                            { value: "mixed", label: "Mixed Use" },
+                          ]}
+                          value={formData.landUseType}
+                          onChange={(value) => updateFormData("landUseType", value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Topography
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Topography" },
+                            { value: "flat", label: "Flat" },
+                            { value: "sloped", label: "Sloped" },
+                            { value: "hilly", label: "Hilly" },
+                            { value: "valley", label: "Valley" },
+                          ]}
+                          value={formData.topography}
+                          onChange={(value) => updateFormData("topography", value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Title Type
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Title Type" },
+                            { value: "freehold", label: "Freehold" },
+                            { value: "leasehold", label: "Leasehold" },
+                            { value: "mailo", label: "Mailo" },
+                          ]}
+                          value={formData.titleType}
+                          onChange={(value) => updateFormData("titleType", value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Soil Quality (for agricultural land)
+                        </label>
+                        <Input
+                          placeholder="e.g., Loamy, fertile"
+                          value={formData.soilQuality}
+                          onChange={(e) => updateFormData("soilQuality", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Available Utilities
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="roadAccess"
+                            checked={formData.roadAccess}
+                            onChange={(e) => updateFormData("roadAccess", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="roadAccess" className="text-slate-700">
+                            Road Access
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="waterAvailability"
+                            checked={formData.waterAvailability}
+                            onChange={(e) => updateFormData("waterAvailability", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="waterAvailability" className="text-slate-700">
+                            Water Availability
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="electricityAvailability"
+                            checked={formData.electricityAvailability}
+                            onChange={(e) => updateFormData("electricityAvailability", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="electricityAvailability" className="text-slate-700">
+                            Electricity Availability
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : formData.propertyType === "commercial" ? (
+                  <>
+                    {/* Commercial-specific fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Floor Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 500"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Number of Floors
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 2"
+                          min="1"
+                          value={formData.totalFloors}
+                          onChange={(e) => updateFormData("totalFloors", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Frontage Width (meters)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 15"
+                          value={formData.frontageWidth}
+                          onChange={(e) => updateFormData("frontageWidth", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Ceiling Height (meters)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 3.5"
+                          step="0.1"
+                          value={formData.ceilingHeight}
+                          onChange={(e) => updateFormData("ceilingHeight", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Loading Bays
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.loadingBays}
+                          onChange={(e) => updateFormData("loadingBays", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spaces
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Foot Traffic Level
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Level" },
+                            { value: "low", label: "Low" },
+                            { value: "medium", label: "Medium" },
+                            { value: "high", label: "High" },
+                            { value: "very_high", label: "Very High" },
+                          ]}
+                          value={formData.footTrafficLevel}
+                          onChange={(value) => updateFormData("footTrafficLevel", value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Features & Amenities
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="threePhasePower"
+                            checked={formData.threePhasePower}
+                            onChange={(e) => updateFormData("threePhasePower", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="threePhasePower" className="text-slate-700">
+                            3-Phase Power Available
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="hvacSystem"
+                            checked={formData.hvacSystem}
+                            onChange={(e) => updateFormData("hvacSystem", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="hvacSystem" className="text-slate-700">
+                            HVAC System
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="fireSafety"
+                            checked={formData.fireSafety}
+                            onChange={(e) => updateFormData("fireSafety", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="fireSafety" className="text-slate-700">
+                            Fire Safety Systems
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : formData.propertyType === "warehouse" ? (
+                  <>
+                    {/* Warehouse-specific fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Floor Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 2000"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Clear Height (meters) *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 8"
+                          step="0.1"
+                          value={formData.clearHeight}
+                          onChange={(e) => updateFormData("clearHeight", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Loading Docks
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.loadingDocks}
+                          onChange={(e) => updateFormData("loadingDocks", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Floor Load Capacity (kg/sqm)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 1000"
+                          value={formData.floorLoadCapacity}
+                          onChange={(e) => updateFormData("floorLoadCapacity", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Column Spacing (meters)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 10"
+                          step="0.1"
+                          value={formData.columnSpacing}
+                          onChange={(e) => updateFormData("columnSpacing", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Office Area (sqm)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 100"
+                          value={formData.officeArea}
+                          onChange={(e) => updateFormData("officeArea", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spaces
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Warehouse Features
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="driveInAccess"
+                            checked={formData.driveInAccess}
+                            onChange={(e) => updateFormData("driveInAccess", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="driveInAccess" className="text-slate-700">
+                            Drive-In Access
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="coldStorage"
+                            checked={formData.coldStorage}
+                            onChange={(e) => updateFormData("coldStorage", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="coldStorage" className="text-slate-700">
+                            Cold Storage Capability
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="rampAccess"
+                            checked={formData.rampAccess}
+                            onChange={(e) => updateFormData("rampAccess", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="rampAccess" className="text-slate-700">
+                            Ramp Access
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : formData.propertyType === "office" ? (
+                  <>
+                    {/* Office-specific fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Floor Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 300"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Number of Floors
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 1"
+                          min="1"
+                          value={formData.totalFloors}
+                          onChange={(e) => updateFormData("totalFloors", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Workstation Capacity
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 20"
+                          value={formData.workstationCapacity}
+                          onChange={(e) => updateFormData("workstationCapacity", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Meeting Rooms
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.meetingRooms}
+                          onChange={(e) => updateFormData("meetingRooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spaces
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Office Features
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="receptionArea"
+                            checked={formData.receptionArea}
+                            onChange={(e) => updateFormData("receptionArea", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="receptionArea" className="text-slate-700">
+                            Reception Area
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="elevator"
+                            checked={formData.elevator}
+                            onChange={(e) => updateFormData("elevator", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="elevator" className="text-slate-700">
+                            Elevator/Lift
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="conferenceRoom"
+                            checked={formData.conferenceRoom}
+                            onChange={(e) => updateFormData("conferenceRoom", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="conferenceRoom" className="text-slate-700">
+                            Conference Room
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="serverRoom"
+                            checked={formData.serverRoom}
+                            onChange={(e) => updateFormData("serverRoom", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="serverRoom" className="text-slate-700">
+                            Server Room
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="cafeteria"
+                            checked={formData.cafeteria}
+                            onChange={(e) => updateFormData("cafeteria", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="cafeteria" className="text-slate-700">
+                            Cafeteria/Kitchenette
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Standard Amenities
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {["Air Conditioning", "Backup Generator", "Internet Ready", "Security", "CCTV", "Parking"].map((amenity) => (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
+                              formData.amenities.includes(amenity)
+                                ? "bg-blue-50 border-blue-500 text-blue-700"
+                                : "border-slate-200 hover:border-blue-500"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center",
+                                formData.amenities.includes(amenity)
+                                  ? "bg-blue-600 border-blue-600"
+                                  : "border-slate-300"
+                              )}
+                            >
+                              {formData.amenities.includes(amenity) && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            {amenity}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <>
-                    {/* Regular property fields */}
+                    {/* Regular property fields (House, Apartment, Condo, Villa, Airbnb) */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
