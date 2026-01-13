@@ -50,6 +50,13 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get('dashboard/analytics')
+  async getDashboardAnalytics(@Request() req) {
+    const userId = req.user.sub;
+    return this.usersService.getDashboardAnalytics(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Patch('profile')
   updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(req.user.sub, updateUserDto);

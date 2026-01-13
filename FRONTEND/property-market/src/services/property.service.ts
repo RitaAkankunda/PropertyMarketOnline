@@ -38,7 +38,19 @@ export interface CreatePropertyData {
 export const propertyService = {
   // Get all properties with filters
   async getProperties(
-    filters?: PropertyFilters,
+    filters?: PropertyFilters & {
+      north?: number;
+      south?: number;
+      east?: number;
+      west?: number;
+      centerLat?: number;
+      centerLng?: number;
+      radius?: number;
+      excludeId?: string;
+      city?: string;
+      minPrice?: number;
+      maxPrice?: number;
+    },
     page: number = 1,
     pageSize: number = 12
   ): Promise<PaginatedResponse<Property>> {
@@ -47,6 +59,10 @@ export const propertyService = {
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
+          // Skip map-specific params and special params - they'll be added separately
+          if (['north', 'south', 'east', 'west', 'centerLat', 'centerLng', 'radius', 'excludeId', 'city', 'minPrice', 'maxPrice'].includes(key)) {
+            return;
+          }
           if (Array.isArray(value)) {
             value.forEach((v) => params.append(key, v));
           } else {
@@ -54,6 +70,21 @@ export const propertyService = {
           }
         }
       });
+
+      // Add special filters
+      if (filters.excludeId) params.append('excludeId', filters.excludeId);
+      if (filters.city) params.append('city', filters.city);
+      if (filters.minPrice !== undefined) params.append('minPrice', String(filters.minPrice));
+      if (filters.maxPrice !== undefined) params.append('maxPrice', String(filters.maxPrice));
+
+      // Add map bounds parameters if provided
+      if (filters.north !== undefined) params.append('north', String(filters.north));
+      if (filters.south !== undefined) params.append('south', String(filters.south));
+      if (filters.east !== undefined) params.append('east', String(filters.east));
+      if (filters.west !== undefined) params.append('west', String(filters.west));
+      if (filters.centerLat !== undefined) params.append('centerLat', String(filters.centerLat));
+      if (filters.centerLng !== undefined) params.append('centerLng', String(filters.centerLng));
+      if (filters.radius !== undefined) params.append('radius', String(filters.radius));
     }
     
     params.append("page", String(page));
@@ -179,21 +210,40 @@ export const propertyService = {
   },
 
   // Create new property listing
-  async createProperty(data: CreatePropertyData): Promise<Property> {
+  async createProperty(data: CreatePropertyData | any): Promise<Property> {
     // Transform data to match backend DTO structure
+    // Handle both old format (with location object) and new format (with top-level lat/lng)
+    const latitude = (data as any).latitude ?? data.location?.latitude ?? 0.3476;
+    const longitude = (data as any).longitude ?? data.location?.longitude ?? 32.5825;
+    
     const backendData = {
       title: data.title,
       description: data.description,
       price: data.price,
       propertyType: data.propertyType,
       listingType: data.listingType || 'sale', // Default to 'sale' if not provided
-      bedrooms: data.features?.bedrooms,
-      latitude: data.location?.latitude || 0.3476, // Default to Kampala coordinates
-      longitude: data.location?.longitude || 32.5825,
+      bedrooms: data.features?.bedrooms ?? data.bedrooms,
+      // Location text fields
+      region: (data as any).region ?? data.location?.region,
+      city: (data as any).city ?? data.location?.city,
+      district: (data as any).district ?? data.location?.district,
+      county: (data as any).county ?? data.location?.county,
+      subcounty: (data as any).subcounty ?? data.location?.subcounty,
+      parish: (data as any).parish ?? data.location?.parish,
+      village: (data as any).village ?? data.location?.village,
+      // Coordinates (required at top level)
+      latitude: latitude,
+      longitude: longitude,
+      // Include all other fields from data
+      ...(data as any),
+      // Override with correct coordinates
+      latitude,
+      longitude,
       images: (data as any).images || [], // Include images if provided
     };
     
     console.log("Sending property data to backend:", backendData);
+    console.log("Coordinates being sent:", { latitude, longitude });
     
     const response = await api.post<Property>("/properties", backendData);
     
@@ -459,7 +509,7 @@ export const propertyService = {
 
   // Record property view
   async recordView(propertyId: string): Promise<void> {
-    await api.post(`/listings/${propertyId}/view`);
+    await api.post(`/properties/${propertyId}/view`);
   },
 
   // Submit lead/inquiry

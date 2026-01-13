@@ -264,6 +264,22 @@ export class Property {
   @Column({ nullable: true })
   negotiable: boolean;
 
+  // Price breakdown fields (for transparent pricing)
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  basePrice: number; // Base price before fees
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  serviceFee: number; // Platform/service fee
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  tax: number; // Tax amount
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  otherFees: number; // Other fees (cleaning, etc.)
+
+  @Column({ type: 'text', nullable: true })
+  priceBreakdown: string; // JSON string for flexible breakdown structure
+
   // Location fields
   @Column({ nullable: true })
   region: string; // Central, Eastern, Northern, Western
@@ -294,6 +310,10 @@ export class Property {
 
   @Column('simple-array', { nullable: true })
   images: string[];
+
+  // Analytics fields
+  @Column({ type: 'int', default: 0 })
+  views: number; // Total number of views
 
   @ManyToOne(() => User, (user) => user.properties)
   owner: User;

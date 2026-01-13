@@ -23,6 +23,23 @@ import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS, HOTEL_AMENITIES, HOTEL_ROOM_T
 import { propertyService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
+import dynamic from "next/dynamic";
+
+// Dynamically import LocationPicker to avoid SSR issues with Leaflet
+const LocationPicker = dynamic(
+  () => import("@/components/maps").then((mod) => ({ default: mod.LocationPicker })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-[400px] bg-gray-100 flex items-center justify-center rounded-lg">
+        <div className="flex items-center gap-2 text-gray-500">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span>Loading map...</span>
+        </div>
+      </div>
+    )
+  }
+);
 
 const steps = [
   { id: 1, title: "Basic Info", description: "Property type & listing details" },
@@ -82,6 +99,8 @@ export default function CreateListingPage() {
     subcounty: "",
     parish: "",
     village: "",
+    latitude: 0.3476, // Default to Kampala
+    longitude: 32.5825, // Default to Kampala
 
     // Features
     bedrooms: "",
@@ -292,19 +311,17 @@ export default function CreateListingPage() {
         listingType: formData.listingType,
         price: basePrice,
         currency: formData.currency || "UGX",
-        location: {
-          region: formData.region,
-          city: formData.city,
-          district: formData.district,
-          county: formData.county,
-          subcounty: formData.subcounty,
-          parish: formData.parish,
-          village: formData.village,
-          country: "Uganda",
-          // Default coordinates for Kampala if not provided
-          latitude: 0.3476,
-          longitude: 32.5825,
-        },
+        // Location fields (text-based)
+        region: formData.region,
+        city: formData.city,
+        district: formData.district,
+        county: formData.county,
+        subcounty: formData.subcounty,
+        parish: formData.parish,
+        village: formData.village,
+        // Coordinates (required by backend - must be at top level)
+        latitude: Number(formData.latitude) || 0.3476,
+        longitude: Number(formData.longitude) || 32.5825,
         // Hotel-specific fields
         ...(formData.propertyType === "hotel" && {
           totalRooms: formData.totalRooms ? parseInt(formData.totalRooms) : undefined,
@@ -423,6 +440,14 @@ export default function CreateListingPage() {
         amenities: formData.propertyType === "hotel" ? formData.hotelAmenities : formData.amenities,
         images: uploadedImageUrls, // Use the uploaded image URLs
       };
+
+      // Debug: Log coordinates before submission
+      console.log("Submitting property with coordinates:", {
+        latitude: propertyData.latitude,
+        longitude: propertyData.longitude,
+        city: propertyData.city,
+        district: propertyData.district,
+      });
 
       const createdProperty = await propertyService.createProperty(propertyData);
       
@@ -761,11 +786,26 @@ export default function CreateListingPage() {
                   />
                 </div>
 
-                {/* Map Placeholder */}
-                <div className="border-2 border-dashed rounded-xl p-8 text-center">
-                  <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 mb-2">Pin location on map</p>
-                  <p className="text-xs text-slate-400">Coming soon: Click on map to set exact location</p>
+                {/* Location Picker Map */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Pin Location on Map *
+                  </label>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Click on the map or search to set the exact location of your property. This helps buyers find your property easily.
+                  </p>
+                  <LocationPicker
+                    initialPosition={
+                      formData.latitude && formData.longitude && formData.latitude !== 0.3476 && formData.longitude !== 32.5825
+                        ? { lat: formData.latitude, lng: formData.longitude }
+                        : undefined
+                    }
+                    onLocationSelect={(location) => {
+                      updateFormData("latitude", location.lat);
+                      updateFormData("longitude", location.lng);
+                    }}
+                    className="w-full"
+                  />
                 </div>
               </div>
             </Card>

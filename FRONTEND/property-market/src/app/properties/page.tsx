@@ -2,9 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Grid, List, Map, Building2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Grid, List, Map, Building2, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui";
-import { PropertyFilters, PropertyGrid } from "@/components/properties";
+import { PropertyFilters, PropertyGrid, AdvancedFiltersSidebar, PropertiesMapView } from "@/components/properties";
 import { propertyService } from "@/services";
 import type { Property, PropertyFilters as PropertyFiltersType, PropertyType } from "@/types";
 
@@ -23,12 +23,13 @@ const propertyTypeLabels: Record<string, string> = {
 function PropertiesPage() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<PropertyFiltersType>({});
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
   const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertiesByType, setPropertiesByType] = useState<Record<string, Property[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const propertiesPerCategoryPerPage = 4; // Show 4 properties per category per page
 
   // Get property type from URL
@@ -160,56 +161,121 @@ function PropertiesPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white border-b sticky top-16 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <PropertyFilters
-            filters={filters}
-            onFilterChange={setFilters}
-            showAdvanced={false}
-          />
-        </div>
-      </div>
-
-      {/* Results */}
-      <div className="container mx-auto px-4 py-8">
-        {/* Results Header */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-slate-600">
-            {isLoading ? (
-              "Loading properties..."
-            ) : (
-              <>
-                Showing <span className="font-medium">{totalProperties}</span> properties across <span className="font-medium">{propertyTypesWithProperties.length}</span> categories
-                {totalPages > 1 && (
-                  <> • Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span></>
-                )}
-              </>
-            )}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="icon"
-              onClick={() => setViewMode("grid")}
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="icon"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon">
-              <Map className="h-4 w-4" />
-            </Button>
+      {/* Filters - Hidden in map view (filters available via floating button) */}
+      {viewMode !== "map" && (
+        <div className="bg-white border-b sticky top-16 z-40">
+          <div className="container mx-auto px-4 py-4">
+            <PropertyFilters
+              filters={filters}
+              onFilterChange={setFilters}
+              showAdvanced={false}
+            />
           </div>
         </div>
+      )}
 
-        {/* Error State */}
-        {error && (
+      {/* Floating Filter Button for Map View */}
+      {viewMode === "map" && (
+        <>
+          <div className="fixed top-20 right-4 z-50">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="shadow-lg"
+            >
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+          </div>
+          {/* Mobile Advanced Filters - Overlay for Map View */}
+          <div className="lg:hidden">
+            <AdvancedFiltersSidebar
+              filters={filters}
+              onFilterChange={setFilters}
+              isOpen={showAdvancedFilters}
+              onClose={() => setShowAdvancedFilters(false)}
+              propertyCount={totalProperties}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Results with Sidebar */}
+      <div className={viewMode === "map" ? "w-full relative" : "container mx-auto px-4 py-8"}>
+        <div className={viewMode === "map" ? "" : "flex gap-6"}>
+          {/* Advanced Filters Sidebar - Desktop (hidden in map view) */}
+          {viewMode !== "map" && (
+            <div className="hidden lg:block flex-shrink-0">
+              <AdvancedFiltersSidebar
+                filters={filters}
+                onFilterChange={setFilters}
+                isOpen={true}
+                onClose={() => {}}
+                propertyCount={totalProperties}
+              />
+            </div>
+          )}
+
+          {/* Mobile Advanced Filters - Overlay (for grid/list view only) */}
+          {viewMode !== "map" && (
+            <div className="lg:hidden">
+              <AdvancedFiltersSidebar
+                filters={filters}
+                onFilterChange={setFilters}
+                isOpen={showAdvancedFilters}
+                onClose={() => setShowAdvancedFilters(false)}
+                propertyCount={totalProperties}
+              />
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className={viewMode === "map" ? "w-full" : "flex-1 min-w-0"}>
+            {/* Results Header - Hidden in map view */}
+            {viewMode !== "map" && (
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-slate-600">
+                  {isLoading ? (
+                    "Loading properties..."
+                  ) : (
+                    <>
+                      Showing <span className="font-medium">{totalProperties}</span> properties across <span className="font-medium">{propertyTypesWithProperties.length}</span> categories
+                      {totalPages > 1 && (
+                        <> • Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span></>
+                      )}
+                    </>
+                  )}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "map" ? "default" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("map")}
+                    title="Map View"
+                  >
+                    <Map className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+        {/* Error State - Hidden in map view */}
+        {viewMode !== "map" && error && (
           <div className="text-center py-12">
             <div className="text-red-500 mb-4">{error}</div>
             <Button onClick={() => window.location.reload()}>
@@ -218,8 +284,8 @@ function PropertiesPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!isLoading && !error && properties.length === 0 && (
+        {/* Empty State - Hidden in map view */}
+        {viewMode !== "map" && !isLoading && !error && properties.length === 0 && (
           <div className="text-center py-16">
             <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-700 mb-2">
@@ -236,8 +302,19 @@ function PropertiesPage() {
           </div>
         )}
 
-        {/* Properties Grouped by Category */}
-        {!isLoading && propertyTypesWithProperties.length > 0 && (
+        {/* Map View */}
+        {viewMode === "map" && !isLoading && (
+          <PropertiesMapView
+            filters={filters}
+            onPropertiesChange={(props) => {
+              // Update properties when map view loads
+              setProperties(props);
+            }}
+          />
+        )}
+
+        {/* Grid/List View - Properties Grouped by Category */}
+        {viewMode !== "map" && !isLoading && propertyTypesWithProperties.length > 0 && (
           <div className="space-y-12">
             {propertyTypesWithProperties.map((type: string) => {
               const typeProperties = propertiesByType[type];
@@ -325,6 +402,8 @@ function PropertiesPage() {
             </Button>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

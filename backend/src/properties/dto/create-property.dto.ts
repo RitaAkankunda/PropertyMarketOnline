@@ -402,6 +402,35 @@ export class CreatePropertyDto {
   @Type(() => Boolean)
   negotiable?: boolean;
 
+  // Price breakdown fields
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  basePrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  serviceFee?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  tax?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  otherFees?: number;
+
+  @IsOptional()
+  @IsString()
+  priceBreakdown?: string; // JSON string for flexible breakdown
+
   // Location fields
   @IsOptional()
   @IsString()

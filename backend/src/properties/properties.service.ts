@@ -57,6 +57,15 @@ export class PropertiesService {
       bedrooms,
       page = 1,
       limit = 10,
+      north,
+      south,
+      east,
+      west,
+      centerLat,
+      centerLng,
+      radius,
+      excludeId,
+      city,
     } = queryDto;
 
     // Build query without owner join for better performance on list views
@@ -88,11 +97,55 @@ export class PropertiesService {
       query.andWhere('property.bedrooms = :bedrooms', { bedrooms });
     }
 
+    // Exclude specific property (for similar properties)
+    if (excludeId) {
+      query.andWhere('property.id != :excludeId', { excludeId });
+    }
+
+    // Filter by city
+    if (city) {
+      query.andWhere('property.city = :city', { city });
+    }
+
+    // Map bounds filtering (for map view)
+    if (north !== undefined && south !== undefined && east !== undefined && west !== undefined) {
+      query.andWhere('property.latitude IS NOT NULL');
+      query.andWhere('property.longitude IS NOT NULL');
+      query.andWhere('property.latitude BETWEEN :south AND :north', { south, north });
+      query.andWhere('property.longitude BETWEEN :west AND :east', { west, east });
+    }
+
+    // Radius-based search (alternative to bounds)
+    if (centerLat !== undefined && centerLng !== undefined && radius !== undefined) {
+      query.andWhere('property.latitude IS NOT NULL');
+      query.andWhere('property.longitude IS NOT NULL');
+      
+      // Using Haversine formula for distance calculation
+      // PostgreSQL with PostGIS would be better, but this works for basic needs
+      // For now, we'll use a bounding box approximation
+      // 1 degree latitude ≈ 111 km, 1 degree longitude ≈ 111 km * cos(latitude)
+      const latDelta = radius / 111;
+      const lngDelta = radius / (111 * Math.cos((centerLat * Math.PI) / 180));
+      
+      query.andWhere('property.latitude BETWEEN :minLat AND :maxLat', {
+        minLat: centerLat - latDelta,
+        maxLat: centerLat + latDelta,
+      });
+      query.andWhere('property.longitude BETWEEN :minLng AND :maxLng', {
+        minLng: centerLng - lngDelta,
+        maxLng: centerLng + lngDelta,
+      });
+    }
+
     // Add ordering for consistent results
     query.orderBy('property.createdAt', 'DESC');
 
-    const skip = (page - 1) * limit;
-    query.skip(skip).take(limit);
+    // For map view, don't paginate (show all markers in bounds)
+    // For list/grid view, apply pagination
+    if (!north && !centerLat) {
+      const skip = (page - 1) * limit;
+      query.skip(skip).take(limit);
+    }
 
     // Use getManyAndCount for pagination
     const [items, total] = await query.getManyAndCount();
@@ -170,5 +223,13 @@ export class PropertiesService {
       order: { createdAt: 'DESC' },
       take: limit,
     });
+  }
+
+  async recordView(propertyId: string): Promise<void> {
+    await this.propertyRepository.increment(
+      { id: propertyId },
+      'views',
+      1,
+    );
   }
 }

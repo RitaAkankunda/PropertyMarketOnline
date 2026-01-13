@@ -20,6 +20,8 @@ import { DatabaseConfig } from './config/database.config';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { PropertyReviewsModule } from './property-reviews/property-reviews.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { BookingsModule } from './bookings/bookings.module';
     HealthModule,
     NotificationsModule,
     BookingsModule,
+    FavoritesModule,
+    PropertyReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

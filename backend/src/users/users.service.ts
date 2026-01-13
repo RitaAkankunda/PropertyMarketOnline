@@ -6,6 +6,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRole } from './enums/user-role.enum';
 import { PropertiesService } from 'src/properties/properties.service';
+import { Booking, BookingType, BookingStatus } from 'src/bookings/entities/booking.entity';
+import { Property } from 'src/properties/entities/property.entity';
 
 export interface CreateOAuthUserDto {
   email: string;
@@ -22,6 +24,10 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly propertiesService: PropertiesService,
+    @InjectRepository(Booking)
+    private readonly bookingRepository: Repository<Booking>,
+    @InjectRepository(Property)
+    private readonly propertyRepository: Repository<Property>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -349,6 +355,130 @@ export class UsersService {
     if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
     if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
     return dateObj.toLocaleDateString();
+  }
+
+  async getDashboardAnalytics(userId: string) {
+    // Get user's properties
+    const properties = await this.propertyRepository.find({
+      where: { ownerId: userId },
+    });
+
+    const totalProperties = properties.length;
+
+    // Calculate total views from actual view counts on properties
+    const totalViews = properties.reduce((sum, property) => {
+      return sum + (property.views || 0);
+    }, 0);
+
+    // Get bookings for user's properties (inquiries/messages)
+    const bookings = await this.bookingRepository
+      .createQueryBuilder('booking')
+      .innerJoin('booking.property', 'property')
+      .where('property.ownerId = :userId', { userId })
+      .getMany();
+
+    // Calculate total messages (inquiries count as messages)
+    const totalMessages = bookings.filter(
+      (b) => b.type === BookingType.INQUIRY,
+    ).length;
+
+    // Calculate revenue from completed bookings with completed payments
+    const completedBookings = bookings.filter(
+      (b) =>
+        b.status === BookingStatus.COMPLETED &&
+        b.paymentStatus === 'completed',
+    );
+
+    const revenue = completedBookings.reduce((sum, booking) => {
+      return sum + (Number(booking.paymentAmount) || 0);
+    }, 0);
+
+    // Calculate change percentages (comparing last 30 days vs previous 30 days)
+    const now = new Date();
+    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const previous30Days = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    // Calculate views change from properties created in last 30 days vs previous 30 days
+    // We'll use a simple approach: compare properties created in each period
+    // For more accurate tracking, you'd want a property_views table with timestamps
+    const recentPropertiesViews = properties
+      .filter((p) => new Date(p.createdAt) >= last30Days)
+      .reduce((sum, p) => sum + (p.views || 0), 0);
+    const previousPropertiesViews = properties
+      .filter(
+        (p) =>
+          new Date(p.createdAt) >= previous30Days &&
+          new Date(p.createdAt) < last30Days,
+      )
+      .reduce((sum, p) => sum + (p.views || 0), 0);
+
+    const viewsChange =
+      previousPropertiesViews > 0
+        ? (((recentPropertiesViews - previousPropertiesViews) /
+            previousPropertiesViews) *
+            100).toFixed(1)
+        : recentPropertiesViews > 0
+          ? '100'
+          : '0';
+
+    const recentMessages = recentBookings.filter(
+      (b) => b.type === BookingType.INQUIRY,
+    ).length;
+    const previousMessages = previousBookings.filter(
+      (b) => b.type === BookingType.INQUIRY,
+    ).length;
+
+    const messagesChange =
+      previousMessages > 0
+        ? (((recentMessages - previousMessages) / previousMessages) * 100).toFixed(1)
+        : recentMessages > 0
+          ? '100'
+          : '0';
+
+    const recentProperties = properties.filter(
+      (p) => new Date(p.createdAt) >= last30Days,
+    ).length;
+    const previousProperties = properties.filter(
+      (p) =>
+        new Date(p.createdAt) >= previous30Days &&
+        new Date(p.createdAt) < last30Days,
+    ).length;
+
+    const propertyChange =
+      previousProperties > 0
+        ? (((recentProperties - previousProperties) / previousProperties) * 100).toFixed(1)
+        : recentProperties > 0
+          ? '100'
+          : '0';
+
+    const recentRevenue = completedBookings
+      .filter((b) => new Date(b.createdAt) >= last30Days)
+      .reduce((sum, booking) => sum + (Number(booking.paymentAmount) || 0), 0);
+    const previousRevenue = completedBookings
+      .filter(
+        (b) =>
+          new Date(b.createdAt) >= previous30Days &&
+          new Date(b.createdAt) < last30Days,
+      )
+      .reduce((sum, booking) => sum + (Number(booking.paymentAmount) || 0), 0);
+
+    const revenueChange =
+      previousRevenue > 0
+        ? (((recentRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1)
+        : recentRevenue > 0
+          ? '100'
+          : '0';
+
+    return {
+      totalProperties,
+      totalViews,
+      totalMessages,
+      revenue,
+      propertyChange: `${propertyChange}%`,
+      viewsChange: `${viewsChange}%`,
+      messagesChange: `${messagesChange}`,
+      revenueChange: `${revenueChange}%`,
+    };
   }
 
 }

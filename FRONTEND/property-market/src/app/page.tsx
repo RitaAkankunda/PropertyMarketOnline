@@ -32,6 +32,7 @@ import { APP_NAME } from "@/lib/constants";
 import { propertyService, providerService } from "@/services";
 import api from "@/services/api";
 import type { Property, PropertyType } from "@/types";
+import { RecentlyViewedProperties } from "@/components/properties";
 
 // Hero Section Categories
 const heroCategories = [
@@ -700,6 +701,13 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Recently Viewed Properties Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <RecentlyViewedProperties maxItems={8} />
         </div>
       </section>
 

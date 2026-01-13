@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  Heart,
   MapPin,
   Bed,
   Bath,
@@ -18,12 +17,14 @@ import {
   Loader2,
   Calendar,
   MessageSquare,
+  ZoomIn,
 } from "lucide-react";
 import { Button, Badge, Card } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
 import { propertyService } from "@/services/property.service";
 import { useAuth } from "@/hooks";
-import { PropertyViewingModal, PropertyInquiryModal, PropertyPaymentModal } from "@/components/properties";
+import { PropertyViewingModal, PropertyInquiryModal, PropertyPaymentModal, ImageLightbox, PropertyWishlistButton, PropertyBadges, PropertyReviews, PropertyRating, SimilarProperties, PriceBreakdown } from "@/components/properties";
+import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import type { Property } from "@/types";
 
 // Mockup property data
@@ -251,13 +252,14 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [isViewingModalOpen, setIsViewingModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { addToRecentlyViewed } = useRecentlyViewed();
 
   // Restore viewing modal after login/registration
   useEffect(() => {
@@ -284,6 +286,18 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
         console.log('Property owner:', data.owner);
         console.log('Property ownerId:', (data as any).ownerId);
         setProperty(data);
+        // Add to recently viewed
+        if (data) {
+          addToRecentlyViewed(data);
+        }
+        
+        // Record view (don't wait for it, fire and forget)
+        try {
+          await propertyService.recordView(id);
+        } catch (viewError) {
+          // Silently fail - view recording shouldn't break the page
+          console.warn('Failed to record view:', viewError);
+        }
       } catch (err: any) {
         console.error("Failed to fetch property:", err);
         setError(err.message || "Failed to load property");
@@ -392,12 +406,12 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Image Slideshow */}
         <Card className="mb-8 overflow-hidden">
-          <div className="relative aspect-video bg-slate-900">
+          <div className="relative aspect-video bg-slate-900 cursor-pointer group" onClick={() => setIsLightboxOpen(true)}>
             {propertyImages.length > 0 ? (
               <img
                 src={propertyImages[currentImageIndex]}
                 alt={`${property.title} - Image ${currentImageIndex + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
                 onError={(e) => {
                   console.error('Image failed to load:', propertyImages[currentImageIndex]);
                   const target = e.target as HTMLImageElement;
@@ -439,16 +453,23 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
               </div>
             )}
 
-            {/* Favorite Button */}
-            <button
-              onClick={() => setIsFavorite(!isFavorite)}
-              className={cn(
-                "absolute top-4 right-4 p-3 rounded-full shadow-lg transition",
-                isFavorite ? "bg-red-500 text-white" : "bg-white/90 hover:bg-white text-slate-700"
-              )}
-            >
-              <Heart className={cn("w-5 h-5", isFavorite && "fill-current")} />
-            </button>
+            {/* View Fullscreen Button */}
+            {propertyImages.length > 0 && (
+              <button
+                onClick={() => setIsLightboxOpen(true)}
+                className="absolute top-4 right-20 p-3 rounded-full bg-white/90 hover:bg-white shadow-lg transition text-slate-700"
+                aria-label="View fullscreen"
+              >
+                <ZoomIn className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Wishlist Button */}
+            {property && (
+              <div className="absolute top-4 right-4">
+                <PropertyWishlistButton property={property} size="md" />
+              </div>
+            )}
           </div>
 
           {/* Thumbnail Navigation */}
@@ -485,14 +506,41 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
         <Card className="mb-8">
           <div className="p-6">
             <div className="flex items-start justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">{property.title}</h1>
+              <div className="flex-1">
+                <div className="flex items-start gap-3 mb-2">
+                  <h1 className="text-3xl font-bold text-slate-900">{property.title}</h1>
+                  <PropertyBadges property={property} />
+                </div>
                 <div className="flex items-center text-slate-600 mb-4">
                   <MapPin className="w-4 h-4 mr-2" />
                   <span>{property.location.address}, {property.location.district}, {property.location.city}</span>
                 </div>
+                {/* Quick Navigation */}
+                <div className="flex items-center gap-4 text-sm mt-4">
+                  <a 
+                    href="#reviews" 
+                    className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    ⭐ View Reviews
+                  </a>
+                  <span className="text-slate-300">|</span>
+                  <a 
+                    href="#amenities" 
+                    className="text-slate-600 hover:text-slate-700 hover:underline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('amenities-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Amenities
+                  </a>
+                </div>
               </div>
-              <Badge className="bg-blue-600 text-white text-lg px-4 py-2 capitalize">
+              <Badge className="bg-blue-600 text-white text-lg px-4 py-2 capitalize flex-shrink-0">
                 For {property.listingType}
               </Badge>
             </div>
@@ -503,6 +551,11 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
               <p className="text-4xl font-bold text-blue-600">
                 {formatCurrency(property.price, property.currency)}
               </p>
+            </div>
+
+            {/* Price Breakdown */}
+            <div className="mb-6">
+              <PriceBreakdown property={property} />
             </div>
 
             {/* Features Grid */}
@@ -671,6 +724,38 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
       />
+
+      {/* Image Lightbox */}
+      {property && propertyImages.length > 0 && (
+        <ImageLightbox
+          images={propertyImages}
+          initialIndex={currentImageIndex}
+          isOpen={isLightboxOpen}
+          onClose={() => setIsLightboxOpen(false)}
+          propertyTitle={property.title}
+        />
+      )}
+
+      {/* Reviews Section */}
+      {property && (
+        <div id="reviews-section" className="mt-12 scroll-mt-20">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-slate-900">Reviews & Ratings</h2>
+            <PropertyRating propertyId={property.id} size="md" showReviewCount={true} />
+          </div>
+          <PropertyReviews 
+            propertyId={property.id} 
+            propertyOwnerId={(property as any).ownerId || (property as any).owner?.id}
+          />
+        </div>
+      )}
+
+      {/* Similar Properties Section */}
+      {property && (
+        <div className="mt-12">
+          <SimilarProperties property={property} maxItems={4} />
+        </div>
+      )}
     </div>
   );
 }

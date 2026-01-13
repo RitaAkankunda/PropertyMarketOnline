@@ -17,6 +17,17 @@ export interface DashboardAppointment {
   time: string;
 }
 
+export interface DashboardAnalytics {
+  totalProperties: number;
+  totalViews: number;
+  totalMessages: number;
+  revenue: number;
+  propertyChange: string;
+  viewsChange: string;
+  messagesChange: string;
+  revenueChange: string;
+}
+
 export const dashboardService = {
   // Get dashboard activities
   async getActivities(): Promise<DashboardActivity[]> {
@@ -27,6 +38,12 @@ export const dashboardService = {
   // Get dashboard appointments
   async getAppointments(): Promise<DashboardAppointment[]> {
     const response = await api.get<DashboardAppointment[]>('/users/dashboard/appointments');
+    return response.data;
+  },
+
+  // Get dashboard analytics
+  async getAnalytics(): Promise<DashboardAnalytics> {
+    const response = await api.get<DashboardAnalytics>('/users/dashboard/analytics');
     return response.data;
   },
 };

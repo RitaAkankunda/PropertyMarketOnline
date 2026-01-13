@@ -1,11 +1,23 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
-import { GOOGLE_MAPS_API_KEY, DEFAULT_MAP_CENTER } from '@/lib/constants';
+import { useState, useCallback, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import { DEFAULT_MAP_CENTER } from '@/lib/constants';
 import { MapPin, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons in Leaflet with Next.js
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  });
+}
 
 interface LocationPickerProps {
   initialPosition?: { lat: number; lng: number };
@@ -13,10 +25,38 @@ interface LocationPickerProps {
   className?: string;
 }
 
-const containerStyle = {
-  width: '100%',
-  height: '100%',
-};
+// Component to handle map click events
+function MapClickHandler({
+  onMapClick,
+  markerPosition,
+  setMarkerPosition,
+}: {
+  onMapClick: (lat: number, lng: number) => void;
+  markerPosition: { lat: number; lng: number } | null;
+  setMarkerPosition: (pos: { lat: number; lng: number }) => void;
+}) {
+  const map = useMap();
+
+  useMapEvents({
+    click: (e) => {
+      const newPosition = {
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+      };
+      setMarkerPosition(newPosition);
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+
+  // Update map center when marker position changes
+  useEffect(() => {
+    if (markerPosition) {
+      map.setView([markerPosition.lat, markerPosition.lng], map.getZoom());
+    }
+  }, [markerPosition, map]);
+
+  return null;
+}
 
 export function LocationPicker({
   initialPosition,
@@ -29,106 +69,79 @@ export function LocationPicker({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [center, setCenter] = useState(initialPosition || DEFAULT_MAP_CENTER);
+  const [isClient, setIsClient] = useState(false);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: ['places'],
-  });
+  // Ensure component only renders on client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Update marker position when initialPosition changes
+  useEffect(() => {
+    if (initialPosition) {
+      setMarkerPosition(initialPosition);
+      setCenter(initialPosition);
+    }
+  }, [initialPosition]);
 
   const handleMapClick = useCallback(
-    (e: google.maps.MapMouseEvent) => {
-      if (e.latLng) {
-        const newPosition = {
-          lat: e.latLng.lat(),
-          lng: e.latLng.lng(),
-        };
-        setMarkerPosition(newPosition);
-        
-        // Reverse geocode to get address
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ location: newPosition }, (results, status) => {
-          if (status === 'OK' && results && results[0]) {
-            onLocationSelect({
-              ...newPosition,
-              address: results[0].formatted_address,
-            });
-          } else {
-            onLocationSelect(newPosition);
-          }
-        });
-      }
+    (lat: number, lng: number) => {
+      const newPosition = { lat, lng };
+      // For Leaflet, we'll use the coordinates directly
+      // Reverse geocoding would require a separate service (like Nominatim)
+      onLocationSelect(newPosition);
     },
     [onLocationSelect]
   );
 
   const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim() || !isLoaded) return;
+    if (!searchQuery.trim()) return;
 
     setIsSearching(true);
-    const geocoder = new google.maps.Geocoder();
+    try {
+      // Use Nominatim (OpenStreetMap's geocoding service) for free geocoding
+      const searchWithContext = searchQuery.toLowerCase().includes('uganda')
+        ? searchQuery
+        : `${searchQuery}, Uganda`;
 
-    // Add Uganda context to search
-    const searchWithContext = searchQuery.toLowerCase().includes('uganda')
-      ? searchQuery
-      : `${searchQuery}, Uganda`;
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchWithContext)}&limit=1`
+      );
+      const data = await response.json();
 
-    geocoder.geocode({ address: searchWithContext }, (results, status) => {
-      setIsSearching(false);
-      if (status === 'OK' && results && results[0]) {
-        const location = results[0].geometry.location;
+      if (data && data.length > 0) {
+        const location = data[0];
         const newPosition = {
-          lat: location.lat(),
-          lng: location.lng(),
+          lat: parseFloat(location.lat),
+          lng: parseFloat(location.lon),
         };
         setCenter(newPosition);
         setMarkerPosition(newPosition);
         onLocationSelect({
           ...newPosition,
-          address: results[0].formatted_address,
+          address: location.display_name,
         });
       }
-    });
-  }, [searchQuery, isLoaded, onLocationSelect]);
+    } catch (error) {
+      console.error('Geocoding error:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [searchQuery, onLocationSelect]);
 
   const handleMarkerDrag = useCallback(
-    (e: google.maps.MapMouseEvent) => {
-      if (e.latLng) {
-        const newPosition = {
-          lat: e.latLng.lat(),
-          lng: e.latLng.lng(),
-        };
-        setMarkerPosition(newPosition);
-
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ location: newPosition }, (results, status) => {
-          if (status === 'OK' && results && results[0]) {
-            onLocationSelect({
-              ...newPosition,
-              address: results[0].formatted_address,
-            });
-          } else {
-            onLocationSelect(newPosition);
-          }
-        });
-      }
+    (e: L.DragEndEvent) => {
+      const newPosition = {
+        lat: e.target.getLatLng().lat,
+        lng: e.target.getLatLng().lng,
+      };
+      setMarkerPosition(newPosition);
+      onLocationSelect(newPosition);
     },
     [onLocationSelect]
   );
 
-  if (loadError) {
-    return (
-      <div className={`${className} bg-gray-100 flex items-center justify-center rounded-lg`}>
-        <div className="text-center text-gray-500">
-          <MapPin className="w-8 h-8 mx-auto mb-2" />
-          <p className="font-medium">Error loading map</p>
-          <p className="text-sm">Please check your internet connection</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
+  if (!isClient) {
     return (
       <div className={`${className} bg-gray-100 flex items-center justify-center rounded-lg`}>
         <div className="flex items-center gap-2 text-gray-500">
@@ -160,27 +173,35 @@ export function LocationPicker({
       </div>
 
       {/* Map */}
-      <div className="h-[350px] rounded-lg overflow-hidden border">
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={center}
+      <div className="h-[350px] rounded-lg overflow-hidden border relative z-0">
+        <MapContainer
+          center={[center.lat, center.lng]}
           zoom={14}
-          onClick={handleMapClick}
-          options={{
-            disableDefaultUI: false,
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-          }}
+          scrollWheelZoom={true}
+          className="h-full w-full"
+          style={{ height: '100%', width: '100%', zIndex: 0 }}
         >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          <MapClickHandler
+            onMapClick={handleMapClick}
+            markerPosition={markerPosition}
+            setMarkerPosition={setMarkerPosition}
+          />
+
           {markerPosition && (
             <Marker
-              position={markerPosition}
-              draggable
-              onDragEnd={handleMarkerDrag}
+              position={[markerPosition.lat, markerPosition.lng]}
+              draggable={true}
+              eventHandlers={{
+                dragend: handleMarkerDrag,
+              }}
             />
           )}
-        </GoogleMap>
+        </MapContainer>
       </div>
 
       {/* Instructions */}

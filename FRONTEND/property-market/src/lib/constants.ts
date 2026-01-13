@@ -327,8 +327,14 @@ export const SUPPORTED_CURRENCIES = ["UGX", "USD", "EUR"] as const;
 
 // Google Maps Configuration
 export const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-export const DEFAULT_MAP_CENTER = { lat: 0.3476, lng: 32.5825 }; // Kampala, Uganda
-export const DEFAULT_MAP_ZOOM = 12;
+export const DEFAULT_MAP_CENTER = { lat: 1.3733, lng: 32.2903 }; // Center of Uganda
+export const DEFAULT_MAP_ZOOM = 7; // Zoom level to show all of Uganda
+export const UGANDA_BOUNDS = {
+  north: 4.2144, // Northern border
+  south: -1.4823, // Southern border
+  east: 35.0000, // Eastern border
+  west: 29.5734, // Western border
+};
 
 // Country Configuration
 export const COUNTRY = {
