@@ -5,12 +5,20 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, X, Upload, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, X, Upload, Save, Loader2, Check } from "lucide-react";
 import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { propertyService } from "@/services/property.service";
 import { useAuth } from "@/hooks";
 import { useToastContext } from "@/components/ui/toast-provider";
 import type { Property } from "@/types";
+
+const amenitiesList = [
+  "Swimming Pool", "Garden", "Security", "Backup Generator", "Water Tank",
+  "Air Conditioning", "Internet Ready", "Balcony", "Garage", "Parking",
+  "Gym", "Elevator", "Laundry Room", "Storage", "Servant Quarters",
+  "CCTV", "Solar Power", "Borehole",
+];
 
 const propertySchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -36,6 +44,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [images, setImages] = useState<ImageFile[]>([]);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
   const {
     register,
@@ -71,6 +80,9 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           price: data.price,
         });
 
+        // Set amenities
+        setSelectedAmenities(data.amenities || []);
+
         // Convert property images to ImageFile format
         const imageFiles: ImageFile[] = (data.images || []).map((img, index) => ({
           id: typeof img === 'string' ? `existing-${index}` : img.id || `existing-${index}`,
@@ -103,6 +115,14 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
 
   const removeImage = (imageId: string) => {
     setImages(images.filter((img) => img.id !== imageId));
+  };
+
+  const toggleAmenity = (amenity: string) => {
+    setSelectedAmenities((prev) =>
+      prev.includes(amenity)
+        ? prev.filter((a) => a !== amenity)
+        : [...prev, amenity]
+    );
   };
 
   const onSubmit = async (data: PropertyFormData) => {
@@ -166,7 +186,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           longitude: lngNum,
         },
         features: property.features,
-        amenities: property.amenities || [],
+        amenities: selectedAmenities,
       });
 
       success("Property updated successfully!");
@@ -325,6 +345,44 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
                     No images added. Click "Add Images" to upload property photos.
                   </p>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Amenities */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Amenities</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {amenitiesList.map((amenity) => (
+                  <button
+                    key={amenity}
+                    type="button"
+                    onClick={() => toggleAmenity(amenity)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
+                      selectedAmenities.includes(amenity)
+                        ? "bg-blue-50 border-blue-500 text-blue-700"
+                        : "border-slate-200 hover:border-blue-500"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "w-5 h-5 rounded border flex items-center justify-center",
+                        selectedAmenities.includes(amenity)
+                          ? "bg-blue-600 border-blue-600"
+                          : "border-slate-300"
+                      )}
+                    >
+                      {selectedAmenities.includes(amenity) && (
+                        <Check className="w-3 h-3 text-white" />
+                      )}
+                    </div>
+                    <span>{amenity}</span>
+                  </button>
+                ))}
               </div>
             </CardContent>
           </Card>

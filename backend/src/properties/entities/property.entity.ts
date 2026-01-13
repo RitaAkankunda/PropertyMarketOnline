@@ -57,6 +57,251 @@ export class Property {
   @Column({ nullable: true })
   bedrooms: number;
 
+  @Column({ nullable: true })
+  bathrooms: number;
+
+  @Column({ nullable: true })
+  parking: number;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  area: number;
+
+  @Column({ nullable: true })
+  areaUnit: string; // sqm, sqft, acres, hectares
+
+  @Column({ nullable: true })
+  yearBuilt: number;
+
+  @Column({ nullable: true })
+  furnished: boolean;
+
+  @Column('simple-array', { nullable: true })
+  amenities: string[];
+
+  // Hotel-specific fields
+  @Column({ nullable: true })
+  totalRooms: number;
+
+  @Column({ nullable: true })
+  starRating: number;
+
+  @Column({ nullable: true })
+  checkInTime: string;
+
+  @Column({ nullable: true })
+  checkOutTime: string;
+
+  // Land-specific fields
+  @Column({ nullable: true })
+  landUseType: string; // agricultural, residential, commercial, industrial, mixed
+
+  @Column({ nullable: true })
+  topography: string; // flat, sloped, hilly, valley
+
+  @Column({ nullable: true })
+  roadAccess: boolean;
+
+  @Column({ nullable: true })
+  waterAvailability: boolean;
+
+  @Column({ nullable: true })
+  electricityAvailability: boolean;
+
+  @Column({ nullable: true })
+  titleType: string; // freehold, leasehold, mailo
+
+  @Column({ nullable: true })
+  soilQuality: string;
+
+  // Commercial-specific fields
+  @Column({ nullable: true })
+  totalFloors: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  frontageWidth: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  ceilingHeight: number;
+
+  @Column({ nullable: true })
+  loadingBays: number;
+
+  @Column({ nullable: true })
+  footTrafficLevel: string; // low, medium, high, very_high
+
+  @Column({ nullable: true })
+  threePhasePower: boolean;
+
+  @Column({ nullable: true })
+  hvacSystem: boolean;
+
+  @Column({ nullable: true })
+  fireSafety: boolean;
+
+  // Warehouse-specific fields
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  clearHeight: number;
+
+  @Column({ nullable: true })
+  loadingDocks: number;
+
+  @Column({ nullable: true })
+  driveInAccess: boolean;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  floorLoadCapacity: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  columnSpacing: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  officeArea: number;
+
+  @Column({ nullable: true })
+  coldStorage: boolean;
+
+  @Column({ nullable: true })
+  rampAccess: boolean;
+
+  // Office-specific fields
+  @Column({ nullable: true })
+  workstationCapacity: number;
+
+  @Column({ nullable: true })
+  meetingRooms: number;
+
+  @Column({ nullable: true })
+  receptionArea: boolean;
+
+  @Column({ nullable: true })
+  elevator: boolean;
+
+  @Column({ nullable: true })
+  conferenceRoom: boolean;
+
+  @Column({ nullable: true })
+  serverRoom: boolean;
+
+  @Column({ nullable: true })
+  cafeteria: boolean;
+
+  // Pricing fields - Hotel specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  standardRoomRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  peakSeasonRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  offPeakSeasonRate: number;
+
+  // Pricing fields - Airbnb specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  nightlyRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  weeklyRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  monthlyRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  cleaningFee: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  securityDeposit: number;
+
+  // Pricing fields - Land specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerAcre: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerHectare: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  totalLandPrice: number;
+
+  // Pricing fields - Commercial specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerSqm: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  serviceCharge: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  commercialDeposit: number;
+
+  // Pricing fields - Warehouse specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  warehouseLeaseRate: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  warehousePricePerSqm: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  warehouseDeposit: number;
+
+  @Column({ nullable: true })
+  utilitiesIncluded: boolean;
+
+  // Pricing fields - Office specific
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  pricePerWorkstation: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  officePricePerSqm: number;
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  sharedFacilitiesCost: number;
+
+  @Column({ nullable: true })
+  officeUtilitiesIncluded: boolean;
+
+  // General pricing fields
+  @Column({ nullable: true })
+  currency: string; // UGX, USD, etc.
+
+  @Column({ nullable: true })
+  negotiable: boolean;
+
+  // Price breakdown fields (for transparent pricing)
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  basePrice: number; // Base price before fees
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  serviceFee: number; // Platform/service fee
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  tax: number; // Tax amount
+
+  @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
+  otherFees: number; // Other fees (cleaning, etc.)
+
+  @Column({ type: 'text', nullable: true })
+  priceBreakdown: string; // JSON string for flexible breakdown structure
+
+  // Location fields
+  @Column({ nullable: true })
+  region: string; // Central, Eastern, Northern, Western
+
+  @Column({ nullable: true })
+  city: string; // One of 11 major cities
+
+  @Column({ nullable: true })
+  district: string; // One of 137 districts
+
+  @Column({ nullable: true })
+  county: string; // County/Municipality
+
+  @Column({ nullable: true })
+  subcounty: string; // Subcounty/Division
+
+  @Column({ nullable: true })
+  parish: string; // Parish/Ward
+
+  @Column({ nullable: true })
+  village: string; // Village/Zone
+
   @Column('decimal', { precision: 10, scale: 7 })
   latitude: number;
 
@@ -65,6 +310,10 @@ export class Property {
 
   @Column('simple-array', { nullable: true })
   images: string[];
+
+  // Analytics fields
+  @Column({ type: 'int', default: 0 })
+  views: number; // Total number of views
 
   @ManyToOne(() => User, (user) => user.properties)
   owner: User;

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Card, Badge, Button } from "@/components/ui";
 import { formatCurrency, cn } from "@/lib/utils";
+import { PropertyWishlistButton, PropertyBadges, PropertyRating } from "./";
 import type { Property } from "@/types";
 
 interface PropertyCardProps {
@@ -75,7 +76,7 @@ export function PropertyCard({
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            <div className="absolute top-3 left-3 flex gap-2">
+            <div className="absolute top-3 left-3 flex flex-col gap-2">
               <span
                 className={cn(
                   "text-white text-xs font-medium px-2 py-1 rounded",
@@ -84,29 +85,27 @@ export function PropertyCard({
               >
                 {listingTypeLabels[property.listingType]}
               </span>
-              {property.isVerified && (
-                <Badge variant="success" className="text-xs">
-                  <BadgeCheck className="h-3 w-3 mr-1" />
-                  Verified
-                </Badge>
-              )}
+              <PropertyBadges property={property} />
             </div>
-            <button className="absolute top-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-              <Heart className="h-4 w-4 text-muted-foreground hover:text-red-500" />
-            </button>
+            <div className="absolute top-3 right-3">
+              <PropertyWishlistButton property={property} size="sm" />
+            </div>
           </div>
 
           {/* Content */}
           <div className="flex-1 p-4 flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Link
-                    href={`/properties/${property.id}`}
-                    className="text-lg font-semibold hover:text-primary transition-colors line-clamp-1"
-                  >
-                    {property.title}
-                  </Link>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <Link
+                      href={`/properties/${property.id}`}
+                      className="text-lg font-semibold hover:text-primary transition-colors line-clamp-1 flex-1"
+                    >
+                      {property.title}
+                    </Link>
+                    <PropertyRating propertyId={property.id} size="sm" />
+                  </div>
                   <div className="flex items-center text-muted-foreground text-sm mt-1">
                     <MapPin className="h-4 w-4 mr-1" />
                     {property.location?.city || 'Location'}, {property.location?.district || ''}
@@ -188,7 +187,7 @@ export function PropertyCard({
             <span className="text-gray-400 text-sm">No image</span>
           </div>
         )}
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-3 left-3 flex flex-col gap-2">
           <span
             className={cn(
               "text-white text-xs font-medium px-2 py-1 rounded",
@@ -197,16 +196,11 @@ export function PropertyCard({
           >
             {listingTypeLabels[property.listingType]}
           </span>
-          {property.isVerified && (
-            <Badge variant="success" className="text-xs">
-              <BadgeCheck className="h-3 w-3 mr-1" />
-              Verified
-            </Badge>
-          )}
+          <PropertyBadges property={property} />
         </div>
-        <button className="absolute top-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-          <Heart className="h-4 w-4 text-muted-foreground hover:text-red-500" />
-        </button>
+        <div className="absolute top-3 right-3">
+          <PropertyWishlistButton property={property} size="sm" />
+        </div>
         {property.isFeatured && (
           <div className="absolute bottom-3 left-3">
             <Badge variant="default" className="bg-yellow-500 text-xs">
@@ -223,12 +217,15 @@ export function PropertyCard({
           {property.location?.city || 'Location'}{property.location?.district ? `, ${property.location.district}` : ''}
         </div>
 
-        <Link
-          href={`/properties/${property.id}`}
-          className="text-lg font-semibold hover:text-primary transition-colors line-clamp-1 block"
-        >
-          {property.title}
-        </Link>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <Link
+            href={`/properties/${property.id}`}
+            className="text-lg font-semibold hover:text-primary transition-colors line-clamp-1 flex-1"
+          >
+            {property.title}
+          </Link>
+          <PropertyRating propertyId={property.id} size="sm" />
+        </div>
 
         <p className="text-xl font-bold text-primary mt-2">
           {formatCurrency(property.price, property.currency)}

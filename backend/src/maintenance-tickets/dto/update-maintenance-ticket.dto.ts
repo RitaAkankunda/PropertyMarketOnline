@@ -51,5 +51,9 @@ export class UpdateMaintenanceTicketDto {
   @IsNumber()
   @IsOptional()
   escrowAmount?: number;
+
+  @IsString()
+  @IsOptional()
+  jobId?: string;
 }
 

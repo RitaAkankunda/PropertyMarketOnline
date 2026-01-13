@@ -1,14 +1,28 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
-import { GOOGLE_MAPS_API_KEY, DEFAULT_MAP_CENTER } from '@/lib/constants';
+import { useCallback, useState, useEffect, useRef } from 'react';
+import { MapContainer as LeafletMapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import { DEFAULT_MAP_CENTER } from '@/lib/constants';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons in Leaflet with Next.js
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  });
+}
 
 interface MapContainerProps {
   center?: { lat: number; lng: number };
   zoom?: number;
   markers?: MapMarker[];
   onMapClick?: (lat: number, lng: number) => void;
+  onMarkerClick?: (marker: MapMarker) => void;
+  onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number } | null) => void;
   className?: string;
   showInfoWindow?: boolean;
 }
@@ -20,74 +34,85 @@ export interface MapMarker {
   price?: string;
   image?: string;
   address?: string;
+  property?: any; // Store full property for details
 }
 
-const containerStyle = {
-  width: '100%',
-  height: '100%',
-};
+// Component to handle map events
+function MapEventHandler({
+  onMapClick,
+  onBoundsChanged,
+}: {
+  onMapClick?: (lat: number, lng: number) => void;
+  onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number } | null) => void;
+}) {
+  const map = useMap();
 
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: false,
-  zoomControl: true,
-  streetViewControl: true,
-  mapTypeControl: true,
-  fullscreenControl: true,
-  styles: [
-    {
-      featureType: 'poi',
-      elementType: 'labels',
-      stylers: [{ visibility: 'off' }],
+  useMapEvents({
+    click: (e) => {
+      if (onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
     },
-  ],
-};
+  });
+
+  useEffect(() => {
+    const updateBounds = () => {
+      if (onBoundsChanged) {
+        const bounds = map.getBounds();
+        onBoundsChanged({
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+        });
+      }
+    };
+
+    // Initial bounds
+    updateBounds();
+
+    // Update bounds on move/zoom
+    map.on('moveend', updateBounds);
+    map.on('zoomend', updateBounds);
+
+    return () => {
+      map.off('moveend', updateBounds);
+      map.off('zoomend', updateBounds);
+    };
+  }, [map, onBoundsChanged]);
+
+  return null;
+}
 
 export function MapContainer({
   center = DEFAULT_MAP_CENTER,
-  zoom = 14,
+  zoom = 7, // Default zoom for Uganda
   markers = [],
   onMapClick,
+  onMarkerClick,
+  onBoundsChanged,
   className = 'h-[400px] w-full rounded-lg overflow-hidden',
   showInfoWindow = true,
 }: MapContainerProps) {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-  });
-
-  const onLoad = useCallback((map: google.maps.Map) => {
-    setMap(map);
+  // Ensure component only renders on client (Leaflet needs window object)
+  useEffect(() => {
+    setIsClient(true);
   }, []);
 
-  const onUnmount = useCallback(() => {
-    setMap(null);
-  }, []);
-
-  const handleMapClick = useCallback(
-    (e: google.maps.MapMouseEvent) => {
-      if (onMapClick && e.latLng) {
-        onMapClick(e.latLng.lat(), e.latLng.lng());
+  const handleMarkerClick = useCallback(
+    (marker: MapMarker) => {
+      setSelectedMarker(marker);
+      if (onMarkerClick) {
+        onMarkerClick(marker);
       }
-      setSelectedMarker(null);
     },
-    [onMapClick]
+    [onMarkerClick]
   );
 
-  if (loadError) {
-    return (
-      <div className={`${className} bg-gray-100 flex items-center justify-center`}>
-        <div className="text-center text-gray-500">
-          <p className="font-medium">Error loading map</p>
-          <p className="text-sm">Please check your internet connection</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
+  if (!isClient) {
     return (
       <div className={`${className} bg-gray-100 flex items-center justify-center`}>
         <div className="flex items-center gap-2 text-gray-500">
@@ -100,50 +125,53 @@ export function MapContainer({
 
   return (
     <div className={className}>
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={center}
+      <LeafletMapContainer
+        center={[center.lat, center.lng]}
         zoom={zoom}
-        onLoad={onLoad}
-        onUnmount={onUnmount}
-        onClick={handleMapClick}
-        options={mapOptions}
+        scrollWheelZoom={true}
+        className="h-full w-full"
+        style={{ height: '100%', width: '100%' }}
       >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        
+        <MapEventHandler onMapClick={onMapClick} onBoundsChanged={onBoundsChanged} />
+
         {markers.map((marker) => (
           <Marker
             key={marker.id}
-            position={marker.position}
-            title={marker.title}
-            onClick={() => setSelectedMarker(marker)}
-          />
-        ))}
-
-        {showInfoWindow && selectedMarker && (
-          <InfoWindow
-            position={selectedMarker.position}
-            onCloseClick={() => setSelectedMarker(null)}
+            position={[marker.position.lat, marker.position.lng]}
+            eventHandlers={{
+              click: () => handleMarkerClick(marker),
+            }}
           >
-            <div className="p-2 min-w-[200px]">
-              {selectedMarker.image && (
-                <img
-                  src={selectedMarker.image}
-                  alt={selectedMarker.title}
-                  className="w-full h-24 object-cover rounded mb-2"
-                />
-              )}
-              {selectedMarker.title && (
-                <h3 className="font-semibold text-gray-900">{selectedMarker.title}</h3>
-              )}
-              {selectedMarker.address && (
-                <p className="text-sm text-gray-600">{selectedMarker.address}</p>
-              )}
-              {selectedMarker.price && (
-                <p className="text-primary font-bold mt-1">{selectedMarker.price}</p>
-              )}
-            </div>
-          </InfoWindow>
-        )}
-      </GoogleMap>
+            {showInfoWindow && (
+              <Popup>
+                <div className="p-2 min-w-[200px]">
+                  {marker.image && (
+                    <img
+                      src={marker.image}
+                      alt={marker.title}
+                      className="w-full h-24 object-cover rounded mb-2"
+                    />
+                  )}
+                  {marker.title && (
+                    <h3 className="font-semibold text-gray-900 text-sm">{marker.title}</h3>
+                  )}
+                  {marker.address && (
+                    <p className="text-xs text-gray-600 mt-1">{marker.address}</p>
+                  )}
+                  {marker.price && (
+                    <p className="text-blue-600 font-bold mt-1 text-sm">{marker.price}</p>
+                  )}
+                </div>
+              </Popup>
+            )}
+          </Marker>
+        ))}
+      </LeafletMapContainer>
     </div>
   );
 }

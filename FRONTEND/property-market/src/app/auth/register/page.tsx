@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,8 +18,27 @@ import {
   CardContent,
 } from "@/components/ui";
 import { useAuth } from "@/hooks";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, API_BASE_URL } from "@/lib/constants";
 
+// Simplified schema for service request users
+const simplifiedRegisterSchema = z
+  .object({
+    firstName: z.string().min(2, "First name must be at least 2 characters"),
+    lastName: z.string().min(2, "Last name must be at least 2 characters"),
+    email: z.string().email("Please enter a valid email address"),
+    phone: z.string().min(10, "Phone number is required"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+    acceptTerms: z.boolean().refine((val) => val === true, {
+      message: "You must accept the terms and conditions",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+// Full schema for regular registration
 const registerSchema = z
   .object({
     firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -45,6 +64,7 @@ const registerSchema = z
   });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
+type SimplifiedRegisterFormData = z.infer<typeof simplifiedRegisterSchema>;
 
 const roleOptions = [
   { value: "buyer", label: "Buyer - I want to buy property" },
@@ -55,10 +75,19 @@ const roleOptions = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register: registerUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Check if this is simplified registration (from service request)
+  const isSimplified = searchParams.get("simple") === "true";
+  const returnUrl = searchParams.get("return") || null;
+
+  // Use appropriate schema based on mode
+  const schema = isSimplified ? simplifiedRegisterSchema : registerSchema;
+  type FormData = typeof isSimplified extends true ? SimplifiedRegisterFormData : RegisterFormData;
 
   const {
     register,
@@ -66,27 +95,37 @@ export default function RegisterPage() {
     setValue,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+  } = useForm<FormData>({
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       acceptTerms: false,
+      role: isSimplified ? "buyer" : undefined,
     },
   });
 
   const selectedRole = watch("role");
 
-  const onSubmit = async (data: RegisterFormData) => {
+  const onSubmit = async (data: FormData) => {
     try {
       setError(null);
       await registerUser({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        phone: data.phone,
+        phone: data.phone || "",
         password: data.password,
-        role: data.role,
+        role: isSimplified ? "buyer" : (data as RegisterFormData).role,
       });
-      router.push("/dashboard");
+      
+      // Redirect based on return URL or default
+      if (returnUrl) {
+        router.push(returnUrl);
+      } else if (isSimplified) {
+        // For simplified registration, go back to providers page
+        router.push("/providers");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: unknown) {
       // Check for 409 Conflict (email already exists)
       const axiosError = err as { response?: { status?: number; data?: { message?: string } } };
@@ -98,6 +137,23 @@ export default function RegisterPage() {
         setError("An error occurred. Please try again.");
       }
     }
+  };
+
+  const handleGoogleLogin = () => {
+    const redirectUrl = returnUrl 
+      ? `/auth/callback?return=${encodeURIComponent(returnUrl)}`
+      : isSimplified 
+        ? "/auth/callback?return=/providers"
+        : "/auth/callback";
+    
+    // Store return URL in localStorage for callback
+    if (returnUrl) {
+      localStorage.setItem("returnUrl", returnUrl);
+    } else if (isSimplified) {
+      localStorage.setItem("returnUrl", "/providers");
+    }
+    
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   return (
@@ -123,9 +179,14 @@ export default function RegisterPage() {
 
         <Card variant="elevated" className="border-0 shadow-xl">
           <CardHeader className="text-center pb-0">
-            <CardTitle className="text-2xl">Create your account</CardTitle>
+            <CardTitle className="text-2xl">
+              {isSimplified ? "Quick Sign Up" : "Create your account"}
+            </CardTitle>
             <CardDescription>
-              Join thousands of property seekers and listers
+              {isSimplified 
+                ? "Create an account to submit your service request"
+                : "Join thousands of property seekers and listers"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -170,23 +231,25 @@ export default function RegisterPage() {
 
               <Input
                 type="tel"
-                label="Phone Number (Optional)"
+                label={isSimplified ? "Phone Number" : "Phone Number (Optional)"}
                 placeholder="+256 700 000 000"
                 icon={<Phone className="h-4 w-4" />}
                 error={errors.phone?.message}
                 {...register("phone")}
               />
 
-              <Select
-                label="I am a..."
-                placeholder="Select your role"
-                options={roleOptions}
-                value={selectedRole}
-                onChange={(value) =>
-                  setValue("role", value as RegisterFormData["role"])
-                }
-                error={errors.role?.message}
-              />
+              {!isSimplified && (
+                <Select
+                  label="I am a..."
+                  placeholder="Select your role"
+                  options={roleOptions}
+                  value={selectedRole}
+                  onChange={(value) =>
+                    setValue("role", value as RegisterFormData["role"])
+                  }
+                  error={errors.role?.message}
+                />
+              )}
 
               <div className="relative">
                 <Input
@@ -281,8 +344,13 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="mt-4 flex justify-center">
-                <Button variant="outline" type="button">
+              <div className="mt-4">
+                <Button 
+                  variant="outline" 
+                  type="button"
+                  className="w-full"
+                  onClick={handleGoogleLogin}
+                >
                   <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -301,7 +369,7 @@ export default function RegisterPage() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  Google
+                  Continue with Google
                 </Button>
               </div>
             </div>

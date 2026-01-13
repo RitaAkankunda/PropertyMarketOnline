@@ -7,6 +7,7 @@ import { useNotificationAlerts } from "@/hooks/use-notifications";
 import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
 import { NotificationPermissionBanner } from "@/components/notifications/notification-permission-banner";
 import { NotificationPermissionSuccess } from "@/components/notifications/notification-permission-success";
+import { JobStatusTimeline } from "@/components/jobs/JobStatusTimeline";
 import type { Job as ApiJob } from "@/types";
 import type { Notification as ApiNotification } from "@/services/notifications.service";
 import {
@@ -50,13 +51,14 @@ interface ServiceRequest {
   amount: number;
   createdAt: string;
   providerRating?: number;
+  completedAt?: string;
 }
 
 // Notification interface matches API response
 type Notification = ApiNotification;
 
 // Helper function to format Job from API to ServiceRequest display format
-function formatJobToServiceRequest(job: ApiJob): ServiceRequest {
+function formatJobToServiceRequest(job: ApiJob): ServiceRequest & { completedAt?: string } {
   const providerName = job.provider?.businessName || job.provider?.user?.firstName 
     ? `${job.provider.user?.firstName || ''} ${job.provider.user?.lastName || ''}`.trim() 
     : 'Unknown Provider';
@@ -76,6 +78,7 @@ function formatJobToServiceRequest(job: ApiJob): ServiceRequest {
     amount: job.price || 0,
     createdAt: job.createdAt,
     providerRating: job.provider?.rating,
+    completedAt: job.completedAt,
   };
 }
 
@@ -205,6 +208,15 @@ function RequestDetailModal({
           <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
             <span className="text-gray-700">Amount</span>
             <span className="text-xl font-bold text-blue-600">UGX {request.amount.toLocaleString()}</span>
+          </div>
+
+          {/* Status Timeline */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <JobStatusTimeline
+              status={request.status}
+              createdAt={request.createdAt}
+              completedAt={completedAt}
+            />
           </div>
 
           {/* Rating for completed jobs */}
@@ -349,6 +361,7 @@ function ChatModal({
 export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("requests");
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [jobs, setJobs] = useState<ApiJob[]>([]); // Store original job data
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [selectedChat, setSelectedChat] = useState<typeof DUMMY_CONVERSATIONS[0] | null>(null);
@@ -367,6 +380,8 @@ export default function UserDashboard() {
         const status = statusFilter === "all" ? undefined : statusFilter;
         const response = await providerService.getMyJobs(status, 1, 100);
         
+        // Store original jobs for timeline data
+        setJobs(response.data || []);
         // Format jobs to service requests
         const formattedRequests = response.data.map(formatJobToServiceRequest);
         setRequests(formattedRequests);
@@ -513,8 +528,9 @@ export default function UserDashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Modals */}
       {selectedRequest && (
-        <RequestDetailModal 
-          request={selectedRequest} 
+        <RequestDetailModal
+          request={selectedRequest}
+          completedAt={jobs.find(j => j.id === selectedRequest.id)?.completedAt}
           onClose={() => setSelectedRequest(null)}
           onCancel={handleCancelRequest}
           onRate={handleRateService}

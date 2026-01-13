@@ -40,4 +40,47 @@ export class QueryPropertyDto {
   @Min(1)
   @Type(() => Number)
   limit?: number = 10;
+
+  // Map view parameters
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  north?: number; // North bound (latitude)
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  south?: number; // South bound (latitude)
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  east?: number; // East bound (longitude)
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  west?: number; // West bound (longitude)
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  centerLat?: number; // Center latitude for radius search
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  centerLng?: number; // Center longitude for radius search
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  radius?: number; // Radius in kilometers
+
+  @IsOptional()
+  excludeId?: string; // Exclude specific property ID (for similar properties)
+
+  @IsOptional()
+  city?: string; // Filter by city
 }

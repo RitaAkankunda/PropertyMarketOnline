@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere } from 'typeorm';
@@ -11,6 +13,8 @@ import { CreateMaintenanceTicketDto } from './dto/create-maintenance-ticket.dto'
 import { UpdateMaintenanceTicketDto } from './dto/update-maintenance-ticket.dto';
 import { QueryMaintenanceTicketDto } from './dto/query-maintenance-ticket.dto';
 import { UsersService } from '../users/users.service';
+import { JobsService } from '../jobs/jobs.service';
+import { CreateJobDto } from '../jobs/dto/create-job.dto';
 
 @Injectable()
 export class MaintenanceTicketsService {
@@ -18,6 +22,8 @@ export class MaintenanceTicketsService {
     @InjectRepository(MaintenanceTicket)
     private readonly ticketRepository: Repository<MaintenanceTicket>,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => JobsService))
+    private readonly jobsService: JobsService,
   ) {}
 
   async create(
@@ -81,7 +87,7 @@ export class MaintenanceTicketsService {
 
     const [tickets, total] = await this.ticketRepository.findAndCount({
       where,
-      relations: ['tenant', 'assignedProvider', 'owner'],
+      relations: ['tenant', 'assignedProvider', 'owner', 'job'],
       order: { createdAt: 'DESC' },
       skip,
       take: pageSize,
@@ -101,7 +107,7 @@ export class MaintenanceTicketsService {
   async findOne(id: string, userId?: string, userRole?: string): Promise<MaintenanceTicket> {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
-      relations: ['tenant', 'assignedProvider', 'owner'],
+      relations: ['tenant', 'assignedProvider', 'owner', 'job'],
     });
 
     if (!ticket) {
@@ -196,6 +202,58 @@ export class MaintenanceTicketsService {
     }
 
     await this.ticketRepository.remove(ticket);
+  }
+
+  /**
+   * Link an existing job to a maintenance ticket
+   */
+  async linkJob(
+    ticketId: string,
+    jobId: string,
+    userId: string,
+    userRole?: string,
+  ): Promise<MaintenanceTicket> {
+    const ticket = await this.findOne(ticketId, userId, userRole);
+
+    // Only owner or admin can link jobs
+    if (ticket.ownerId !== userId && userRole !== 'admin') {
+      throw new ForbiddenException('You do not have permission to link jobs to this ticket');
+    }
+
+    // Verify job exists
+    const job = await this.jobsService.findOne(jobId);
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    ticket.jobId = jobId;
+    return this.ticketRepository.save(ticket);
+  }
+
+  /**
+   * Create a job from a maintenance ticket
+   */
+  async createJobFromTicket(
+    ticketId: string,
+    createJobDto: CreateJobDto,
+    userId: string,
+    userRole?: string,
+  ): Promise<{ ticket: MaintenanceTicket; job: any }> {
+    const ticket = await this.findOne(ticketId, userId, userRole);
+
+    // Only owner or admin can create jobs from tickets
+    if (ticket.ownerId !== userId && userRole !== 'admin') {
+      throw new ForbiddenException('You do not have permission to create jobs from this ticket');
+    }
+
+    // Create job using the ticket information
+    const job = await this.jobsService.create(createJobDto, userId);
+
+    // Link the job to the ticket
+    ticket.jobId = job.id;
+    const updatedTicket = await this.ticketRepository.save(ticket);
+
+    return { ticket: updatedTicket, job };
   }
 }
 

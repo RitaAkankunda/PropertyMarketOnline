@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { X, Calendar, Users, MessageSquare, Clock, DollarSign, Home, MapPin, Send, CreditCard, Check } from "lucide-react";
 import { Button } from "@/components/ui";
+import { propertyService } from "@/services";
+import { useAuthStore } from "@/store/auth.store";
 import type { Property } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +15,7 @@ interface PropertyInquiryModalProps {
 }
 
 export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInquiryModalProps) {
+  const { user, isAuthenticated } = useAuthStore();
   const [step, setStep] = useState(1); // Now 4 steps: 1) Details, 2) Contact, 3) Payment, 4) Success
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
@@ -21,9 +24,9 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
   // Form state
   const [formData, setFormData] = useState({
     // Common fields
-    name: "",
-    email: "",
-    phone: "",
+    name: user ? `${user.firstName} ${user.lastName}` : "",
+    email: user?.email || "",
+    phone: user?.phone || "",
     message: "",
 
     // Airbnb/Short-term rental fields
@@ -111,23 +114,59 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        alert("Please login to submit an inquiry");
+        onClose();
+        return;
+      }
 
-    console.log("Property inquiry submitted:", {
-      propertyId: property.id,
-      propertyType: property.propertyType,
-      listingType: property.listingType,
-      formData,
-      payment: needsPayment ? {
-        method: selectedPaymentMethod,
-        option: paymentOption,
-        amount: paymentOption === "full" ? totalAmount : depositAmount,
-      } : null,
-    });
+      const bookingData: any = {
+        propertyId: property.id,
+        type: isAirbnb ? 'booking' : 'inquiry',
+        name: formData.name || `${user?.firstName} ${user?.lastName}`,
+        email: formData.email || user?.email || '',
+        phone: formData.phone || user?.phone || '',
+        message: formData.message,
+        currency: 'UGX',
+      };
 
-    setIsSubmitting(false);
-    setStep(needsPayment ? 4 : 3); // Success step (4 if payment, 3 if no payment)
+      // Add property-specific fields
+      if (isAirbnb) {
+        bookingData.checkInDate = formData.checkIn;
+        bookingData.checkOutDate = formData.checkOut;
+        bookingData.guests = formData.guests;
+      } else if (isForRent || isForLease) {
+        bookingData.moveInDate = formData.moveInDate;
+        bookingData.leaseDuration = formData.leaseDuration;
+        bookingData.occupants = formData.occupants;
+      } else if (isForSale) {
+        bookingData.scheduledDate = formData.viewingDate;
+        bookingData.scheduledTime = formData.viewingTime;
+        bookingData.offerAmount = formData.offerAmount ? parseFloat(formData.offerAmount) : undefined;
+        bookingData.financingType = formData.financingType;
+      } else if (isCommercial) {
+        bookingData.businessType = formData.businessType;
+        bookingData.spaceRequirements = formData.spaceRequirements;
+        bookingData.leaseTerm = formData.leaseTerm;
+      }
+
+      // Add payment information if needed
+      if (needsPayment && selectedPaymentMethod) {
+        bookingData.paymentAmount = paymentOption === "full" ? totalAmount : depositAmount;
+        bookingData.paymentMethod = selectedPaymentMethod;
+      }
+
+      await propertyService.createBooking(bookingData);
+
+      setIsSubmitting(false);
+      setStep(needsPayment ? 4 : 3); // Success step (4 if payment, 3 if no payment)
+    } catch (error: any) {
+      console.error("Error submitting inquiry:", error);
+      alert(error?.response?.data?.message || "Failed to submit inquiry. Please try again.");
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {

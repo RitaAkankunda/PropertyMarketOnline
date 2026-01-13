@@ -73,10 +73,31 @@ function AuthCallbackPageContent() {
             token,
             isAuthenticated: true,
           });
-          console.log('[AUTH CALLBACK] Auth state updated with user, redirecting to dashboard...');
+          console.log('[AUTH CALLBACK] Auth state updated with user, checking redirect...');
           
-          // Redirect immediately - no delay needed
-          router.push("/dashboard");
+          // Check for return URL
+          const returnUrlParam = searchParams.get("return");
+          const returnUrlStorage = localStorage.getItem("returnUrl");
+          
+          let redirectTo = "/dashboard";
+          
+          if (returnUrlParam) {
+            redirectTo = returnUrlParam;
+            localStorage.removeItem("returnUrl");
+          } else if (returnUrlStorage) {
+            redirectTo = returnUrlStorage;
+            localStorage.removeItem("returnUrl");
+          } else {
+            // Redirect based on user role
+            if (user.role === 'admin') {
+              redirectTo = '/admin';
+            } else if (user.role === 'service_provider') {
+              redirectTo = '/dashboard/provider';
+            }
+          }
+          
+          console.log('[AUTH CALLBACK] Redirecting to:', redirectTo);
+          router.push(redirectTo);
         } catch (profileError) {
           console.error('[AUTH CALLBACK] Failed to fetch profile:', profileError);
           setError("Failed to load user profile. Please try logging in again.");

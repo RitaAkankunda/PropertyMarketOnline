@@ -73,6 +73,38 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Handle 401 Unauthorized - token is invalid or expired
+    if (error.response?.status === 401) {
+      const authErrorLog = `[API 401 ERROR] ${new Date().toISOString()}\nUnauthorized - Token may be invalid or expired\nClearing auth state...`;
+      console.error("%c" + authErrorLog, "background: #1a1a1a; color: #ff9800; padding: 5px; font-size: 12px; font-weight: bold;");
+      
+      // Clear token and auth state
+      if (typeof window !== "undefined") {
+        const currentPath = window.location.pathname;
+        // Only clear and redirect if not already on auth pages
+        if (!currentPath.includes('/auth/')) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("auth-storage");
+          
+          // Store logs
+          const logs = JSON.parse(localStorage.getItem("api_logs") || "[]");
+          logs.push({ 
+            timestamp: new Date().toISOString(), 
+            type: "401_unauthorized", 
+            message: "Token invalid/expired, cleared auth state",
+            requestUrl: error.config?.url
+          });
+          localStorage.setItem("api_logs", JSON.stringify(logs.slice(-20)));
+          
+          // Only redirect if not on login/register page
+          if (currentPath !== '/auth/login' && currentPath !== '/auth/register') {
+            console.log('[API] Redirecting to login due to 401 error...');
+            window.location.href = '/auth/login?message=Session expired. Please login again.';
+          }
+        }
+      }
+    }
+    
     // Check if error response is HTML
     if (error.response?.headers['content-type']?.includes('text/html')) {
       const htmlErrorLog = `[API RESPONSE HTML ERROR] ${new Date().toISOString()}\nBackend error: Received HTML response\nAPI Base URL: ${API_BASE_URL}\nRequest URL: ${error.config?.url}`;
@@ -107,16 +139,42 @@ api.interceptors.response.use(
       // Don't auto-redirect for provider registration - let the component handle it
       const isProviderRegistration = error.config?.url?.includes('/providers/register');
       
+      // Don't auto-redirect for public endpoints (homepage stats, properties list, etc.)
+      const isPublicEndpoint = 
+        error.config?.url?.includes('/bookings/verify') ||
+        error.config?.url?.includes('/properties') ||
+        error.config?.url?.includes('/providers') ||
+        error.config?.url?.includes('/jobs') && !error.config?.url?.includes('/jobs/my') && !error.config?.url?.includes('/jobs/provider');
+      
       if (isProviderRegistration) {
         // Let the component handle the error display
         // Don't remove token - let the component decide what to do
         error.message = error.response?.data?.message || "Authentication required. Please login to continue.";
         console.log("[API] 401 error on provider registration - letting component handle it");
+      } else if (isPublicEndpoint) {
+        // For public endpoints, just reject the promise - don't redirect
+        // The component will handle the error gracefully
+        if (process.env.NODE_ENV === 'development') {
+          console.log("[API] 401 error on public endpoint - not redirecting:", error.config?.url);
+        }
+        // Don't remove token or redirect - just let the error propagate
       } else {
-        // Auto-redirect for other endpoints
+        // Auto-redirect for protected endpoints only
+        // Check if we're on a public page (homepage, properties list, etc.)
         if (typeof window !== "undefined") {
-          localStorage.removeItem("token");
-          window.location.href = "/auth/login";
+          const currentPath = window.location.pathname;
+          const isPublicPage = currentPath === "/" || 
+                              currentPath.startsWith("/properties") || 
+                              currentPath.startsWith("/providers") ||
+                              currentPath.startsWith("/category");
+          
+          // Only redirect if we're NOT on a public page
+          // This prevents redirecting when user is browsing public content
+          if (!isPublicPage) {
+            localStorage.removeItem("token");
+            window.location.href = "/auth/login";
+          }
+          // If on public page, just let the error propagate - don't redirect
         }
       }
     }

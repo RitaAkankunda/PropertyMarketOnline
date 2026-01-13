@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -19,10 +19,27 @@ import {
 import { Button, Input, Select, Textarea, Card, Badge } from "@/components/ui";
 import { useToastContext } from "@/components/ui/toast-provider";
 import { cn } from "@/lib/utils";
-import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS } from "@/lib/constants";
+import { PROPERTY_TYPES, LISTING_TYPES, LOCATIONS, HOTEL_AMENITIES, HOTEL_ROOM_TYPES, UGANDA_REGIONS, UGANDA_CITIES, UGANDA_DISTRICTS } from "@/lib/constants";
 import { propertyService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
+import dynamic from "next/dynamic";
+
+// Dynamically import LocationPicker to avoid SSR issues with Leaflet
+const LocationPicker = dynamic(
+  () => import("@/components/maps").then((mod) => ({ default: mod.LocationPicker })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-[400px] bg-gray-100 flex items-center justify-center rounded-lg">
+        <div className="flex items-center gap-2 text-gray-500">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span>Loading map...</span>
+        </div>
+      </div>
+    )
+  }
+);
 
 const steps = [
   { id: 1, title: "Basic Info", description: "Property type & listing details" },
@@ -75,10 +92,15 @@ export default function CreateListingPage() {
     description: "",
 
     // Location
+    region: "",
     city: "",
     district: "",
-    sector: "",
-    address: "",
+    county: "",
+    subcounty: "",
+    parish: "",
+    village: "",
+    latitude: 0.3476, // Default to Kampala
+    longitude: 32.5825, // Default to Kampala
 
     // Features
     bedrooms: "",
@@ -90,13 +112,92 @@ export default function CreateListingPage() {
     furnished: false,
     amenities: [] as string[],
 
+    // Hotel-specific fields
+    totalRooms: "",
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    starRating: "",
+    hotelAmenities: [] as string[],
+
+    // Land-specific fields
+    landUseType: "",
+    topography: "",
+    roadAccess: false,
+    waterAvailability: false,
+    electricityAvailability: false,
+    titleType: "",
+    soilQuality: "",
+
+    // Commercial-specific fields
+    totalFloors: "",
+    frontageWidth: "",
+    ceilingHeight: "",
+    loadingBays: "",
+    footTrafficLevel: "",
+    threePhasePower: false,
+    hvacSystem: false,
+    fireSafety: false,
+
+    // Warehouse-specific fields
+    clearHeight: "",
+    loadingDocks: "",
+    driveInAccess: false,
+    floorLoadCapacity: "",
+    columnSpacing: "",
+    officeArea: "",
+    coldStorage: false,
+    rampAccess: false,
+
+    // Office-specific fields
+    workstationCapacity: "",
+    meetingRooms: "",
+    receptionArea: false,
+    elevator: false,
+    conferenceRoom: false,
+    serverRoom: false,
+    cafeteria: false,
+
     // Photos
     images: [] as { id: string; url: string; file?: File }[],
 
-    // Pricing
+    // Pricing - Common
     price: "",
     currency: "UGX",
     negotiable: false,
+
+    // Airbnb pricing
+    nightlyRate: "",
+    weeklyRate: "",
+    monthlyRate: "",
+    cleaningFee: "",
+    securityDeposit: "",
+
+    // Hotel pricing
+    standardRoomRate: "",
+    peakSeasonRate: "",
+    offPeakSeasonRate: "",
+
+    // Land pricing
+    pricePerAcre: "",
+    pricePerHectare: "",
+    totalLandPrice: "",
+
+    // Commercial pricing
+    pricePerSqm: "",
+    serviceCharge: "",
+    commercialDeposit: "",
+
+    // Warehouse pricing
+    warehouseLeaseRate: "",
+    warehousePricePerSqm: "",
+    warehouseDeposit: "",
+    utilitiesIncluded: false,
+
+    // Office pricing
+    pricePerWorkstation: "",
+    officePricePerSqm: "",
+    sharedFacilitiesCost: "",
+    officeUtilitiesIncluded: false,
   });
 
   const updateFormData = (field: string, value: unknown) => {
@@ -104,12 +205,21 @@ export default function CreateListingPage() {
   };
 
   const toggleAmenity = (amenity: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter((a) => a !== amenity)
-        : [...prev.amenities, amenity],
-    }));
+    if (formData.propertyType === "hotel") {
+      setFormData((prev) => ({
+        ...prev,
+        hotelAmenities: prev.hotelAmenities.includes(amenity)
+          ? prev.hotelAmenities.filter((a) => a !== amenity)
+          : [...prev.hotelAmenities, amenity],
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        amenities: prev.amenities.includes(amenity)
+          ? prev.amenities.filter((a) => a !== amenity)
+          : [...prev.amenities, amenity],
+      }));
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,9 +257,36 @@ export default function CreateListingPage() {
   };
 
   const handleSubmit = async () => {
-    // Validate required fields
-    if (!formData.title || !formData.description || !formData.propertyType || !formData.price) {
-      showError("Please fill in all required fields (Title, Description, Property Type, and Price).");
+    // Determine a base price across all pricing models
+    const priceCandidates = [
+      formData.price,
+      formData.nightlyRate,
+      formData.weeklyRate,
+      formData.monthlyRate,
+      formData.standardRoomRate,
+      formData.pricePerAcre,
+      formData.pricePerHectare,
+      formData.totalLandPrice,
+      formData.pricePerSqm,
+      formData.serviceCharge,
+      formData.commercialDeposit,
+      formData.warehouseLeaseRate,
+      formData.warehousePricePerSqm,
+      formData.warehouseDeposit,
+      formData.pricePerWorkstation,
+      formData.officePricePerSqm,
+      formData.sharedFacilitiesCost,
+    ];
+
+    const basePrice = priceCandidates
+      .map((v) => (v !== undefined && v !== null && v !== '' ? Number(v) : NaN))
+      .find((v) => Number.isFinite(v) && v >= 0);
+
+    const missingCore = !formData.title || !formData.description || !formData.propertyType;
+    const missingPrice = !Number.isFinite(basePrice);
+
+    if (missingCore || missingPrice) {
+      showError("Please fill in all required fields (Title, Description, Property Type, and a price for this model).");
       return;
     }
 
@@ -172,28 +309,145 @@ export default function CreateListingPage() {
         description: formData.description,
         propertyType: formData.propertyType,
         listingType: formData.listingType,
-        price: parseFloat(formData.price),
-        currency: formData.currency,
-        location: {
-          address: formData.address,
-          city: formData.city,
-          district: formData.district,
-          country: "Uganda",
-          // Default coordinates for Kampala if not provided
-          latitude: 0.3476,
-          longitude: 32.5825,
-        },
-        features: {
+        price: basePrice,
+        currency: formData.currency || "UGX",
+        // Location fields (text-based)
+        region: formData.region,
+        city: formData.city,
+        district: formData.district,
+        county: formData.county,
+        subcounty: formData.subcounty,
+        parish: formData.parish,
+        village: formData.village,
+        // Coordinates (required by backend - must be at top level)
+        latitude: Number(formData.latitude) || 0.3476,
+        longitude: Number(formData.longitude) || 32.5825,
+        // Hotel-specific fields
+        ...(formData.propertyType === "hotel" && {
+          totalRooms: formData.totalRooms ? parseInt(formData.totalRooms) : undefined,
+          starRating: formData.starRating ? parseInt(formData.starRating) : undefined,
+          checkInTime: formData.checkInTime,
+          checkOutTime: formData.checkOutTime,
+        }),
+        
+        // Land-specific fields
+        ...(formData.propertyType === "land" && {
+          landUseType: formData.landUseType,
+          topography: formData.topography,
+          roadAccess: formData.roadAccess,
+          waterAvailability: formData.waterAvailability,
+          electricityAvailability: formData.electricityAvailability,
+          titleType: formData.titleType,
+          soilQuality: formData.soilQuality,
+        }),
+
+        // Commercial-specific fields
+        ...(formData.propertyType === "commercial" && {
+          totalFloors: formData.totalFloors ? parseInt(formData.totalFloors) : undefined,
+          frontageWidth: formData.frontageWidth ? parseFloat(formData.frontageWidth) : undefined,
+          ceilingHeight: formData.ceilingHeight ? parseFloat(formData.ceilingHeight) : undefined,
+          loadingBays: formData.loadingBays ? parseInt(formData.loadingBays) : undefined,
+          footTrafficLevel: formData.footTrafficLevel,
+          threePhasePower: formData.threePhasePower,
+          hvacSystem: formData.hvacSystem,
+          fireSafety: formData.fireSafety,
+        }),
+
+        // Warehouse-specific fields
+        ...(formData.propertyType === "warehouse" && {
+          clearHeight: formData.clearHeight ? parseFloat(formData.clearHeight) : undefined,
+          loadingDocks: formData.loadingDocks ? parseInt(formData.loadingDocks) : undefined,
+          driveInAccess: formData.driveInAccess,
+          floorLoadCapacity: formData.floorLoadCapacity ? parseFloat(formData.floorLoadCapacity) : undefined,
+          columnSpacing: formData.columnSpacing ? parseFloat(formData.columnSpacing) : undefined,
+          officeArea: formData.officeArea ? parseFloat(formData.officeArea) : undefined,
+          coldStorage: formData.coldStorage,
+          rampAccess: formData.rampAccess,
+        }),
+
+        // Office-specific fields
+        ...(formData.propertyType === "office" && {
+          workstationCapacity: formData.workstationCapacity ? parseInt(formData.workstationCapacity) : undefined,
+          meetingRooms: formData.meetingRooms ? parseInt(formData.meetingRooms) : undefined,
+          receptionArea: formData.receptionArea,
+          elevator: formData.elevator,
+          conferenceRoom: formData.conferenceRoom,
+          serverRoom: formData.serverRoom,
+          cafeteria: formData.cafeteria,
+        }),
+
+        // Residential-specific fields (for House, Apartment, Condo, Villa, Airbnb)
+        ...(["house", "apartment", "condo", "villa", "airbnb"].includes(formData.propertyType) && {
           bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
           bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
-          area: formData.size ? parseFloat(formData.size) : undefined,
-          areaUnit: formData.sizeUnit,
           parking: formData.parking ? parseInt(formData.parking) : undefined,
-          yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
-        },
-        amenities: formData.amenities,
+          furnished: formData.furnished,
+        }),
+
+        // Pricing fields - Hotel specific
+        ...(formData.propertyType === "hotel" && {
+          standardRoomRate: formData.standardRoomRate ? parseFloat(formData.standardRoomRate) : undefined,
+          peakSeasonRate: formData.peakSeasonRate ? parseFloat(formData.peakSeasonRate) : undefined,
+          offPeakSeasonRate: formData.offPeakSeasonRate ? parseFloat(formData.offPeakSeasonRate) : undefined,
+        }),
+
+        // Pricing fields - Airbnb specific
+        ...(formData.propertyType === "airbnb" && {
+          nightlyRate: formData.nightlyRate ? parseFloat(formData.nightlyRate) : undefined,
+          weeklyRate: formData.weeklyRate ? parseFloat(formData.weeklyRate) : undefined,
+          monthlyRate: formData.monthlyRate ? parseFloat(formData.monthlyRate) : undefined,
+          cleaningFee: formData.cleaningFee ? parseFloat(formData.cleaningFee) : undefined,
+          securityDeposit: formData.securityDeposit ? parseFloat(formData.securityDeposit) : undefined,
+        }),
+
+        // Pricing fields - Land specific
+        ...(formData.propertyType === "land" && {
+          pricePerAcre: formData.pricePerAcre ? parseFloat(formData.pricePerAcre) : undefined,
+          pricePerHectare: formData.pricePerHectare ? parseFloat(formData.pricePerHectare) : undefined,
+          totalLandPrice: formData.totalLandPrice ? parseFloat(formData.totalLandPrice) : undefined,
+        }),
+
+        // Pricing fields - Commercial specific
+        ...(formData.propertyType === "commercial" && {
+          pricePerSqm: formData.pricePerSqm ? parseFloat(formData.pricePerSqm) : undefined,
+          serviceCharge: formData.serviceCharge ? parseFloat(formData.serviceCharge) : undefined,
+          commercialDeposit: formData.commercialDeposit ? parseFloat(formData.commercialDeposit) : undefined,
+        }),
+
+        // Pricing fields - Warehouse specific
+        ...(formData.propertyType === "warehouse" && {
+          warehouseLeaseRate: formData.warehouseLeaseRate ? parseFloat(formData.warehouseLeaseRate) : undefined,
+          warehousePricePerSqm: formData.warehousePricePerSqm ? parseFloat(formData.warehousePricePerSqm) : undefined,
+          warehouseDeposit: formData.warehouseDeposit ? parseFloat(formData.warehouseDeposit) : undefined,
+          utilitiesIncluded: formData.utilitiesIncluded,
+        }),
+
+        // Pricing fields - Office specific
+        ...(formData.propertyType === "office" && {
+          pricePerWorkstation: formData.pricePerWorkstation ? parseFloat(formData.pricePerWorkstation) : undefined,
+          officePricePerSqm: formData.officePricePerSqm ? parseFloat(formData.officePricePerSqm) : undefined,
+          sharedFacilitiesCost: formData.sharedFacilitiesCost ? parseFloat(formData.sharedFacilitiesCost) : undefined,
+          officeUtilitiesIncluded: formData.officeUtilitiesIncluded,
+        }),
+
+        // General pricing fields
+        negotiable: formData.negotiable,
+
+        // Common fields for all property types
+        area: formData.size ? parseFloat(formData.size) : undefined,
+        areaUnit: formData.sizeUnit,
+        yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
+        amenities: formData.propertyType === "hotel" ? formData.hotelAmenities : formData.amenities,
         images: uploadedImageUrls, // Use the uploaded image URLs
       };
+
+      // Debug: Log coordinates before submission
+      console.log("Submitting property with coordinates:", {
+        latitude: propertyData.latitude,
+        longitude: propertyData.longitude,
+        city: propertyData.city,
+        district: propertyData.district,
+      });
 
       const createdProperty = await propertyService.createProperty(propertyData);
       
@@ -280,10 +534,30 @@ export default function CreateListingPage() {
     ...LISTING_TYPES.map((t) => ({ value: t.value, label: t.label })),
   ];
 
-  const cityOptions = [
-    { value: "", label: "Select City" },
-    ...LOCATIONS.map((loc) => ({ value: loc.value, label: loc.label })),
-  ];
+  // Memoize location options to prevent re-renders with new array references
+  const regionOptions = useMemo(
+    () => [
+      { value: "", label: "Select Region" },
+      ...UGANDA_REGIONS.map((region) => ({ value: region.value, label: region.label })),
+    ],
+    []
+  );
+
+  const cityOptions = useMemo(
+    () => [
+      { value: "", label: "Select City" },
+      ...UGANDA_CITIES.map((city) => ({ value: city.value, label: city.label })),
+    ],
+    []
+  );
+
+  const districtOptions = useMemo(
+    () => [
+      { value: "", label: "Select District" },
+      ...UGANDA_DISTRICTS.map((district) => ({ value: district.value, label: district.label })),
+    ],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -435,7 +709,17 @@ export default function CreateListingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      City/Province *
+                      Region *
+                    </label>
+                    <Select
+                      options={regionOptions}
+                      value={formData.region}
+                      onChange={(value) => updateFormData("region", value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      City *
                     </label>
                     <Select
                       options={cityOptions}
@@ -443,45 +727,85 @@ export default function CreateListingPage() {
                       onChange={(value) => updateFormData("city", value)}
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       District *
                     </label>
-                    <Input
-                      placeholder="e.g., Gasabo"
+                    <Select
+                      options={districtOptions}
                       value={formData.district}
-                      onChange={(e) => updateFormData("district", e.target.value)}
+                      onChange={(value) => updateFormData("district", value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      County/Municipality
+                    </label>
+                    <Input
+                      placeholder="e.g., Kampala County"
+                      value={formData.county}
+                      onChange={(e) => updateFormData("county", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Subcounty/Division
+                    </label>
+                    <Input
+                      placeholder="e.g., Kampala Sub County"
+                      value={formData.subcounty}
+                      onChange={(e) => updateFormData("subcounty", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Parish/Ward
+                    </label>
+                    <Input
+                      placeholder="e.g., Kampala Parish"
+                      value={formData.parish}
+                      onChange={(e) => updateFormData("parish", e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Sector *
+                    Village/Zone
                   </label>
                   <Input
-                    placeholder="e.g., Remera"
-                    value={formData.sector}
-                    onChange={(e) => updateFormData("sector", e.target.value)}
+                    placeholder="e.g., Kololo Zone"
+                    value={formData.village}
+                    onChange={(e) => updateFormData("village", e.target.value)}
                   />
                 </div>
 
-                <div>
+                {/* Location Picker Map */}
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Street Address
+                    Pin Location on Map *
                   </label>
-                  <Input
-                    placeholder="e.g., KG 123 Street, House 45"
-                    value={formData.address}
-                    onChange={(e) => updateFormData("address", e.target.value)}
+                  <p className="text-xs text-slate-500 mb-3">
+                    Click on the map or search to set the exact location of your property. This helps buyers find your property easily.
+                  </p>
+                  <LocationPicker
+                    initialPosition={
+                      formData.latitude && formData.longitude && formData.latitude !== 0.3476 && formData.longitude !== 32.5825
+                        ? { lat: formData.latitude, lng: formData.longitude }
+                        : undefined
+                    }
+                    onLocationSelect={(location) => {
+                      updateFormData("latitude", location.lat);
+                      updateFormData("longitude", location.lng);
+                    }}
+                    className="w-full"
                   />
-                </div>
-
-                {/* Map Placeholder */}
-                <div className="border-2 border-dashed rounded-xl p-8 text-center">
-                  <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 mb-2">Pin location on map</p>
-                  <p className="text-xs text-slate-400">Coming soon: Click on map to set exact location</p>
                 </div>
               </div>
             </Card>
@@ -490,136 +814,897 @@ export default function CreateListingPage() {
           {/* Step 3: Features */}
           {currentStep === 3 && (
             <Card className="p-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Property Features</h2>
-              <p className="text-slate-500 mb-6">Add details about your property</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                {formData.propertyType === "hotel" ? "Hotel Details" :
+                 formData.propertyType === "land" ? "Land Details" :
+                 formData.propertyType === "commercial" ? "Commercial Property Details" :
+                 formData.propertyType === "warehouse" ? "Warehouse Details" :
+                 formData.propertyType === "office" ? "Office Space Details" :
+                 "Property Features"}
+              </h2>
+              <p className="text-slate-500 mb-6">
+                Add details about your {formData.propertyType || "property"}
+              </p>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Bedrooms
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      value={formData.bedrooms}
-                      onChange={(e) => updateFormData("bedrooms", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Bathrooms
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      value={formData.bathrooms}
-                      onChange={(e) => updateFormData("bathrooms", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Parking Spots
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      value={formData.parking}
-                      onChange={(e) => updateFormData("parking", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Year Built
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="2020"
-                      value={formData.yearBuilt}
-                      onChange={(e) => updateFormData("yearBuilt", e.target.value)}
-                    />
-                  </div>
-                </div>
+                {/* Hotel-specific fields */}
+                {formData.propertyType === "hotel" ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Rooms *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 50"
+                          min="1"
+                          value={formData.totalRooms}
+                          onChange={(e) => updateFormData("totalRooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Star Rating (1-5)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 4"
+                          min="1"
+                          max="5"
+                          value={formData.starRating}
+                          onChange={(e) => updateFormData("starRating", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Property Size
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 200"
-                      value={formData.size}
-                      onChange={(e) => updateFormData("size", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Size Unit
-                    </label>
-                    <Select
-                      options={[
-                        { value: "sqm", label: "Square Meters (sqm)" },
-                        { value: "sqft", label: "Square Feet (sqft)" },
-                        { value: "acres", label: "Acres" },
-                        { value: "hectares", label: "Hectares" },
-                      ]}
-                      value={formData.sizeUnit}
-                      onChange={(value) => updateFormData("sizeUnit", value)}
-                    />
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Check-in Time *
+                        </label>
+                        <Input
+                          type="time"
+                          value={formData.checkInTime}
+                          onChange={(e) => updateFormData("checkInTime", e.target.value)}
+                        />
+                        <p className="text-xs text-slate-400 mt-1">Typical: 2:00 PM</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Check-out Time *
+                        </label>
+                        <Input
+                          type="time"
+                          value={formData.checkOutTime}
+                          onChange={(e) => updateFormData("checkOutTime", e.target.value)}
+                        />
+                        <p className="text-xs text-slate-400 mt-1">Typical: 11:00 AM</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="furnished"
-                    checked={formData.furnished}
-                    onChange={(e) => updateFormData("furnished", e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="furnished" className="text-slate-700">
-                    This property is furnished
-                  </label>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Property Size (optional)
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Input
+                          type="number"
+                          placeholder="e.g., 5000"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                        <Select
+                          options={[
+                            { value: "sqm", label: "Square Meters (sqm)" },
+                            { value: "sqft", label: "Square Feet (sqft)" },
+                            { value: "acres", label: "Acres" },
+                            { value: "hectares", label: "Hectares" },
+                          ]}
+                          value={formData.sizeUnit}
+                          onChange={(value) => updateFormData("sizeUnit", value)}
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
-                    Amenities
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {amenitiesList.map((amenity) => (
-                      <button
-                        key={amenity}
-                        type="button"
-                        onClick={() => toggleAmenity(amenity)}
-                        className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
-                          formData.amenities.includes(amenity)
-                            ? "bg-blue-50 border-blue-500 text-blue-700"
-                            : "border-slate-200 hover:border-blue-500"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "w-5 h-5 rounded border flex items-center justify-center",
-                            formData.amenities.includes(amenity)
-                              ? "bg-blue-600 border-blue-600"
-                              : "border-slate-300"
-                          )}
-                        >
-                          {formData.amenities.includes(amenity) && (
-                            <Check className="w-3 h-3 text-white" />
-                          )}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Hotel Amenities
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {HOTEL_AMENITIES.map((amenity) => (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
+                              formData.hotelAmenities.includes(amenity)
+                                ? "bg-blue-50 border-blue-500 text-blue-700"
+                                : "border-slate-200 hover:border-blue-500"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center",
+                                formData.hotelAmenities.includes(amenity)
+                                  ? "bg-blue-600 border-blue-600"
+                                  : "border-slate-300"
+                              )}
+                            >
+                              {formData.hotelAmenities.includes(amenity) && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            {amenity}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : formData.propertyType === "land" ? (
+                  <>
+                    {/* Land-specific fields */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Land Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 5"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Area Unit *
+                        </label>
+                        <Select
+                          options={[
+                            { value: "acres", label: "Acres" },
+                            { value: "hectares", label: "Hectares" },
+                            { value: "sqm", label: "Square Meters" },
+                          ]}
+                          value={formData.sizeUnit}
+                          onChange={(value) => updateFormData("sizeUnit", value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Land Use Type *
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Land Use" },
+                            { value: "agricultural", label: "Agricultural" },
+                            { value: "residential", label: "Residential" },
+                            { value: "commercial", label: "Commercial" },
+                            { value: "industrial", label: "Industrial" },
+                            { value: "mixed", label: "Mixed Use" },
+                          ]}
+                          value={formData.landUseType}
+                          onChange={(value) => updateFormData("landUseType", value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Topography
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Topography" },
+                            { value: "flat", label: "Flat" },
+                            { value: "sloped", label: "Sloped" },
+                            { value: "hilly", label: "Hilly" },
+                            { value: "valley", label: "Valley" },
+                          ]}
+                          value={formData.topography}
+                          onChange={(value) => updateFormData("topography", value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Title Type
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Title Type" },
+                            { value: "freehold", label: "Freehold" },
+                            { value: "leasehold", label: "Leasehold" },
+                            { value: "mailo", label: "Mailo" },
+                          ]}
+                          value={formData.titleType}
+                          onChange={(value) => updateFormData("titleType", value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Soil Quality (for agricultural land)
+                        </label>
+                        <Input
+                          placeholder="e.g., Loamy, fertile"
+                          value={formData.soilQuality}
+                          onChange={(e) => updateFormData("soilQuality", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Available Utilities
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="roadAccess"
+                            checked={formData.roadAccess}
+                            onChange={(e) => updateFormData("roadAccess", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="roadAccess" className="text-slate-700">
+                            Road Access
+                          </label>
                         </div>
-                        {amenity}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="waterAvailability"
+                            checked={formData.waterAvailability}
+                            onChange={(e) => updateFormData("waterAvailability", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="waterAvailability" className="text-slate-700">
+                            Water Availability
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="electricityAvailability"
+                            checked={formData.electricityAvailability}
+                            onChange={(e) => updateFormData("electricityAvailability", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="electricityAvailability" className="text-slate-700">
+                            Electricity Availability
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : formData.propertyType === "commercial" ? (
+                  <>
+                    {/* Commercial-specific fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Floor Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 500"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Number of Floors
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 2"
+                          min="1"
+                          value={formData.totalFloors}
+                          onChange={(e) => updateFormData("totalFloors", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Frontage Width (meters)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 15"
+                          value={formData.frontageWidth}
+                          onChange={(e) => updateFormData("frontageWidth", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Ceiling Height (meters)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 3.5"
+                          step="0.1"
+                          value={formData.ceilingHeight}
+                          onChange={(e) => updateFormData("ceilingHeight", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Loading Bays
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.loadingBays}
+                          onChange={(e) => updateFormData("loadingBays", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spaces
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Foot Traffic Level
+                        </label>
+                        <Select
+                          options={[
+                            { value: "", label: "Select Level" },
+                            { value: "low", label: "Low" },
+                            { value: "medium", label: "Medium" },
+                            { value: "high", label: "High" },
+                            { value: "very_high", label: "Very High" },
+                          ]}
+                          value={formData.footTrafficLevel}
+                          onChange={(value) => updateFormData("footTrafficLevel", value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Features & Amenities
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="threePhasePower"
+                            checked={formData.threePhasePower}
+                            onChange={(e) => updateFormData("threePhasePower", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="threePhasePower" className="text-slate-700">
+                            3-Phase Power Available
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="hvacSystem"
+                            checked={formData.hvacSystem}
+                            onChange={(e) => updateFormData("hvacSystem", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="hvacSystem" className="text-slate-700">
+                            HVAC System
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="fireSafety"
+                            checked={formData.fireSafety}
+                            onChange={(e) => updateFormData("fireSafety", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="fireSafety" className="text-slate-700">
+                            Fire Safety Systems
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : formData.propertyType === "warehouse" ? (
+                  <>
+                    {/* Warehouse-specific fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Floor Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 2000"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Clear Height (meters) *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 8"
+                          step="0.1"
+                          value={formData.clearHeight}
+                          onChange={(e) => updateFormData("clearHeight", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Loading Docks
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.loadingDocks}
+                          onChange={(e) => updateFormData("loadingDocks", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Floor Load Capacity (kg/sqm)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 1000"
+                          value={formData.floorLoadCapacity}
+                          onChange={(e) => updateFormData("floorLoadCapacity", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Column Spacing (meters)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 10"
+                          step="0.1"
+                          value={formData.columnSpacing}
+                          onChange={(e) => updateFormData("columnSpacing", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Office Area (sqm)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 100"
+                          value={formData.officeArea}
+                          onChange={(e) => updateFormData("officeArea", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spaces
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Warehouse Features
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="driveInAccess"
+                            checked={formData.driveInAccess}
+                            onChange={(e) => updateFormData("driveInAccess", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="driveInAccess" className="text-slate-700">
+                            Drive-In Access
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="coldStorage"
+                            checked={formData.coldStorage}
+                            onChange={(e) => updateFormData("coldStorage", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="coldStorage" className="text-slate-700">
+                            Cold Storage Capability
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="rampAccess"
+                            checked={formData.rampAccess}
+                            onChange={(e) => updateFormData("rampAccess", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="rampAccess" className="text-slate-700">
+                            Ramp Access
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : formData.propertyType === "office" ? (
+                  <>
+                    {/* Office-specific fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Total Floor Area *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 300"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Number of Floors
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 1"
+                          min="1"
+                          value={formData.totalFloors}
+                          onChange={(e) => updateFormData("totalFloors", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Workstation Capacity
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 20"
+                          value={formData.workstationCapacity}
+                          onChange={(e) => updateFormData("workstationCapacity", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Meeting Rooms
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.meetingRooms}
+                          onChange={(e) => updateFormData("meetingRooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spaces
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Office Features
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="receptionArea"
+                            checked={formData.receptionArea}
+                            onChange={(e) => updateFormData("receptionArea", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="receptionArea" className="text-slate-700">
+                            Reception Area
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="elevator"
+                            checked={formData.elevator}
+                            onChange={(e) => updateFormData("elevator", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="elevator" className="text-slate-700">
+                            Elevator/Lift
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="conferenceRoom"
+                            checked={formData.conferenceRoom}
+                            onChange={(e) => updateFormData("conferenceRoom", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="conferenceRoom" className="text-slate-700">
+                            Conference Room
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="serverRoom"
+                            checked={formData.serverRoom}
+                            onChange={(e) => updateFormData("serverRoom", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="serverRoom" className="text-slate-700">
+                            Server Room
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="cafeteria"
+                            checked={formData.cafeteria}
+                            onChange={(e) => updateFormData("cafeteria", e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label htmlFor="cafeteria" className="text-slate-700">
+                            Cafeteria/Kitchenette
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Standard Amenities
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {["Air Conditioning", "Backup Generator", "Internet Ready", "Security", "CCTV", "Parking"].map((amenity) => (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
+                              formData.amenities.includes(amenity)
+                                ? "bg-blue-50 border-blue-500 text-blue-700"
+                                : "border-slate-200 hover:border-blue-500"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center",
+                                formData.amenities.includes(amenity)
+                                  ? "bg-blue-600 border-blue-600"
+                                  : "border-slate-300"
+                              )}
+                            >
+                              {formData.amenities.includes(amenity) && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            {amenity}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Regular property fields (House, Apartment, Condo, Villa, Airbnb) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Bedrooms
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.bedrooms}
+                          onChange={(e) => updateFormData("bedrooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Bathrooms
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.bathrooms}
+                          onChange={(e) => updateFormData("bathrooms", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Parking Spots
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={formData.parking}
+                          onChange={(e) => updateFormData("parking", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Year Built
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          value={formData.yearBuilt}
+                          onChange={(e) => updateFormData("yearBuilt", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Property Size
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 200"
+                          value={formData.size}
+                          onChange={(e) => updateFormData("size", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Size Unit
+                        </label>
+                        <Select
+                          options={[
+                            { value: "sqm", label: "Square Meters (sqm)" },
+                            { value: "sqft", label: "Square Feet (sqft)" },
+                            { value: "acres", label: "Acres" },
+                            { value: "hectares", label: "Hectares" },
+                          ]}
+                          value={formData.sizeUnit}
+                          onChange={(value) => updateFormData("sizeUnit", value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="furnished"
+                        checked={formData.furnished}
+                        onChange={(e) => updateFormData("furnished", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="furnished" className="text-slate-700">
+                        This property is furnished
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Amenities
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {amenitiesList.map((amenity) => (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
+                              formData.amenities.includes(amenity)
+                                ? "bg-blue-50 border-blue-500 text-blue-700"
+                                : "border-slate-200 hover:border-blue-500"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center",
+                                formData.amenities.includes(amenity)
+                                  ? "bg-blue-600 border-blue-600"
+                                  : "border-slate-300"
+                              )}
+                            >
+                              {formData.amenities.includes(amenity) && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            {amenity}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
           )}
@@ -702,60 +1787,661 @@ export default function CreateListingPage() {
           {currentStep === 5 && (
             <Card className="p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Set Your Price</h2>
-              <p className="text-slate-500 mb-6">How much do you want for your property?</p>
+              <p className="text-slate-500 mb-6">
+                {formData.propertyType === "airbnb" && "Set your nightly and extended stay rates"}
+                {formData.propertyType === "hotel" && "Configure your room rates"}
+                {formData.propertyType === "land" && "Set your land pricing"}
+                {formData.propertyType === "commercial" && "Set your commercial property pricing"}
+                {formData.propertyType === "warehouse" && "Configure your warehouse pricing"}
+                {formData.propertyType === "office" && "Set your office space pricing"}
+                {!["airbnb", "hotel", "land", "commercial", "warehouse", "office"].includes(formData.propertyType) && 
+                  "How much do you want for your property?"}
+              </p>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Price *
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 50000000"
-                      value={formData.price}
-                      onChange={(e) => updateFormData("price", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Currency
-                    </label>
-                    <Select
-                      options={[
-                        { value: "UGX", label: "UGX" },
-                        { value: "USD", label: "USD" },
-                      ]}
-                      value={formData.currency}
-                      onChange={(value) => updateFormData("currency", value)}
-                    />
-                  </div>
-                </div>
+                {/* Residential Properties (House, Apartment, Condo, Villa) */}
+                {["house", "apartment", "condo", "villa"].includes(formData.propertyType) && (
+                  <>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          {formData.listingType === "sale" ? "Sale Price" : "Monthly Rent"} *
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="e.g., 50000000"
+                          value={formData.price}
+                          onChange={(e) => updateFormData("price", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Currency
+                        </label>
+                        <select
+                          value={formData.currency}
+                          onChange={(e) => updateFormData("currency", e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="UGX">UGX</option>
+                          <option value="USD">USD</option>
+                        </select>
+                      </div>
+                    </div>
 
-                {formData.price && (
-                  <div className="p-4 bg-slate-100 rounded-xl">
-                    <p className="text-sm text-slate-500">Your price:</p>
-                    <p className="text-3xl font-bold text-slate-900">
-                      {formData.currency} {Number(formData.price).toLocaleString()}
-                      {formData.listingType === "rent" && (
-                        <span className="text-lg font-normal text-slate-500">/month</span>
-                      )}
-                    </p>
-                  </div>
+                    {formData.price && (
+                      <div className="p-4 bg-slate-100 rounded-xl">
+                        <p className="text-sm text-slate-500">Your price:</p>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {formData.currency} {Number(formData.price).toLocaleString()}
+                          {formData.listingType === "rent" && (
+                            <span className="text-lg font-normal text-slate-500">/month</span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="negotiable"
+                        checked={formData.negotiable}
+                        onChange={(e) => updateFormData("negotiable", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="negotiable" className="text-slate-700">
+                        Price is negotiable
+                      </label>
+                    </div>
+                  </>
                 )}
 
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="negotiable"
-                    checked={formData.negotiable}
-                    onChange={(e) => updateFormData("negotiable", e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="negotiable" className="text-slate-700">
-                    Price is negotiable
-                  </label>
-                </div>
+                {/* Airbnb Pricing */}
+                {formData.propertyType === "airbnb" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Nightly Rate *
+                        </label>
+                        <div className="flex gap-2">
+                          <select
+                            value={formData.currency}
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
+                          <Input
+                            type="number"
+                            placeholder="150000"
+                            value={formData.nightlyRate}
+                            onChange={(e) => updateFormData("nightlyRate", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Weekly Rate (Optional)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="900000"
+                          value={formData.weeklyRate}
+                          onChange={(e) => updateFormData("weeklyRate", e.target.value)}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">7-night discount</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Monthly Rate (Optional)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="3000000"
+                          value={formData.monthlyRate}
+                          onChange={(e) => updateFormData("monthlyRate", e.target.value)}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">30-night discount</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Cleaning Fee
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="50000"
+                          value={formData.cleaningFee}
+                          onChange={(e) => updateFormData("cleaningFee", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Security Deposit
+                      </label>
+                      <Input
+                        type="number"
+                        placeholder="500000"
+                        value={formData.securityDeposit}
+                        onChange={(e) => updateFormData("securityDeposit", e.target.value)}
+                      />
+                    </div>
+
+                    {formData.nightlyRate && (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <p className="text-sm font-medium text-blue-900 mb-2">Pricing Summary:</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-blue-700">Per Night:</span>
+                            <span className="font-semibold">{formData.currency} {Number(formData.nightlyRate).toLocaleString()}</span>
+                          </div>
+                          {formData.weeklyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-blue-700">Per Week:</span>
+                              <span className="font-semibold">{formData.currency} {Number(formData.weeklyRate).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {formData.monthlyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-blue-700">Per Month:</span>
+                              <span className="font-semibold">{formData.currency} {Number(formData.monthlyRate).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Hotel Pricing */}
+                {formData.propertyType === "hotel" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Standard Room Rate (per night) *
+                        </label>
+                        <div className="flex gap-2">
+                          <select
+                            value={formData.currency}
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
+                          <Input
+                            type="number"
+                            placeholder="200000"
+                            value={formData.standardRoomRate}
+                            onChange={(e) => updateFormData("standardRoomRate", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Peak Season Rate
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="300000"
+                          value={formData.peakSeasonRate}
+                          onChange={(e) => updateFormData("peakSeasonRate", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Off-Peak Season Rate
+                      </label>
+                      <Input
+                        type="number"
+                        placeholder="150000"
+                        value={formData.offPeakSeasonRate}
+                        onChange={(e) => updateFormData("offPeakSeasonRate", e.target.value)}
+                      />
+                    </div>
+
+                    {formData.standardRoomRate && (
+                      <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                        <p className="text-sm font-medium text-purple-900 mb-2">Room Rates:</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-purple-700">Standard Rate:</span>
+                            <span className="font-semibold">{formData.currency} {Number(formData.standardRoomRate).toLocaleString()}/night</span>
+                          </div>
+                          {formData.peakSeasonRate && (
+                            <div className="flex justify-between">
+                              <span className="text-purple-700">Peak Season:</span>
+                              <span className="font-semibold">{formData.currency} {Number(formData.peakSeasonRate).toLocaleString()}/night</span>
+                            </div>
+                          )}
+                          {formData.offPeakSeasonRate && (
+                            <div className="flex justify-between">
+                              <span className="text-purple-700">Off-Peak:</span>
+                              <span className="font-semibold">{formData.currency} {Number(formData.offPeakSeasonRate).toLocaleString()}/night</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Land Pricing */}
+                {formData.propertyType === "land" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Price per Acre
+                        </label>
+                        <div className="flex gap-2">
+                          <select
+                            value={formData.currency}
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
+                          <Input
+                            type="number"
+                            placeholder="50000000"
+                            value={formData.pricePerAcre}
+                            onChange={(e) => updateFormData("pricePerAcre", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Price per Hectare
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="125000000"
+                          value={formData.pricePerHectare}
+                          onChange={(e) => updateFormData("pricePerHectare", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Total Land Price *
+                      </label>
+                      <Input
+                        type="number"
+                        placeholder="200000000"
+                        value={formData.totalLandPrice}
+                        onChange={(e) => updateFormData("totalLandPrice", e.target.value)}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Total price for the entire {formData.size} {formData.sizeUnit}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="negotiable-land"
+                        checked={formData.negotiable}
+                        onChange={(e) => updateFormData("negotiable", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="negotiable-land" className="text-slate-700">
+                        Price is negotiable
+                      </label>
+                    </div>
+
+                    {formData.totalLandPrice && (
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                        <p className="text-sm font-medium text-green-900 mb-2">Land Pricing:</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-green-700">Total Price:</span>
+                            <span className="font-semibold text-lg">{formData.currency} {Number(formData.totalLandPrice).toLocaleString()}</span>
+                          </div>
+                          {formData.pricePerAcre && (
+                            <div className="flex justify-between">
+                              <span className="text-green-700">Per Acre:</span>
+                              <span>{formData.currency} {Number(formData.pricePerAcre).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {formData.pricePerHectare && (
+                            <div className="flex justify-between">
+                              <span className="text-green-700">Per Hectare:</span>
+                              <span>{formData.currency} {Number(formData.pricePerHectare).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Commercial Pricing */}
+                {formData.propertyType === "commercial" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          {formData.listingType === "sale" ? "Total Price" : "Monthly Lease Rate"} *
+                        </label>
+                        <div className="flex gap-2">
+                          <select
+                            value={formData.currency}
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
+                          <Input
+                            type="number"
+                            placeholder="100000000"
+                            value={formData.price}
+                            onChange={(e) => updateFormData("price", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Price per Sqm
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="50000"
+                          value={formData.pricePerSqm}
+                          onChange={(e) => updateFormData("pricePerSqm", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {formData.listingType === "rent" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                              Service Charge (Monthly)
+                            </label>
+                            <Input
+                              type="number"
+                              placeholder="2000000"
+                              value={formData.serviceCharge}
+                              onChange={(e) => updateFormData("serviceCharge", e.target.value)}
+                            />
+                            <p className="text-xs text-slate-500 mt-1">Maintenance, security, etc.</p>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                              Security Deposit
+                            </label>
+                            <Input
+                              type="number"
+                              placeholder="10000000"
+                              value={formData.commercialDeposit}
+                              onChange={(e) => updateFormData("commercialDeposit", e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="negotiable-commercial"
+                        checked={formData.negotiable}
+                        onChange={(e) => updateFormData("negotiable", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="negotiable-commercial" className="text-slate-700">
+                        Price is negotiable
+                      </label>
+                    </div>
+
+                    {formData.price && (
+                      <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
+                        <p className="text-sm font-medium text-orange-900 mb-2">Commercial Pricing:</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-orange-700">
+                              {formData.listingType === "sale" ? "Sale Price:" : "Monthly Rent:"}
+                            </span>
+                            <span className="font-semibold text-lg">{formData.currency} {Number(formData.price).toLocaleString()}</span>
+                          </div>
+                          {formData.pricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-orange-700">Per Sqm:</span>
+                              <span>{formData.currency} {Number(formData.pricePerSqm).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {formData.serviceCharge && (
+                            <div className="flex justify-between">
+                              <span className="text-orange-700">Service Charge:</span>
+                              <span>{formData.currency} {Number(formData.serviceCharge).toLocaleString()}/month</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Warehouse Pricing */}
+                {formData.propertyType === "warehouse" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Monthly Lease Rate *
+                        </label>
+                        <div className="flex gap-2">
+                          <select
+                            value={formData.currency}
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
+                          <Input
+                            type="number"
+                            placeholder="15000000"
+                            value={formData.warehouseLeaseRate}
+                            onChange={(e) => updateFormData("warehouseLeaseRate", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Price per Sqm
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="30000"
+                          value={formData.warehousePricePerSqm}
+                          onChange={(e) => updateFormData("warehousePricePerSqm", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Security Deposit
+                      </label>
+                      <Input
+                        type="number"
+                        placeholder="30000000"
+                        value={formData.warehouseDeposit}
+                        onChange={(e) => updateFormData("warehouseDeposit", e.target.value)}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Typically 2-3 months rent</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="utilities-included"
+                        checked={formData.utilitiesIncluded}
+                        onChange={(e) => updateFormData("utilitiesIncluded", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="utilities-included" className="text-slate-700">
+                        Utilities included in lease rate
+                      </label>
+                    </div>
+
+                    {formData.warehouseLeaseRate && (
+                      <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+                        <p className="text-sm font-medium text-indigo-900 mb-2">Warehouse Pricing:</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-indigo-700">Monthly Rent:</span>
+                            <span className="font-semibold text-lg">{formData.currency} {Number(formData.warehouseLeaseRate).toLocaleString()}</span>
+                          </div>
+                          {formData.warehousePricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-indigo-700">Per Sqm:</span>
+                              <span>{formData.currency} {Number(formData.warehousePricePerSqm).toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-indigo-700">Utilities:</span>
+                            <span>{formData.utilitiesIncluded ? "Included" : "Separate"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Office Pricing */}
+                {formData.propertyType === "office" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Monthly Lease Rate *
+                        </label>
+                        <div className="flex gap-2">
+                          <select
+                            value={formData.currency}
+                            onChange={(e) => updateFormData("currency", e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-20"
+                          >
+                            <option value="UGX">UGX</option>
+                            <option value="USD">USD</option>
+                          </select>
+                          <Input
+                            type="number"
+                            placeholder="10000000"
+                            value={formData.price}
+                            onChange={(e) => updateFormData("price", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Price per Workstation
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="500000"
+                          value={formData.pricePerWorkstation}
+                          onChange={(e) => updateFormData("pricePerWorkstation", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Price per Sqm
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="40000"
+                          value={formData.officePricePerSqm}
+                          onChange={(e) => updateFormData("officePricePerSqm", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Shared Facilities Cost
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="1000000"
+                          value={formData.sharedFacilitiesCost}
+                          onChange={(e) => updateFormData("sharedFacilitiesCost", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="office-utilities"
+                        checked={formData.officeUtilitiesIncluded}
+                        onChange={(e) => updateFormData("officeUtilitiesIncluded", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="office-utilities" className="text-slate-700">
+                        Utilities & internet included
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="negotiable-office"
+                        checked={formData.negotiable}
+                        onChange={(e) => updateFormData("negotiable", e.target.checked)}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="negotiable-office" className="text-slate-700">
+                        Price is negotiable
+                      </label>
+                    </div>
+
+                    {formData.price && (
+                      <div className="p-4 bg-cyan-50 rounded-xl border border-cyan-200">
+                        <p className="text-sm font-medium text-cyan-900 mb-2">Office Pricing:</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-cyan-700">Monthly Rent:</span>
+                            <span className="font-semibold text-lg">{formData.currency} {Number(formData.price).toLocaleString()}</span>
+                          </div>
+                          {formData.pricePerWorkstation && (
+                            <div className="flex justify-between">
+                              <span className="text-cyan-700">Per Workstation:</span>
+                              <span>{formData.currency} {Number(formData.pricePerWorkstation).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {formData.officePricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-cyan-700">Per Sqm:</span>
+                              <span>{formData.currency} {Number(formData.officePricePerSqm).toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-cyan-700">Utilities & Internet:</span>
+                            <span>{formData.officeUtilitiesIncluded ? "Included" : "Separate"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </Card>
           )}
@@ -784,7 +2470,7 @@ export default function CreateListingPage() {
                     </h3>
                     <div className="flex items-center gap-2 text-slate-500 text-sm mb-4">
                       <MapPin className="w-4 h-4" />
-                      {[formData.sector, formData.district, formData.city]
+                      {[formData.village, formData.parish, formData.district, formData.city]
                         .filter(Boolean)
                         .join(", ") || "Location"}
                     </div>
@@ -811,41 +2497,615 @@ export default function CreateListingPage() {
                       For {formData.listingType || "-"}
                     </span>
                   </div>
-                  <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Bedrooms</span>
-                    <span className="font-medium text-slate-900">
-                      {formData.bedrooms || "-"}
-                    </span>
+
+                  {/* Location Details */}
+                  <div className="py-3 border-b">
+                    <span className="text-slate-500 block mb-2">Location</span>
+                    <div className="space-y-1 text-sm">
+                      {formData.region && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Region:</span>
+                          <span className="font-medium text-slate-900">{formData.region}</span>
+                        </div>
+                      )}
+                      {formData.city && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">City:</span>
+                          <span className="font-medium text-slate-900">{formData.city}</span>
+                        </div>
+                      )}
+                      {formData.district && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">District:</span>
+                          <span className="font-medium text-slate-900">{formData.district}</span>
+                        </div>
+                      )}
+                      {formData.county && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">County:</span>
+                          <span className="font-medium text-slate-900">{formData.county}</span>
+                        </div>
+                      )}
+                      {formData.subcounty && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Subcounty:</span>
+                          <span className="font-medium text-slate-900">{formData.subcounty}</span>
+                        </div>
+                      )}
+                      {formData.parish && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Parish:</span>
+                          <span className="font-medium text-slate-900">{formData.parish}</span>
+                        </div>
+                      )}
+                      {formData.village && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Village:</span>
+                          <span className="font-medium text-slate-900">{formData.village}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Bathrooms</span>
-                    <span className="font-medium text-slate-900">
-                      {formData.bathrooms || "-"}
-                    </span>
+
+                  {/* Pricing Summary */}
+                  <div className="py-3 border-b">
+                    <span className="text-slate-500 block mb-2">Pricing</span>
+                    <div className="space-y-2 text-sm">
+                      {/* Residential/Standard pricing */}
+                      {["house", "apartment", "condo", "villa"].includes(formData.propertyType) && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Price:</span>
+                          <span className="font-medium text-slate-900">
+                            {formData.currency} {Number(formData.price || 0).toLocaleString()}
+                            {formData.negotiable && " (Negotiable)"}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Hotel pricing */}
+                      {formData.propertyType === "hotel" && (
+                        <>
+                          {formData.standardRoomRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Standard Rate (per night):</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.standardRoomRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.peakSeasonRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Peak Season Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.peakSeasonRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.offPeakSeasonRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Off-Peak Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.offPeakSeasonRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Airbnb pricing */}
+                      {formData.propertyType === "airbnb" && (
+                        <>
+                          {formData.nightlyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Nightly Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.nightlyRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.weeklyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Weekly Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.weeklyRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.monthlyRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Monthly Rate:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.monthlyRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.cleaningFee && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Cleaning Fee:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.cleaningFee).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.securityDeposit && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Security Deposit:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.securityDeposit).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Land pricing */}
+                      {formData.propertyType === "land" && (
+                        <>
+                          {formData.pricePerAcre && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per Acre:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerAcre).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.pricePerHectare && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per Hectare:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerHectare).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.totalLandPrice && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Total Price:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.totalLandPrice).toLocaleString()}
+                                {formData.negotiable && " (Negotiable)"}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Commercial pricing */}
+                      {formData.propertyType === "commercial" && (
+                        <>
+                          {formData.price && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">{formData.listingType === "rent" ? "Monthly Lease" : "Total Price"}:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.price).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.pricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per m²:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerSqm).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.serviceCharge && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Service Charge:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.serviceCharge).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.commercialDeposit && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Deposit:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.commercialDeposit).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Warehouse pricing */}
+                      {formData.propertyType === "warehouse" && (
+                        <>
+                          {formData.warehouseLeaseRate && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Monthly Lease:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.warehouseLeaseRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.warehousePricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per m²:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.warehousePricePerSqm).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.warehouseDeposit && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Deposit:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.warehouseDeposit).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.utilitiesIncluded !== undefined && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Utilities:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.utilitiesIncluded ? "Included" : "Not Included"}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Office pricing */}
+                      {formData.propertyType === "office" && (
+                        <>
+                          {formData.price && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Monthly Lease:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.price).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.pricePerWorkstation && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per Workstation:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.pricePerWorkstation).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.officePricePerSqm && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Price per m²:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.officePricePerSqm).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.sharedFacilitiesCost && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Shared Facilities Cost:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.currency} {Number(formData.sharedFacilitiesCost).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {formData.officeUtilitiesIncluded !== undefined && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Utilities:</span>
+                              <span className="font-medium text-slate-900">
+                                {formData.officeUtilitiesIncluded ? "Included" : "Not Included"}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Hotel-specific display */}
+                  {formData.propertyType === "hotel" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Total Rooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.totalRooms || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Star Rating</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.starRating ? `${formData.starRating} ⭐` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Check-in Time</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.checkInTime || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Check-out Time</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.checkOutTime || "-"}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Land-specific display */}
+                  {formData.propertyType === "land" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Land Use Type</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.landUseType || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Topography</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.topography || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Title Type</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.titleType || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Soil Quality</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.soilQuality || "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Utilities</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Road Access:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.roadAccess ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Water:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.waterAvailability ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Electricity:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.electricityAvailability ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Commercial-specific display */}
+                  {formData.propertyType === "commercial" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Total Floors</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.totalFloors || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Frontage Width</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.frontageWidth ? `${formData.frontageWidth}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Ceiling Height</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.ceilingHeight ? `${formData.ceilingHeight}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Loading Bays</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.loadingBays || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Foot Traffic Level</span>
+                        <span className="font-medium text-slate-900 capitalize">
+                          {formData.footTrafficLevel || "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Features</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">3-Phase Power:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.threePhasePower ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">HVAC:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.hvacSystem ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Fire Safety:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.fireSafety ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Warehouse-specific display */}
+                  {formData.propertyType === "warehouse" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Clear Height</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.clearHeight ? `${formData.clearHeight}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Loading Docks</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.loadingDocks || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Floor Load Capacity</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.floorLoadCapacity ? `${formData.floorLoadCapacity} kg/m²` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Column Spacing</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.columnSpacing ? `${formData.columnSpacing}m` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Office Area</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.officeArea ? `${formData.officeArea}m²` : "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Features</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Drive-in Access:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.driveInAccess ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Cold Storage:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.coldStorage ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Ramp Access:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.rampAccess ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Office-specific display */}
+                  {formData.propertyType === "office" && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Workstation Capacity</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.workstationCapacity || "-"} workstations
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Meeting Rooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.meetingRooms || "-"}
+                        </span>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Amenities</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Reception Area:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.receptionArea ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Elevator:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.elevator ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Conference Room:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.conferenceRoom ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-3 border-b">
+                        <span className="text-slate-500 block mb-2">Facilities</span>
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Server Room:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.serverRoom ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-slate-600">Cafeteria:</span>
+                            <span className="ml-2 font-medium">
+                              {formData.cafeteria ? "✓" : "✗"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Residential-specific display (House, Apartment, Condo, Villa, Airbnb) */}
+                  {["house", "apartment", "condo", "villa", "airbnb"].includes(formData.propertyType) && (
+                    <>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Bedrooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.bedrooms || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Bathrooms</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.bathrooms || "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b">
+                        <span className="text-slate-500">Parking</span>
+                        <span className="font-medium text-slate-900">
+                          {formData.parking || "-"} spots
+                        </span>
+                      </div>
+                    </>
+                  )}
+
                   <div className="flex justify-between py-3 border-b">
                     <span className="text-slate-500">Size</span>
                     <span className="font-medium text-slate-900">
                       {formData.size ? `${formData.size} ${formData.sizeUnit}` : "-"}
                     </span>
                   </div>
-                  <div className="flex justify-between py-3 border-b">
-                    <span className="text-slate-500">Furnished</span>
-                    <span className="font-medium text-slate-900">
-                      {formData.furnished ? "Yes" : "No"}
-                    </span>
-                  </div>
+                  {formData.propertyType !== "hotel" && (
+                    <div className="flex justify-between py-3 border-b">
+                      <span className="text-slate-500">Furnished</span>
+                      <span className="font-medium text-slate-900">
+                        {formData.furnished ? "Yes" : "No"}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between py-3 border-b">
                     <span className="text-slate-500">Photos</span>
                     <span className="font-medium text-slate-900">
                       {formData.images.length} images
                     </span>
                   </div>
-                  {formData.amenities.length > 0 && (
+                  {(formData.amenities.length > 0 || formData.hotelAmenities.length > 0) && (
                     <div className="py-3 border-b">
-                      <span className="text-slate-500 block mb-2">Amenities</span>
+                      <span className="text-slate-500 block mb-2">
+                        {formData.propertyType === "hotel" ? "Hotel Amenities" : "Amenities"}
+                      </span>
                       <div className="flex flex-wrap gap-2">
-                        {formData.amenities.map((amenity) => (
+                        {(formData.propertyType === "hotel" 
+                          ? formData.hotelAmenities 
+                          : formData.amenities
+                        ).map((amenity) => (
                           <Badge key={amenity} variant="secondary">
                             {amenity}
                           </Badge>

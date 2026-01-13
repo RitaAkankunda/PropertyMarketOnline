@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck, ChevronDown, Briefcase, Wallet, Settings, Calendar } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
+import { notificationsService } from "@/services";
+import type { Notification as ApiNotification } from "@/services/notifications.service";
 
 const mainNavLinks = [
   { href: "/", label: "Home", icon: Home },
@@ -18,9 +20,14 @@ const mainNavLinks = [
   { href: "/providers", label: "Service Providers", icon: Wrench },
 ];
 
-const authNavLinks = [
+const listerNavLinks = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/listings/create", label: "List Property", icon: Plus },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
+];
+
+const userNavLinks = [
+  { href: "/dashboard/user", label: "My Requests", icon: Home },
   { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
@@ -36,17 +43,24 @@ const providerNavLinks = [
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
 
   // Check if user is a service provider
   const isServiceProvider = user?.role === 'service_provider' || user?.role === 'property_manager';
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
+  // Check if user is a lister (can list properties)
+  const isLister = user?.role === 'lister' || user?.role === 'property_manager';
   
-  // Get role badge info
+  // Get role badge info - only show for special roles (admin, provider, lister)
+  // Regular users don't need a badge
   const getRoleBadge = () => {
     if (isAdmin) {
       return { label: 'Admin', color: 'bg-purple-100 text-purple-700 border-purple-200' };
@@ -54,24 +68,81 @@ export function Header() {
     if (isServiceProvider) {
       return { label: 'Provider', color: 'bg-blue-100 text-blue-700 border-blue-200' };
     }
-    return { label: 'Lister', color: 'bg-green-100 text-green-700 border-green-200' };
+    if (isLister) {
+      return { label: 'Lister', color: 'bg-green-100 text-green-700 border-green-200' };
+    }
+    // Regular users (buyers, renters, or anyone who just signed up) - no badge
+    return null;
   };
   
   const roleBadge = getRoleBadge();
 
-  // Close dropdown when clicking outside
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated || !user) return;
+    try {
+      const response = await notificationsService.getNotifications({
+        limit: 50,
+        offset: 0,
+      });
+      
+      // Filter notifications based on user role
+      if (isServiceProvider) {
+        // Service providers only see job-related notifications
+        const jobRelatedTypes = [
+          'job_created',
+          'job_accepted',
+          'job_rejected',
+          'job_started',
+          'job_completed',
+          'job_cancelled',
+          'job_status_updated',
+          'maintenance_ticket_created',
+          'maintenance_ticket_assigned',
+          'maintenance_ticket_status_updated',
+          'maintenance_ticket_job_linked',
+        ];
+        setNotifications((response.notifications || []).filter((n: ApiNotification) => 
+          jobRelatedTypes.includes(n.type)
+        ));
+      } else {
+        // Other users see all their notifications
+        setNotifications(response.notifications || []);
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setNotifications([]);
+    }
+  }, [isAuthenticated, user, isServiceProvider]);
+
+  // Fetch notifications on mount and when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchNotifications();
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(() => {
+        fetchNotifications();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, user?.id, fetchNotifications]);
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setProfileMenuOpen(false);
       }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+        setShowNotificationDropdown(false);
+      }
     }
 
-    if (profileMenuOpen) {
+    if (profileMenuOpen || showNotificationDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [profileMenuOpen]);
+  }, [profileMenuOpen, showNotificationDropdown]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -127,9 +198,23 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))
+                ) : isLister ? (
+                  // Show lister links only for listers
+                  listerNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        pathname === link.href && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  ))
                 ) : (
-                  // Show lister links for regular users
-                  authNavLinks.map((link) => (
+                  // Show simple user links for regular users (no "List Property", no role badge)
+                  userNavLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
@@ -149,27 +234,169 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                {/* Role Badge */}
-                <div className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-medium border",
-                  roleBadge.color
-                )}>
-                  {roleBadge.label}
-                </div>
+                {/* Role Badge - Only show for listers, providers, and admins */}
+                {roleBadge && (
+                  <div className={cn(
+                    "px-2.5 py-1 rounded-md text-xs font-medium border",
+                    roleBadge.color
+                  )}>
+                    {roleBadge.label}
+                  </div>
+                )}
                 
-                <Link
-                  href="/bookings"
-                  className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
-                  title="My Bookings"
-                >
-                  <Calendar className="h-5 w-5" />
-                </Link>
-                <Link
-                  href="/notifications"
-                  className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
-                  <Bell className="h-5 w-5" />
-                </Link>
+                {/* Hide bookings icon for service providers - they manage jobs in their dashboard */}
+                {!isServiceProvider && (
+                  <Link
+                    href="/bookings"
+                    className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+                    title="My Bookings"
+                  >
+                    <Calendar className="h-5 w-5" />
+                  </Link>
+                )}
+                <div className="relative" ref={notificationMenuRef}>
+                  <button
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const newState = !showNotificationDropdown;
+                      setShowNotificationDropdown(newState);
+                      if (newState) {
+                        await fetchNotifications();
+                      }
+                    }}
+                    className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors relative"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {notifications.filter(n => !n.isRead).length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
+                        {notifications.filter(n => !n.isRead).length > 9 ? '9+' : notifications.filter(n => !n.isRead).length}
+                      </span>
+                    )}
+                  </button>
+                  
+                  {/* Notification Dropdown */}
+                  {showNotificationDropdown && (
+                    <>
+                      {/* Backdrop */}
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowNotificationDropdown(false)}
+                      />
+                      
+                      {/* Dropdown Panel */}
+                      <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-hidden flex flex-col">
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Notifications</h3>
+                            <p className="text-sm text-gray-500">
+                              {notifications.filter(n => !n.isRead).length} unread
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setShowNotificationDropdown(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                        
+                        {/* Notifications List */}
+                        <div className="overflow-y-auto flex-1">
+                          {notifications.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500">
+                              <Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                              <p>No notifications</p>
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-gray-100">
+                              {notifications.map((notification) => (
+                                <div
+                                  key={notification.id}
+                                  className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                    !notification.isRead ? 'bg-blue-50' : ''
+                                  }`}
+                                  onClick={async () => {
+                                    // Mark as read
+                                    if (!notification.isRead) {
+                                      try {
+                                        await notificationsService.markAsRead(notification.id);
+                                        setNotifications(prev =>
+                                          prev.map(n =>
+                                            n.id === notification.id ? { ...n, isRead: true } : n
+                                          )
+                                        );
+                                      } catch (err) {
+                                        console.error('Error marking notification as read:', err);
+                                      }
+                                    }
+                                    
+                                    // Navigate based on notification type
+                                    setShowNotificationDropdown(false);
+                                    
+                                    if (notification.data?.jobId) {
+                                      // For service providers, navigate to provider dashboard with job
+                                      if (isServiceProvider) {
+                                        router.push(`/dashboard/provider?jobId=${notification.data.jobId}`);
+                                      } else {
+                                        router.push(`/bookings`);
+                                      }
+                                    } else if (notification.data?.bookingId) {
+                                      router.push(`/bookings`);
+                                    } else if (notification.data?.propertyId) {
+                                      router.push(`/properties/${notification.data.propertyId}`);
+                                    } else {
+                                      router.push('/notifications');
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                      !notification.isRead ? 'bg-blue-500' : 'bg-transparent'
+                                    }`} />
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`font-medium text-sm ${
+                                        !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                                      }`}>
+                                        {notification.title}
+                                      </p>
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        {notification.message}
+                                      </p>
+                                      <p className="text-xs text-gray-400 mt-2">
+                                        {new Date(notification.createdAt).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Footer */}
+                        {notifications.length > 0 && (
+                          <div className="p-3 border-t border-gray-200">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await notificationsService.markAllAsRead();
+                                  setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                                } catch (err) {
+                                  console.error('Error marking all as read:', err);
+                                }
+                              }}
+                              className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                              Mark all as read
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <Link
                   href="/dashboard/messages"
                   className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -386,9 +613,25 @@ export function Header() {
                       <span>{link.label}</span>
                     </Link>
                   ))
+                ) : isLister ? (
+                  // Show lister links only for listers
+                  listerNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent",
+                        pathname === link.href && "bg-accent"
+                      )}
+                    >
+                      <link.icon className="h-5 w-5" />
+                      <span>{link.label}</span>
+                    </Link>
+                  ))
                 ) : (
-                  // Show lister links for regular users
-                  authNavLinks.map((link) => (
+                  // Show simple user links for regular users (no "List Property")
+                  userNavLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}

@@ -11,6 +11,7 @@ import {
   Request,
   UploadedFiles,
   UseInterceptors,
+  NotFoundException,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -112,5 +113,21 @@ export class PropertiesController {
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
     return this.propertiesService.remove(id, req.user.sub, req.user.role);
+  }
+
+  // Record a view for a property (public endpoint, no auth required)
+  @Post(':id/view')
+  async recordView(@Param('id') id: string) {
+    // Verify property exists
+    try {
+      await this.propertiesService.findOne(id);
+    } catch (error) {
+      throw new NotFoundException('Property not found');
+    }
+    
+    // Record the view
+    await this.propertiesService.recordView(id);
+    
+    return { message: 'View recorded successfully' };
   }
 }

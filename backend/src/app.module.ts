@@ -21,6 +21,9 @@ import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { MessagesModule } from './messages/messages.module';
 import { createMessagesTables } from './messages/create-tables';
+import { BookingsModule } from './bookings/bookings.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { PropertyReviewsModule } from './property-reviews/property-reviews.module';
 
 @Module({
   imports: [
@@ -44,6 +47,9 @@ import { createMessagesTables } from './messages/create-tables';
     HealthModule,
     NotificationsModule,
     MessagesModule,
+    BookingsModule,
+    FavoritesModule,
+    PropertyReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

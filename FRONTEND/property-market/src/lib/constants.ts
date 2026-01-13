@@ -28,6 +28,7 @@ export const PROPERTY_TYPES = [
   { value: "warehouse", label: "Warehouse" },
   { value: "office", label: "Office Space" },
   { value: "airbnb", label: "Airbnb" },
+  { value: "hotel", label: "Hotel" },
 ] as const;
 
 // Listing Types
@@ -91,6 +92,168 @@ export const JOB_STATUS = {
 } as const;
 
 // Regions/Locations (Uganda)
+export const UGANDA_REGIONS = [
+  { value: "central", label: "Central" },
+  { value: "eastern", label: "Eastern" },
+  { value: "northern", label: "Northern" },
+  { value: "western", label: "Western" },
+] as const;
+
+// Uganda Cities (11 major cities)
+export const UGANDA_CITIES = [
+  { value: "kampala", label: "Kampala Capital City" },
+  { value: "mbarara", label: "Mbarara" },
+  { value: "gulu", label: "Gulu" },
+  { value: "masaka", label: "Masaka" },
+  { value: "lira", label: "Lira" },
+  { value: "fortportal", label: "Fort Portal" },
+  { value: "mbale", label: "Mbale" },
+  { value: "soroti", label: "Soroti" },
+  { value: "arua", label: "Arua" },
+  { value: "hoima", label: "Hoima" },
+  { value: "jinja", label: "Jinja" },
+] as const;
+
+// Uganda Districts (137 districts in alphabetical order)
+export const UGANDA_DISTRICTS = [
+  { value: "abim", label: "Abim" },
+  { value: "adjumani", label: "Adjumani" },
+  { value: "agago", label: "Agago" },
+  { value: "alebtong", label: "Alebtong" },
+  { value: "amolatar", label: "Amolatar" },
+  { value: "amudat", label: "Amudat" },
+  { value: "amuria", label: "Amuria" },
+  { value: "amuru", label: "Amuru" },
+  { value: "apac", label: "Apac" },
+  { value: "arua", label: "Arua" },
+  { value: "budaka", label: "Budaka" },
+  { value: "bududa", label: "Bududa" },
+  { value: "bugiri", label: "Bugiri" },
+  { value: "bugweri", label: "Bugweri" },
+  { value: "buhweju", label: "Buhweju" },
+  { value: "buikwe", label: "Buikwe" },
+  { value: "bukedea", label: "Bukedea" },
+  { value: "bukomansimbi", label: "Bukomansimbi" },
+  { value: "bukwo", label: "Bukwo" },
+  { value: "bulambuli", label: "Bulambuli" },
+  { value: "buliisa", label: "Buliisa" },
+  { value: "bundibugyo", label: "Bundibugyo" },
+  { value: "bunyangabu", label: "Bunyangabu" },
+  { value: "bushenyi", label: "Bushenyi" },
+  { value: "busia", label: "Busia" },
+  { value: "butaleja", label: "Butaleja" },
+  { value: "butambala", label: "Butambala" },
+  { value: "butebo", label: "Butebo" },
+  { value: "buvuma", label: "Buvuma" },
+  { value: "buyende", label: "Buyende" },
+  { value: "dokolo", label: "Dokolo" },
+  { value: "gomba", label: "Gomba" },
+  { value: "gulu", label: "Gulu" },
+  { value: "hoima", label: "Hoima" },
+  { value: "ibanda", label: "Ibanda" },
+  { value: "iganga", label: "Iganga" },
+  { value: "isingiro", label: "Isingiro" },
+  { value: "jinja", label: "Jinja" },
+  { value: "kaabong", label: "Kaabong" },
+  { value: "kabale", label: "Kabale" },
+  { value: "kabarole", label: "Kabarole" },
+  { value: "kaberamaido", label: "Kaberamaido" },
+  { value: "kagadi", label: "Kagadi" },
+  { value: "kakumiro", label: "Kakumiro" },
+  { value: "kalaki", label: "Kalaki" },
+  { value: "kalangala", label: "Kalangala" },
+  { value: "kaliro", label: "Kaliro" },
+  { value: "kalungu", label: "Kalungu" },
+  { value: "kampala", label: "Kampala" },
+  { value: "kamuli", label: "Kamuli" },
+  { value: "kamwenge", label: "Kamwenge" },
+  { value: "kanungu", label: "Kanungu" },
+  { value: "kapchorwa", label: "Kapchorwa" },
+  { value: "kapelebyong", label: "Kapelebyong" },
+  { value: "karenga", label: "Karenga" },
+  { value: "kasese", label: "Kasese" },
+  { value: "kasanda", label: "Kasanda" },
+  { value: "katakwi", label: "Katakwi" },
+  { value: "kayunga", label: "Kayunga" },
+  { value: "kazo", label: "Kazo" },
+  { value: "kibaale", label: "Kibaale" },
+  { value: "kiboga", label: "Kiboga" },
+  { value: "kibuku", label: "Kibuku" },
+  { value: "kikuube", label: "Kikuube" },
+  { value: "kiruhura", label: "Kiruhura" },
+  { value: "kiryandongo", label: "Kiryandongo" },
+  { value: "kisoro", label: "Kisoro" },
+  { value: "kitagwenda", label: "Kitagwenda" },
+  { value: "kitgum", label: "Kitgum" },
+  { value: "koboko", label: "Koboko" },
+  { value: "kole", label: "Kole" },
+  { value: "kotido", label: "Kotido" },
+  { value: "kumi", label: "Kumi" },
+  { value: "kwania", label: "Kwania" },
+  { value: "kween", label: "Kween" },
+  { value: "kyankwanzi", label: "Kyankwanzi" },
+  { value: "kyegegwa", label: "Kyegegwa" },
+  { value: "kyenjojo", label: "Kyenjojo" },
+  { value: "kyotera", label: "Kyotera" },
+  { value: "lamwo", label: "Lamwo" },
+  { value: "lira", label: "Lira" },
+  { value: "luuka", label: "Luuka" },
+  { value: "luwero", label: "Luwero" },
+  { value: "lwengo", label: "Lwengo" },
+  { value: "lyantonde", label: "Lyantonde" },
+  { value: "madi-okollo", label: "Madi-Okollo" },
+  { value: "manafwa", label: "Manafwa" },
+  { value: "maracha", label: "Maracha" },
+  { value: "masaka", label: "Masaka" },
+  { value: "masindi", label: "Masindi" },
+  { value: "mayuge", label: "Mayuge" },
+  { value: "mbale", label: "Mbale" },
+  { value: "mbarara", label: "Mbarara" },
+  { value: "mitooma", label: "Mitooma" },
+  { value: "mityana", label: "Mityana" },
+  { value: "moroto", label: "Moroto" },
+  { value: "moyo", label: "Moyo" },
+  { value: "mpigi", label: "Mpigi" },
+  { value: "mubende", label: "Mubende" },
+  { value: "mukono", label: "Mukono" },
+  { value: "nabilatuk", label: "Nabilatuk" },
+  { value: "nakapiripirit", label: "Nakapiripirit" },
+  { value: "nakaseke", label: "Nakaseke" },
+  { value: "nakasongola", label: "Nakasongola" },
+  { value: "namayingo", label: "Namayingo" },
+  { value: "namisindwa", label: "Namisindwa" },
+  { value: "namutumba", label: "Namutumba" },
+  { value: "napak", label: "Napak" },
+  { value: "nebbi", label: "Nebbi" },
+  { value: "ngora", label: "Ngora" },
+  { value: "ntoroko", label: "Ntoroko" },
+  { value: "ntungamo", label: "Ntungamo" },
+  { value: "nwoya", label: "Nwoya" },
+  { value: "obongi", label: "Obongi" },
+  { value: "omoro", label: "Omoro" },
+  { value: "otuke", label: "Otuke" },
+  { value: "oyam", label: "Oyam" },
+  { value: "pader", label: "Pader" },
+  { value: "pakwach", label: "Pakwach" },
+  { value: "pallisa", label: "Pallisa" },
+  { value: "rakai", label: "Rakai" },
+  { value: "rubanda", label: "Rubanda" },
+  { value: "rubirizi", label: "Rubirizi" },
+  { value: "rukiga", label: "Rukiga" },
+  { value: "rukungiri", label: "Rukungiri" },
+  { value: "rwampara", label: "Rwampara" },
+  { value: "sembabule", label: "Sembabule" },
+  { value: "serere", label: "Serere" },
+  { value: "sheema", label: "Sheema" },
+  { value: "sironko", label: "Sironko" },
+  { value: "soroti", label: "Soroti" },
+  { value: "tororo", label: "Tororo" },
+  { value: "wakiso", label: "Wakiso" },
+  { value: "yumbe", label: "Yumbe" },
+  { value: "zombo", label: "Zombo" },
+] as const;
+
+// Old LOCATIONS - kept for backward compatibility but deprecated
 export const LOCATIONS = [
   { value: "kampala", label: "Kampala" },
   { value: "wakiso", label: "Wakiso" },
@@ -115,6 +278,41 @@ export const KAMPALA_DIVISIONS = [
   { value: "rubaga", label: "Rubaga Division" },
 ] as const;
 
+// Hotel-Specific Amenities
+export const HOTEL_AMENITIES = [
+  "24/7 Front Desk",
+  "Concierge Service",
+  "Room Service",
+  "Housekeeping",
+  "Laundry Service",
+  "Restaurant",
+  "Bar/Lounge",
+  "Spa & Wellness",
+  "Fitness Center",
+  "Swimming Pool",
+  "Business Center",
+  "Conference Rooms",
+  "Free WiFi",
+  "Parking",
+  "Airport Shuttle",
+  "Valet Parking",
+  "Elevator",
+  "Air Conditioning",
+  "Safe Deposit Box",
+  "Currency Exchange",
+] as const;
+
+// Hotel Room Types
+export const HOTEL_ROOM_TYPES = [
+  { value: "single", label: "Single Room" },
+  { value: "double", label: "Double Room" },
+  { value: "twin", label: "Twin Room" },
+  { value: "suite", label: "Suite" },
+  { value: "deluxe", label: "Deluxe Room" },
+  { value: "executive", label: "Executive Room" },
+  { value: "presidential", label: "Presidential Suite" },
+] as const;
+
 // Popular Areas/Neighborhoods in Kampala
 export const KAMPALA_AREAS = [
   "Kololo", "Nakasero", "Bugolobi", "Muyenga", "Naguru", "Ntinda", 
@@ -129,8 +327,14 @@ export const SUPPORTED_CURRENCIES = ["UGX", "USD", "EUR"] as const;
 
 // Google Maps Configuration
 export const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-export const DEFAULT_MAP_CENTER = { lat: 0.3476, lng: 32.5825 }; // Kampala, Uganda
-export const DEFAULT_MAP_ZOOM = 12;
+export const DEFAULT_MAP_CENTER = { lat: 1.3733, lng: 32.2903 }; // Center of Uganda
+export const DEFAULT_MAP_ZOOM = 7; // Zoom level to show all of Uganda
+export const UGANDA_BOUNDS = {
+  north: 4.2144, // Northern border
+  south: -1.4823, // Southern border
+  east: 35.0000, // Eastern border
+  west: 29.5734, // Western border
+};
 
 // Country Configuration
 export const COUNTRY = {

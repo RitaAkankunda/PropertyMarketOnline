@@ -32,10 +32,11 @@ import {
   AlertCircle,
   Shield,
   X,
+  History,
 } from "lucide-react";
 import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
-import { propertyService, authService, dashboardService, providerService, notificationsService } from "@/services";
+import { propertyService, authService, dashboardService, providerService, notificationsService, favoritesService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
 import { useNotificationAlerts } from "@/hooks/use-notifications";
@@ -74,12 +75,13 @@ interface Appointment {
   time: string;
 }
 
-// Base navigation items (always shown)
-const baseNavigation = [
+// Base navigation items (always shown) - badge will be set dynamically
+const getBaseNavigation = (savedCount: number = 0) => [
   { name: "Overview", href: "/dashboard", icon: Home, current: true },
   { name: "My Properties", href: "/dashboard/properties", icon: Building2, current: false },
   { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: 0, current: false },
-  { name: "Saved", href: "/dashboard/saved", icon: Heart, current: false },
+  { name: "Saved Properties", href: "/dashboard/saved", icon: Heart, badge: savedCount > 0 ? savedCount : undefined, current: false },
+  { name: "Recently Viewed", href: "/dashboard/recently-viewed", icon: History, current: false },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, current: false },
   { name: "Payments", href: "/dashboard/payments", icon: Wallet, current: false },
   { name: "Documents", href: "/dashboard/documents", icon: FileText, current: false },
@@ -134,31 +136,41 @@ const statsConfig = [
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const [hasRedirected, setHasRedirected] = useState(false);
   
   // Check if user has a provider profile and sync role if needed
   useEffect(() => {
-    const checkAndSyncRole = async () => {
-      if (!authLoading && isAuthenticated && user) {
-        // If user is admin, redirect to admin dashboard
-        if (user.role === 'admin') {
-          console.log('[DASHBOARD] User is an admin, redirecting to admin dashboard');
-          router.replace('/admin');
-          return;
-        }
-        
-        // If role is already service_provider, redirect to provider dashboard
-        if (user.role === 'service_provider') {
-          console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
-          router.replace('/dashboard/provider');
-          return;
-        }
-      }
-    };
+    // Prevent infinite redirect loop
+    if (hasRedirected || authLoading || !isAuthenticated || !user) {
+      return;
+    }
+
+    // If user is admin, redirect to admin dashboard
+    if (user.role === 'admin') {
+      console.log('[DASHBOARD] User is an admin, redirecting to admin dashboard');
+      setHasRedirected(true);
+      router.replace('/admin');
+      return;
+    }
     
-    checkAndSyncRole();
-  }, [authLoading, isAuthenticated, user, router]);
+    // If role is already service_provider, redirect to provider dashboard
+    if (user.role === 'service_provider') {
+      console.log('[DASHBOARD] User is a service provider, redirecting to provider dashboard');
+      setHasRedirected(true);
+      router.replace('/dashboard/provider');
+      return;
+    }
+    
+    // If user is a buyer or renter, redirect to user dashboard
+    if (user.role === 'buyer' || user.role === 'renter') {
+      console.log('[DASHBOARD] User is a buyer/renter, redirecting to user dashboard');
+      setHasRedirected(true);
+      router.replace('/dashboard/user');
+      return;
+    }
+  }, [authLoading, isAuthenticated, user, router, hasRedirected]);
   
-  // Protect route: Only LISTER, PROPERTY_MANAGER can access (admins and service_providers are redirected above)
+  // Protect route: Only LISTER, PROPERTY_MANAGER can access (admins, service_providers, and buyers are redirected above)
   const { hasAccess } = useRequireRole(
     ['lister', 'property_manager'],
     '/'
@@ -182,6 +194,7 @@ export default function DashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [savedPropertiesCount, setSavedPropertiesCount] = useState<number>(0);
   
   // Fetch notifications from API
   const fetchNotifications = async () => {
@@ -260,6 +273,37 @@ export default function DashboardPage() {
   // Browser push notifications and sound alerts
   useNotificationAlerts(notifications, isAuthenticated && user ? true : false);
 
+  // Fetch saved properties count
+  const fetchSavedCount = async () => {
+    if (!isAuthenticated || !user) {
+      setSavedPropertiesCount(0);
+      return;
+    }
+
+    try {
+      const favorites = await favoritesService.getFavorites();
+      setSavedPropertiesCount(favorites.length);
+    } catch (error) {
+      console.error('[DASHBOARD] Failed to fetch saved count:', error);
+      setSavedPropertiesCount(0);
+    }
+  };
+
+  // Fetch saved count on mount and when authenticated
+  useEffect(() => {
+    fetchSavedCount();
+  }, [isAuthenticated, user]);
+
+  // Listen for wishlist updates to refresh count
+  useEffect(() => {
+    const handleWishlistUpdate = () => {
+      fetchSavedCount();
+    };
+
+    window.addEventListener('wishlist-updated', handleWishlistUpdate);
+    return () => window.removeEventListener('wishlist-updated', handleWishlistUpdate);
+  }, [isAuthenticated, user]);
+
   // Handle notification click from browser push notification
   useEffect(() => {
     const handleNotificationClick = (event: CustomEvent) => {
@@ -290,38 +334,36 @@ export default function DashboardPage() {
       try {
         setLoading(true);
         
-        // Fetch user's properties
+        // Fetch user's properties for recent properties list
         try {
-          const propertiesResponse = await propertyService.getMyListings(1, 100); // Get all properties for stats
+          const propertiesResponse = await propertyService.getMyListings(1, 3); // Get only 3 for recent list
           console.log("Dashboard - Properties response:", propertiesResponse);
           console.log("Dashboard - Properties data:", propertiesResponse.data);
-          const allProperties = propertiesResponse.data || [];
-          const recentProps = allProperties.slice(0, 3); // Show only first 3 as recent
+          const recentProps = propertiesResponse.data || [];
           setRecentProperties(recentProps);
-          
-          // Use total from meta if available, otherwise use array length
-          const totalPropertiesCount = propertiesResponse.meta?.total || allProperties.length;
-          
-          // Calculate stats from properties
-          const totalViews = allProperties.reduce((sum, p) => sum + (p.views || 0), 0);
-          const totalLeads = allProperties.reduce((sum, p) => sum + (p.leads || 0), 0);
-          const revenue = allProperties
-            .filter(p => p.status === 'sold' || p.status === 'rented')
-            .reduce((sum, p) => sum + (p.price || 0), 0);
-          
+        } catch (error) {
+          console.error("Failed to fetch user properties:", error);
+          setRecentProperties([]);
+        }
+        
+        // Fetch analytics data from API
+        try {
+          const analyticsData = await dashboardService.getAnalytics();
+          console.log("Dashboard - Analytics data:", analyticsData);
+          setStats(analyticsData);
+        } catch (error) {
+          console.error("Failed to fetch analytics:", error);
+          // Set default stats on error
           setStats({
-            totalProperties: totalPropertiesCount,
-            totalViews: totalViews,
-            totalMessages: totalLeads, // Using leads as messages for now
-            revenue: revenue,
-            propertyChange: "0",
+            totalProperties: 0,
+            totalViews: 0,
+            totalMessages: 0,
+            revenue: 0,
+            propertyChange: "0%",
             viewsChange: "0%",
             messagesChange: "0",
             revenueChange: "0%",
           });
-        } catch (error) {
-          console.error("Failed to fetch user properties:", error);
-          setRecentProperties([]);
         }
         
         // Fetch activities from API
@@ -448,7 +490,7 @@ export default function DashboardPage() {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {baseNavigation.map((item) => (
+            {getBaseNavigation(savedPropertiesCount).map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
@@ -461,8 +503,8 @@ export default function DashboardPage() {
               >
                 <item.icon className="w-5 h-5" />
                 {item.name}
-                {item.badge && (
-                  <Badge className="ml-auto bg-red-500 text-white text-xs">
+                {item.badge !== undefined && item.badge > 0 && (
+                  <Badge className="ml-auto bg-blue-100 text-blue-700 text-xs font-medium">
                     {item.badge}
                   </Badge>
                 )}
@@ -1066,7 +1108,7 @@ export default function DashboardPage() {
 
               {/* Navigation */}
               <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-                {baseNavigation.map((item) => (
+                {getBaseNavigation(savedPropertiesCount).map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
@@ -1080,8 +1122,8 @@ export default function DashboardPage() {
                   >
                     <item.icon className="w-5 h-5" />
                     {item.name}
-                    {item.badge && (
-                      <Badge className="ml-auto bg-red-500 text-white text-xs">
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <Badge className="ml-auto bg-blue-100 text-blue-700 text-xs font-medium">
                         {item.badge}
                       </Badge>
                     )}

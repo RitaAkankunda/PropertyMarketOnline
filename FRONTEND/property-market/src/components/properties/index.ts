@@ -1,4 +1,17 @@
 export { PropertyCard } from "./property-card";
 export { PropertyFiltersComponent as PropertyFilters } from "./property-filters";
 export { PropertyGrid } from "./property-grid";
-export { PropertyInquiryModal } from "./PropertyInquiryModal";
+export { PropertyViewingModal } from "./PropertyViewingModal";
+export { PropertyInquiryModal } from "./PropertyInquiryModalRefactored";
+export { PropertyPaymentModal } from "./PropertyPaymentModal";
+export { AdvancedFiltersSidebar } from "./AdvancedFiltersSidebar";
+export { ImageLightbox } from "./ImageLightbox";
+export { PropertyWishlistButton, useWishlist } from "./PropertyWishlistButton";
+export { PropertyBadges } from "./PropertyBadges";
+export { PropertiesMapView } from "./PropertiesMapView";
+export { PropertyReviews } from "./PropertyReviews";
+export { PropertyReviewForm } from "./PropertyReviewForm";
+export { PropertyRating } from "./PropertyRating";
+export { RecentlyViewedProperties } from "./RecentlyViewedProperties";
+export { SimilarProperties } from "./SimilarProperties";
+export { PriceBreakdown } from "./PriceBreakdown";
