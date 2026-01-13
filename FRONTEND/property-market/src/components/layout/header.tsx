@@ -171,7 +171,7 @@ export function Header() {
                   <Bell className="h-5 w-5" />
                 </Link>
                 <Link
-                  href="/messages"
+                  href="/dashboard/messages"
                   className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   <MessageSquare className="h-5 w-5" />

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { providerService } from "@/services";
+import { useRouter } from "next/navigation";
+import { providerService, messageService } from "@/services";
+import { useAuthStore } from "@/store/auth.store";
 import type { ServiceProvider } from "@/types";
 import {
   Search,
@@ -950,10 +952,12 @@ function RequestFormModal({
 // =============================================
 function ProviderCard({ 
   provider,
-  onRequest 
+  onRequest,
+  onMessage 
 }: { 
   provider: ReturnType<typeof formatProviderForDisplay>;
   onRequest: () => void;
+  onMessage: () => void;
 }) {
   const category = CATEGORIES.find((c) => c.id === provider.category);
   const Icon = category?.icon || Users;
@@ -1000,7 +1004,11 @@ function ProviderCard({
           <button className="p-2 border rounded-lg hover:bg-gray-50">
             <Phone className="w-4 h-4 text-gray-600" />
           </button>
-          <button className="p-2 border rounded-lg hover:bg-gray-50">
+          <button 
+            onClick={onMessage}
+            className="p-2 border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
+            title="Send a message"
+          >
             <MessageCircle className="w-4 h-4 text-gray-600" />
           </button>
           <button 
@@ -1019,6 +1027,9 @@ function ProviderCard({
 // MAIN PAGE COMPONENT
 // =============================================
 export default function ServiceProvidersPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
+  
   // State for selected category
   const [selectedCategory, setSelectedCategory] = useState("all");
   // State for search query
@@ -1030,6 +1041,47 @@ export default function ServiceProvidersPage() {
   const [providers, setProviders] = useState<ServiceProvider[]>([]); // Filtered providers for display
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isStartingConversation, setIsStartingConversation] = useState(false);
+
+  // Handle message button click - start conversation with provider
+  const handleMessageProvider = async (provider: ServiceProvider) => {
+    // Check if user is logged in
+    if (!isAuthenticated || !user) {
+      // Redirect to login with return URL
+      router.push(`/auth/login?redirect=/providers`);
+      return;
+    }
+
+    // Check if trying to message yourself
+    if (provider.user?.id === user.id) {
+      alert("You cannot message yourself");
+      return;
+    }
+
+    try {
+      setIsStartingConversation(true);
+      
+      // Start a conversation with the provider
+      const conversation = await messageService.startConversation(
+        provider.user.id,
+        undefined, // No property
+        `Hi, I'm interested in your ${provider.serviceTypes?.[0] || 'service'} services.`
+      );
+
+      // Navigate to messages page with the conversation
+      router.push(`/dashboard/messages?conversation=${conversation.id}`);
+    } catch (err: any) {
+      console.error("Error starting conversation:", err);
+      // If conversation already exists, the API might return the existing one
+      if (err.response?.data?.id) {
+        router.push(`/dashboard/messages?conversation=${err.response.data.id}`);
+      } else {
+        alert(err.response?.data?.message || "Failed to start conversation. Please try again.");
+      }
+    } finally {
+      setIsStartingConversation(false);
+    }
+  };
 
   // Fetch ALL providers for category counts (no filters)
   // This should run every time the component mounts to ensure fresh data
@@ -1146,6 +1198,16 @@ export default function ServiceProvidersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* LOADING OVERLAY - when starting conversation */}
+      {isStartingConversation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-700 font-medium">Starting conversation...</p>
+          </div>
+        </div>
+      )}
+
       {/* REQUEST FORM MODAL */}
       {selectedProvider && (
         <RequestFormModal 
@@ -1272,6 +1334,7 @@ export default function ServiceProvidersPage() {
                     key={provider.id} 
                     provider={provider} 
                     onRequest={() => setSelectedProvider(provider.provider)}
+                    onMessage={() => handleMessageProvider(provider.provider)}
                   />
                 ))}
               </div>

@@ -19,6 +19,8 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { DatabaseConfig } from './config/database.config';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { MessagesModule } from './messages/messages.module';
+import { createMessagesTables } from './messages/create-tables';
 
 @Module({
   imports: [
@@ -41,6 +43,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     ReviewsModule,
     HealthModule,
     NotificationsModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
@@ -57,6 +60,9 @@ export class AppModule implements OnModuleInit {
     try {
       await this.dataSource.query("SET timezone = 'UTC'");
       console.log('[APP MODULE] Database timezone set to UTC');
+      
+      // Create messages tables if they don't exist
+      await createMessagesTables(this.dataSource);
     } catch (error) {
       console.warn('[APP MODULE] Failed to set database timezone to UTC:', error.message);
     }
