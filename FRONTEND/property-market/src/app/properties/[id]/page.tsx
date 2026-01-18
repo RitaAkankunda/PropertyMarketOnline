@@ -734,6 +734,27 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
             </p>
           </div>
         </Card>
+
+        {/* Reviews Section */}
+        {property && (
+          <Card id="reviews-section" className="mt-8 p-6 scroll-mt-20">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">Reviews & Ratings</h2>
+              <PropertyRating propertyId={property.id} size="md" showReviewCount={true} />
+            </div>
+            <PropertyReviews 
+              propertyId={property.id} 
+              propertyOwnerId={(property as any).ownerId || (property as any).owner?.id}
+            />
+          </Card>
+        )}
+
+        {/* Similar Properties Section */}
+        {property && (
+          <div className="mt-8">
+            <SimilarProperties property={property} maxItems={4} />
+          </div>
+        )}
       </div>
 
       {/* Property Viewing Modal */}
@@ -770,27 +791,6 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
           onClose={() => setIsLightboxOpen(false)}
           propertyTitle={property.title}
         />
-      )}
-
-      {/* Reviews Section */}
-      {property && (
-        <Card id="reviews-section" className="mt-8 p-6 scroll-mt-20">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Reviews & Ratings</h2>
-            <PropertyRating propertyId={property.id} size="md" showReviewCount={true} />
-          </div>
-          <PropertyReviews 
-            propertyId={property.id} 
-            propertyOwnerId={(property as any).ownerId || (property as any).owner?.id}
-          />
-        </Card>
-      )}
-
-      {/* Similar Properties Section */}
-      {property && (
-        <div className="mt-12">
-          <SimilarProperties property={property} maxItems={4} />
-        </div>
       )}
     </div>
   );
