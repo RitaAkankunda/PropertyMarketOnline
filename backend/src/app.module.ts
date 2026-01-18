@@ -21,6 +21,7 @@ import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { MessagesModule } from './messages/messages.module';
 import { createMessagesTables } from './messages/create-tables';
+import { createPaymentsTables } from './payments/create-tables';
 import { BookingsModule } from './bookings/bookings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { PropertyReviewsModule } from './property-reviews/property-reviews.module';
@@ -69,8 +70,11 @@ export class AppModule implements OnModuleInit {
       
       // Create messages tables if they don't exist
       await createMessagesTables(this.dataSource);
+      
+      // Create payments tables if they don't exist
+      await createPaymentsTables(this.dataSource);
     } catch (error) {
-      console.warn('[APP MODULE] Failed to set database timezone to UTC:', error.message);
+      console.warn('[APP MODULE] Failed to initialize database:', error.message);
     }
   }
 }
