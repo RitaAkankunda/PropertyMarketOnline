@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store';
 import type { Notification } from '@/services/notifications.service';
 
@@ -24,14 +24,19 @@ export function useWebSocketNotifications(
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!enabled || !token || socketRef.current?.connected) {
       return;
     }
 
     try {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       console.log('[WS] Connecting to WebSocket server...');
-      
+
+      const { io } = await import('socket.io-client');
       const socket = io(`${WS_BASE_URL}/notifications`, {
         auth: {
           token: token,

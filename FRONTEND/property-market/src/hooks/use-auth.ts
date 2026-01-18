@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { useAuthStore } from "@/store/auth.store";
 
 export function useAuth() {
   const {
@@ -33,11 +33,9 @@ export function useAuth() {
 export function useRequireAuth(redirectUrl: string = "/auth/login") {
   const { isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
-  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && !hasRedirected.current) {
-      hasRedirected.current = true;
+    if (!isLoading && !isAuthenticated) {
       router.push(redirectUrl);
     }
   }, [isAuthenticated, isLoading, router, redirectUrl]);
@@ -51,20 +49,16 @@ export function useRequireRole(
 ) {
   const { user, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
-  const hasRedirected = useRef(false);
-  const allowedRolesStr = allowedRoles.join(',');
 
   useEffect(() => {
-    if (!isLoading && !hasRedirected.current) {
+    if (!isLoading) {
       if (!isAuthenticated) {
-        hasRedirected.current = true;
         router.push("/auth/login");
       } else if (user && !allowedRoles.includes(user.role)) {
-        hasRedirected.current = true;
         router.push(redirectUrl);
       }
     }
-  }, [user, isAuthenticated, isLoading, allowedRolesStr, router, redirectUrl]);
+  }, [user, isAuthenticated, isLoading, allowedRoles, router, redirectUrl]);
 
   return {
     isAuthenticated,

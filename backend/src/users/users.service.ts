@@ -421,6 +421,16 @@ export class UsersService {
           ? '100'
           : '0';
 
+    // Calculate messages change (inquiries in last 30 days vs previous 30 days)
+    const recentBookings = bookings.filter(
+      (b) => new Date(b.createdAt) >= last30Days,
+    );
+    const previousBookings = bookings.filter(
+      (b) =>
+        new Date(b.createdAt) >= previous30Days &&
+        new Date(b.createdAt) < last30Days,
+    );
+
     const recentMessages = recentBookings.filter(
       (b) => b.type === BookingType.INQUIRY,
     ).length;
