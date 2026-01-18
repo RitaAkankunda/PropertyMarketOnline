@@ -22,6 +22,7 @@ import {
   Users,
   Clock,
   ChevronRight,
+  ChevronDown,
   MoreVertical,
   Edit,
   Trash2,
@@ -33,6 +34,7 @@ import {
   Shield,
   X,
   History,
+  UserCircle,
 } from "lucide-react";
 import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -75,7 +77,48 @@ interface Appointment {
   time: string;
 }
 
-// Base navigation items (always shown) - badge will be set dynamically
+// Navigation item type
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  badge?: number;
+  current?: boolean;
+}
+
+interface NavGroup {
+  name: string;
+  icon?: any;
+  items: NavItem[];
+  collapsible?: boolean;
+}
+
+// Grouped navigation items
+const getGroupedNavigation = (savedCount: number = 0): NavGroup[] => [
+  {
+    name: "Main",
+    items: [
+      { name: "Overview", href: "/dashboard", icon: Home, current: true },
+      { name: "My Properties", href: "/dashboard/properties", icon: Building2 },
+      { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: 0 },
+      { name: "Saved Properties", href: "/dashboard/saved", icon: Heart, badge: savedCount > 0 ? savedCount : undefined },
+      { name: "Recently Viewed", href: "/dashboard/recently-viewed", icon: History },
+      { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    name: "Account",
+    icon: UserCircle,
+    collapsible: true,
+    items: [
+      { name: "Payments", href: "/dashboard/payments", icon: Wallet },
+      { name: "Documents", href: "/dashboard/documents", icon: FileText },
+      { name: "Settings", href: "/dashboard/settings", icon: Settings },
+    ],
+  },
+];
+
+// Keep flat navigation for backward compatibility
 const getBaseNavigation = (savedCount: number = 0) => [
   { name: "Overview", href: "/dashboard", icon: Home, current: true },
   { name: "My Properties", href: "/dashboard/properties", icon: Building2, current: false },
@@ -178,6 +221,7 @@ export default function DashboardPage() {
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalProperties: 0,
@@ -490,25 +534,69 @@ export default function DashboardPage() {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {getBaseNavigation(savedPropertiesCount).map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition",
-                  item.current
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-slate-600 hover:bg-slate-50"
+            {getGroupedNavigation(savedPropertiesCount).map((group) => (
+              <div key={group.name} className="mb-2">
+                {/* Group with collapsible items */}
+                {group.collapsible ? (
+                  <>
+                    <button
+                      onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+                      className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        {group.icon && <group.icon className="w-5 h-5" />}
+                        <span>{group.name}</span>
+                      </div>
+                      <ChevronDown 
+                        className={cn(
+                          "w-4 h-4 transition-transform duration-200",
+                          accountMenuOpen ? "rotate-180" : ""
+                        )} 
+                      />
+                    </button>
+                    {/* Collapsible submenu */}
+                    <div className={cn(
+                      "overflow-hidden transition-all duration-200",
+                      accountMenuOpen ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
+                    )}>
+                      <div className="pl-4 space-y-1 mt-1">
+                        {group.items.map((item) => (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+                          >
+                            <item.icon className="w-4 h-4" />
+                            {item.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  /* Regular group items */
+                  group.items.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition",
+                        item.current
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      {item.name}
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <Badge className="ml-auto bg-blue-100 text-blue-700 text-xs font-medium">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  ))
                 )}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.name}
-                {item.badge !== undefined && item.badge > 0 && (
-                  <Badge className="ml-auto bg-blue-100 text-blue-700 text-xs font-medium">
-                    {item.badge}
-                  </Badge>
-                )}
-              </Link>
+              </div>
             ))}
             {/* Admin Panel Link - Only visible to admins */}
             {user?.role === "admin" && (
