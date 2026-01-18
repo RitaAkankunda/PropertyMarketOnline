@@ -510,8 +510,8 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
         </Card>
 
         {/* About Card */}
-        <Card className="mb-8">
-          <div className="p-6">
+        <Card className="mb-8 overflow-hidden">
+          <div className="p-6 overflow-hidden">
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <div className="flex items-start gap-3 mb-2">
@@ -617,9 +617,9 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
             )}
 
             {/* About Section */}
-            <div className="mb-6">
+            <div className="mb-6 overflow-hidden">
               <h2 className="text-xl font-bold text-slate-900 mb-3">About This Property</h2>
-              <p className="text-slate-600 leading-relaxed">{property.description}</p>
+              <p className="text-slate-600 leading-relaxed break-words whitespace-pre-wrap overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{property.description}</p>
             </div>
 
             {/* Amenities */}
