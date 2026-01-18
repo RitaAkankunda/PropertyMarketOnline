@@ -51,24 +51,24 @@ const steps = [
 ];
 
 const amenitiesList = [
-  "Swimming Pool",
-  "Garden",
-  "Security",
-  "Backup Generator",
-  "Water Tank",
-  "Air Conditioning",
-  "Internet Ready",
-  "Balcony",
-  "Garage",
-  "Parking",
-  "Gym",
-  "Elevator",
-  "Laundry Room",
-  "Storage",
-  "Servant Quarters",
-  "CCTV",
-  "Solar Power",
-  "Borehole",
+  { id: "Swimming Pool", label: "Swimming Pool", icon: "🏊" },
+  { id: "Garden", label: "Garden", icon: "🌳" },
+  { id: "Security", label: "Security", icon: "🔒" },
+  { id: "Backup Generator", label: "Backup Generator", icon: "⚡" },
+  { id: "Water Tank", label: "Water Tank", icon: "💧" },
+  { id: "Air Conditioning", label: "Air Conditioning", icon: "❄️" },
+  { id: "Internet Ready", label: "Internet Ready", icon: "📶" },
+  { id: "Balcony", label: "Balcony", icon: "🏡" },
+  { id: "Garage", label: "Garage", icon: "🚗" },
+  { id: "Parking", label: "Parking", icon: "🅿️" },
+  { id: "Gym", label: "Gym", icon: "💪" },
+  { id: "Elevator", label: "Elevator", icon: "🛗" },
+  { id: "Laundry Room", label: "Laundry Room", icon: "🧺" },
+  { id: "Storage", label: "Storage", icon: "📦" },
+  { id: "Servant Quarters", label: "Servant Quarters", icon: "🏠" },
+  { id: "CCTV", label: "CCTV", icon: "📹" },
+  { id: "Solar Power", label: "Solar Power", icon: "☀️" },
+  { id: "Borehole", label: "Borehole", icon: "🚰" },
 ];
 
 export default function CreateListingPage() {
@@ -925,12 +925,12 @@ export default function CreateListingPage() {
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {HOTEL_AMENITIES.map((amenity) => (
                           <button
-                            key={amenity}
+                            key={amenity.id}
                             type="button"
-                            onClick={() => toggleAmenity(amenity)}
+                            onClick={() => toggleAmenity(amenity.id)}
                             className={cn(
                               "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
-                              formData.hotelAmenities.includes(amenity)
+                              formData.hotelAmenities.includes(amenity.id)
                                 ? "bg-blue-50 border-blue-500 text-blue-700"
                                 : "border-slate-200 hover:border-blue-500"
                             )}
@@ -938,16 +938,17 @@ export default function CreateListingPage() {
                             <div
                               className={cn(
                                 "w-5 h-5 rounded border flex items-center justify-center",
-                                formData.hotelAmenities.includes(amenity)
+                                formData.hotelAmenities.includes(amenity.id)
                                   ? "bg-blue-600 border-blue-600"
                                   : "border-slate-300"
                               )}
                             >
-                              {formData.hotelAmenities.includes(amenity) && (
+                              {formData.hotelAmenities.includes(amenity.id) && (
                                 <Check className="w-3 h-3 text-white" />
                               )}
                             </div>
-                            {amenity}
+                            <span className="text-lg">{amenity.icon}</span>
+                            {amenity.label}
                           </button>
                         ))}
                       </div>
@@ -1544,14 +1545,21 @@ export default function CreateListingPage() {
                         Standard Amenities
                       </label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {["Air Conditioning", "Backup Generator", "Internet Ready", "Security", "CCTV", "Parking"].map((amenity) => (
+                        {[
+                          { id: "Air Conditioning", label: "Air Conditioning", icon: "❄️" },
+                          { id: "Backup Generator", label: "Backup Generator", icon: "⚡" },
+                          { id: "Internet Ready", label: "Internet Ready", icon: "📶" },
+                          { id: "Security", label: "Security", icon: "🔒" },
+                          { id: "CCTV", label: "CCTV", icon: "📹" },
+                          { id: "Parking", label: "Parking", icon: "🅿️" },
+                        ].map((amenity) => (
                           <button
-                            key={amenity}
+                            key={amenity.id}
                             type="button"
-                            onClick={() => toggleAmenity(amenity)}
+                            onClick={() => toggleAmenity(amenity.id)}
                             className={cn(
                               "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
-                              formData.amenities.includes(amenity)
+                              formData.amenities.includes(amenity.id)
                                 ? "bg-blue-50 border-blue-500 text-blue-700"
                                 : "border-slate-200 hover:border-blue-500"
                             )}
@@ -1559,16 +1567,17 @@ export default function CreateListingPage() {
                             <div
                               className={cn(
                                 "w-5 h-5 rounded border flex items-center justify-center",
-                                formData.amenities.includes(amenity)
+                                formData.amenities.includes(amenity.id)
                                   ? "bg-blue-600 border-blue-600"
                                   : "border-slate-300"
                               )}
                             >
-                              {formData.amenities.includes(amenity) && (
+                              {formData.amenities.includes(amenity.id) && (
                                 <Check className="w-3 h-3 text-white" />
                               )}
                             </div>
-                            {amenity}
+                            <span className="text-lg">{amenity.icon}</span>
+                            {amenity.label}
                           </button>
                         ))}
                       </div>
@@ -1676,12 +1685,12 @@ export default function CreateListingPage() {
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {amenitiesList.map((amenity) => (
                           <button
-                            key={amenity}
+                            key={amenity.id}
                             type="button"
-                            onClick={() => toggleAmenity(amenity)}
+                            onClick={() => toggleAmenity(amenity.id)}
                             className={cn(
                               "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition",
-                              formData.amenities.includes(amenity)
+                              formData.amenities.includes(amenity.id)
                                 ? "bg-blue-50 border-blue-500 text-blue-700"
                                 : "border-slate-200 hover:border-blue-500"
                             )}
@@ -1689,16 +1698,17 @@ export default function CreateListingPage() {
                             <div
                               className={cn(
                                 "w-5 h-5 rounded border flex items-center justify-center",
-                                formData.amenities.includes(amenity)
+                                formData.amenities.includes(amenity.id)
                                   ? "bg-blue-600 border-blue-600"
                                   : "border-slate-300"
                               )}
                             >
-                              {formData.amenities.includes(amenity) && (
+                              {formData.amenities.includes(amenity.id) && (
                                 <Check className="w-3 h-3 text-white" />
                               )}
                             </div>
-                            {amenity}
+                            <span className="text-lg">{amenity.icon}</span>
+                            {amenity.label}
                           </button>
                         ))}
                       </div>
