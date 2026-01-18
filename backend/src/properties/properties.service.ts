@@ -65,6 +65,9 @@ export class PropertiesService {
       minPrice,
       maxPrice,
       bedrooms,
+      minBedrooms,
+      amenities,
+      isVerified,
       page = 1,
       limit = 10,
       north,
@@ -103,8 +106,38 @@ export class PropertiesService {
       query.andWhere('property.price <= :maxPrice', { maxPrice });
     }
 
+    // Exact bedrooms filter
     if (bedrooms !== undefined) {
       query.andWhere('property.bedrooms = :bedrooms', { bedrooms });
+    }
+
+    // Minimum bedrooms filter (1+, 2+, etc.)
+    if (minBedrooms !== undefined) {
+      query.andWhere('property.bedrooms >= :minBedrooms', { minBedrooms });
+    }
+
+    // Filter by amenities (property must have ALL selected amenities)
+    // Amenities are stored as simple-array (comma-separated string) in the database
+    if (amenities && amenities.length > 0) {
+      amenities.forEach((amenity, index) => {
+        const paramName = `amenity_${index}`;
+        // Use LIKE to check if amenity exists in comma-separated list
+        // This handles: "parking,wifi,pool" contains "parking"
+        query.andWhere(
+          `(property.amenities LIKE :${paramName}_start OR property.amenities LIKE :${paramName}_middle OR property.amenities LIKE :${paramName}_end OR property.amenities = :${paramName}_exact)`,
+          {
+            [`${paramName}_start`]: `${amenity},%`,      // starts with amenity
+            [`${paramName}_middle`]: `%,${amenity},%`,   // amenity in middle
+            [`${paramName}_end`]: `%,${amenity}`,        // ends with amenity
+            [`${paramName}_exact`]: amenity,             // exact match (single amenity)
+          }
+        );
+      });
+    }
+
+    // Filter by verified status
+    if (isVerified !== undefined) {
+      query.andWhere('property.isVerified = :isVerified', { isVerified });
     }
 
     // Exclude specific property (for similar properties)

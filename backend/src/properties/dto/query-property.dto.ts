@@ -1,5 +1,5 @@
-import { IsOptional, IsEnum, IsNumber, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsEnum, IsNumber, Min, IsBoolean, IsArray, IsString } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { PropertyType, ListingType } from '../entities/property.entity';
 
 export class QueryPropertyDto {
@@ -28,6 +28,33 @@ export class QueryPropertyDto {
   @Min(0)
   @Type(() => Number)
   bedrooms?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  minBedrooms?: number; // Minimum bedrooms filter (1+, 2+, etc.)
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => {
+    // Handle both array and comma-separated string
+    if (typeof value === 'string') {
+      return value.split(',').map(s => s.trim());
+    }
+    return value;
+  })
+  amenities?: string[]; // Filter by amenities
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
+  })
+  isVerified?: boolean; // Filter by verified status
 
   @IsOptional()
   @IsNumber()

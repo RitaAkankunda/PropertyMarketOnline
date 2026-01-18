@@ -78,6 +78,9 @@ export class Property {
   @Column('simple-array', { nullable: true })
   amenities: string[];
 
+  @Column({ default: false })
+  isVerified: boolean;
+
   // Hotel-specific fields
   @Column({ nullable: true })
   totalRooms: number;
