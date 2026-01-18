@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { providerService, notificationsService } from "@/services";
+import { useRouter } from "next/navigation";
+import { providerService, notificationsService, messageService } from "@/services";
 import { useNotificationAlerts } from "@/hooks/use-notifications";
 import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
 import { NotificationPermissionBanner } from "@/components/notifications/notification-permission-banner";
@@ -93,11 +94,39 @@ function mapNotificationType(type: string): "info" | "success" | "warning" {
   return 'info';
 }
 
-const DUMMY_CONVERSATIONS = [
-  { id: "C1", providerName: "ElectroPro Services", lastMessage: "I'll arrive around 9 AM tomorrow", timestamp: "30 min ago", unread: true, requestId: "REQ001" },
-  { id: "C2", providerName: "Quick Movers Uganda", lastMessage: "Can you confirm the pickup address?", timestamp: "2 hours ago", unread: true, requestId: "REQ002" },
-  { id: "C3", providerName: "Master Plumbers Ltd", lastMessage: "Working on it now, almost done", timestamp: "4 hours ago", unread: false, requestId: "REQ003" },
-];
+// Conversation types matching backend
+interface ConversationParticipant {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatar?: string;
+}
+
+interface UserConversation {
+  id: string;
+  participant: ConversationParticipant;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+  property?: {
+    id: string;
+    title: string;
+  } | null;
+}
+
+interface ChatMessage {
+  id: string;
+  senderId: string;
+  sender?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  content: string;
+  createdAt: string;
+  isRead: boolean;
+}
 
 // =============================================
 // STATUS BADGE
@@ -125,11 +154,13 @@ function StatusBadge({ status }: { status: RequestStatus }) {
 // =============================================
 function RequestDetailModal({ 
   request, 
+  completedAt,
   onClose,
   onCancel,
   onRate
 }: { 
-  request: ServiceRequest; 
+  request: ServiceRequest;
+  completedAt?: string; 
   onClose: () => void;
   onCancel: (id: string) => void;
   onRate: (id: string, rating: number) => void;
@@ -274,29 +305,83 @@ function RequestDetailModal({
 // CHAT MODAL
 // =============================================
 function ChatModal({ 
-  conversation, 
+  conversation,
+  currentUserId,
   onClose 
 }: { 
-  conversation: typeof DUMMY_CONVERSATIONS[0]; 
+  conversation: UserConversation;
+  currentUserId: string;
   onClose: () => void;
 }) {
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState([
-    { id: 1, sender: "provider", text: "Hello! I received your service request.", time: "10:00 AM" },
-    { id: 2, sender: "user", text: "Great! When can you come?", time: "10:05 AM" },
-    { id: 3, sender: "provider", text: conversation.lastMessage, time: "10:10 AM" },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
-  const handleSend = () => {
-    if (newMessage.trim()) {
-      setMessages([...messages, {
-        id: messages.length + 1,
-        sender: "user",
-        text: newMessage,
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }]);
-      setNewMessage("");
+  // Fetch messages when conversation opens
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        setLoading(true);
+        const response = await messageService.getConversation(conversation.id, 1, 100);
+        // Map messages to include senderId from sender object
+        const mappedMessages: ChatMessage[] = (response.messages || []).map((msg: { id: string; sender?: { id: string; firstName?: string; lastName?: string }; content: string; createdAt: string; isRead: boolean }) => ({
+          ...msg,
+          senderId: msg.sender?.id || '',
+        }));
+        setMessages(mappedMessages);
+        // Mark as read
+        if (conversation.unreadCount > 0) {
+          await messageService.markAsRead(conversation.id);
+        }
+      } catch (err) {
+        console.error('Error fetching messages:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMessages();
+  }, [conversation.id, conversation.unreadCount]);
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || sending) return;
+    
+    const content = newMessage.trim();
+    setNewMessage("");
+    setSending(true);
+
+    // Optimistic update
+    const tempMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      senderId: currentUserId,
+      content,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages(prev => [...prev, tempMessage]);
+
+    try {
+      const sentMessage = await messageService.sendMessage({
+        conversationId: conversation.id,
+        recipientId: conversation.participant.id,
+        content,
+      });
+      // Replace temp message with real one
+      setMessages(prev => 
+        prev.map(m => m.id === tempMessage.id ? { ...sentMessage, senderId: currentUserId } as ChatMessage : m)
+      );
+    } catch (err) {
+      console.error('Error sending message:', err);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setSending(false);
     }
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -305,12 +390,16 @@ function ChatModal({
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+              {conversation.participant.firstName?.charAt(0) || '?'}
             </div>
             <div>
-              <p className="font-medium">{conversation.providerName}</p>
-              <p className="text-xs text-gray-500">Request #{conversation.requestId}</p>
+              <p className="font-medium">
+                {conversation.participant.firstName} {conversation.participant.lastName}
+              </p>
+              {conversation.property && (
+                <p className="text-xs text-gray-500">{conversation.property.title}</p>
+              )}
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -320,20 +409,32 @@ function ChatModal({
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                msg.sender === "user" 
-                  ? "bg-blue-500 text-white rounded-br-md" 
-                  : "bg-gray-100 text-gray-900 rounded-bl-md"
-              }`}>
-                <p className="text-sm">{msg.text}</p>
-                <p className={`text-xs mt-1 ${msg.sender === "user" ? "text-blue-100" : "text-gray-400"}`}>
-                  {msg.time}
-                </p>
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
             </div>
-          ))}
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <MessageCircle className="w-12 h-12 mb-2 text-gray-300" />
+              <p>No messages yet</p>
+              <p className="text-sm">Start the conversation!</p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                  msg.senderId === currentUserId 
+                    ? "bg-blue-500 text-white rounded-br-md" 
+                    : "bg-gray-100 text-gray-900 rounded-bl-md"
+                }`}>
+                  <p className="text-sm">{msg.content}</p>
+                  <p className={`text-xs mt-1 ${msg.senderId === currentUserId ? "text-blue-100" : "text-gray-400"}`}>
+                    {formatTime(msg.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Input */}
@@ -345,8 +446,13 @@ function ChatModal({
             placeholder="Type a message..."
             className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            disabled={sending}
           />
-          <button onClick={handleSend} className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+          <button 
+            onClick={handleSend} 
+            className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            disabled={sending || !newMessage.trim()}
+          >
             <Send className="w-5 h-5" />
           </button>
         </div>
@@ -359,16 +465,114 @@ function ChatModal({
 // MAIN USER DASHBOARD
 // =============================================
 export default function UserDashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("requests");
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [jobs, setJobs] = useState<ApiJob[]>([]); // Store original job data
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
-  const [selectedChat, setSelectedChat] = useState<typeof DUMMY_CONVERSATIONS[0] | null>(null);
+  const [selectedChat, setSelectedChat] = useState<UserConversation | null>(null);
+  const [conversations, setConversations] = useState<UserConversation[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<RequestStatus | "all">("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  // Normalize conversation from API response
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const normalizeConversation = useCallback((conv: any, userId: string): UserConversation | null => {
+    let participant: ConversationParticipant | undefined;
+    let unreadCount = 0;
+
+    if (conv.participant && conv.participant.id) {
+      // Already transformed by backend
+      participant = conv.participant;
+      unreadCount = conv.unreadCount || 0;
+    } else if (conv.participantOneId && conv.participantTwoId) {
+      // Raw format - determine the other participant
+      const isParticipantOne = conv.participantOneId === userId;
+      participant = isParticipantOne ? conv.participantTwo : conv.participantOne;
+      unreadCount = isParticipantOne ? conv.participantOneUnreadCount : conv.participantTwoUnreadCount;
+    }
+
+    if (!participant || !participant.id) {
+      return null;
+    }
+
+    return {
+      id: conv.id,
+      participant: {
+        id: participant.id,
+        firstName: participant.firstName || 'Unknown',
+        lastName: participant.lastName || 'User',
+        email: participant.email || '',
+        avatar: participant.avatar,
+      },
+      lastMessage: conv.lastMessageContent || conv.lastMessage || null,
+      lastMessageAt: conv.lastMessageAt || null,
+      unreadCount: unreadCount || 0,
+      property: conv.property || null,
+    };
+  }, []);
+
+  // Fetch conversations from API
+  const fetchConversations = useCallback(async () => {
+    try {
+      setConversationsLoading(true);
+      const response = await messageService.getConversations(1, 50);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const conversationsData: any[] = Array.isArray(response) ? response : (response.data || []);
+      
+      // Get current user ID from first conversation or from localStorage
+      let userId = currentUserId;
+      if (!userId) {
+        // Try to get from auth store
+        const authData = localStorage.getItem('auth-storage');
+        if (authData) {
+          try {
+            const parsed = JSON.parse(authData);
+            userId = parsed.state?.user?.id || '';
+            setCurrentUserId(userId);
+          } catch (e) {
+            console.error('Error parsing auth data:', e);
+          }
+        }
+      }
+
+      const normalizedConvs = conversationsData
+        .map((conv) => normalizeConversation(conv, userId))
+        .filter((conv): conv is UserConversation => conv !== null);
+      
+      setConversations(normalizedConvs);
+    } catch (err) {
+      console.error('Error fetching conversations:', err);
+      setConversations([]);
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, [currentUserId, normalizeConversation]);
+
+  // Fetch conversations when messages tab is active
+  useEffect(() => {
+    if (activeTab === 'messages') {
+      fetchConversations();
+    }
+  }, [activeTab, fetchConversations]);
+
+  // Get current user ID on mount
+  useEffect(() => {
+    const authData = localStorage.getItem('auth-storage');
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        setCurrentUserId(parsed.state?.user?.id || '');
+      } catch (e) {
+        console.error('Error parsing auth data:', e);
+      }
+    }
+  }, []);
 
   // Fetch user's jobs from backend
   useEffect(() => {
@@ -421,7 +625,7 @@ export default function UserDashboard() {
       console.error('[NOTIFICATIONS] Error details:', {
         message: err instanceof Error ? err.message : 'Unknown error',
         stack: err instanceof Error ? err.stack : undefined,
-        response: (err as any)?.response,
+        response: (err as Record<string, unknown>)?.response,
       });
       // Don't set error state for notifications, just log it
       setNotifications([]);
@@ -522,7 +726,7 @@ export default function UserDashboard() {
   };
 
   const unreadNotifications = notifications.filter(n => !n.isRead).length;
-  const unreadMessages = DUMMY_CONVERSATIONS.filter(c => c.unread).length;
+  const unreadMessages = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -537,7 +741,15 @@ export default function UserDashboard() {
         />
       )}
       {selectedChat && (
-        <ChatModal conversation={selectedChat} onClose={() => setSelectedChat(null)} />
+        <ChatModal 
+          conversation={selectedChat} 
+          currentUserId={currentUserId}
+          onClose={() => {
+            setSelectedChat(null);
+            // Refresh conversations to update unread counts
+            fetchConversations();
+          }} 
+        />
       )}
 
       {/* Header */}
@@ -908,32 +1120,58 @@ export default function UserDashboard() {
         {/* MESSAGES TAB */}
         {activeTab === "messages" && (
           <div className="bg-white rounded-xl shadow-sm divide-y">
-            {DUMMY_CONVERSATIONS.map((conv) => (
-              <div 
-                key={conv.id}
-                onClick={() => setSelectedChat(conv)}
-                className="p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
-              >
-                <div className="relative">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <Briefcase className="w-6 h-6 text-blue-600" />
-                  </div>
-                  {conv.unread && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className={`font-medium ${conv.unread ? "text-gray-900" : "text-gray-600"}`}>
-                      {conv.providerName}
-                    </p>
-                    <span className="text-xs text-gray-400">{conv.timestamp}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 truncate">{conv.lastMessage}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+            {conversationsLoading ? (
+              <div className="p-8 text-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">Loading conversations...</p>
               </div>
-            ))}
+            ) : conversations.length === 0 ? (
+              <div className="p-8 text-center">
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
+                <p className="text-gray-500 mb-4">Start a conversation with a service provider or property owner</p>
+                <button
+                  onClick={() => router.push('/dashboard/messages')}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Go to Messages
+                </button>
+              </div>
+            ) : (
+              conversations.map((conv) => (
+                <div 
+                  key={conv.id}
+                  onClick={() => setSelectedChat(conv)}
+                  className="p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
+                >
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      {conv.participant.firstName?.charAt(0) || '?'}
+                    </div>
+                    {conv.unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                        {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className={`font-medium ${conv.unreadCount > 0 ? "text-gray-900" : "text-gray-600"}`}>
+                        {conv.participant.firstName} {conv.participant.lastName}
+                      </p>
+                      <span className="text-xs text-gray-400">
+                        {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleDateString() : ''}
+                      </span>
+                    </div>
+                    {conv.property && (
+                      <p className="text-xs text-blue-600 truncate">{conv.property.title}</p>
+                    )}
+                    <p className="text-sm text-gray-500 truncate">{conv.lastMessage || 'No messages yet'}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </div>
+              ))
+            )}
           </div>
         )}
 

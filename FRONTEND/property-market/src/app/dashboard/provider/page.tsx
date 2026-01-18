@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { providerService, propertyService, notificationsService } from "@/services";
+import { providerService, propertyService, notificationsService, messageService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
 import { useToastContext } from "@/components/ui/toast-provider";
@@ -72,6 +72,40 @@ interface Message {
   timestamp: string;
   unread: boolean;
   jobId: string;
+}
+
+// Conversation types for real API
+interface ConversationParticipant {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatar?: string;
+}
+
+interface ProviderConversation {
+  id: string;
+  participant: ConversationParticipant;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+  property?: {
+    id: string;
+    title: string;
+  } | null;
+}
+
+interface ChatMessage {
+  id: string;
+  senderId: string;
+  sender?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  content: string;
+  createdAt: string;
+  isRead: boolean;
 }
 
 interface Transaction {
@@ -459,32 +493,86 @@ function WithdrawModal({
 }
 
 // =============================================
-// CHAT MODAL
+// CHAT MODAL FOR PROVIDER
 // =============================================
-function ChatModal({ 
-  message, 
+function ProviderChatModal({ 
+  conversation,
+  currentUserId,
   onClose 
 }: { 
-  message: Message; 
+  conversation: ProviderConversation;
+  currentUserId: string;
   onClose: () => void;
 }) {
   const [newMessage, setNewMessage] = useState("");
-  const [chatMessages, setChatMessages] = useState([
-    { id: 1, sender: "client", text: "Hello, I submitted a service request.", time: "10:00 AM" },
-    { id: 2, sender: "provider", text: "Hi! Yes, I received it. I can come tomorrow morning.", time: "10:05 AM" },
-    { id: 3, sender: "client", text: message.lastMessage, time: "10:10 AM" },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
-  const handleSend = () => {
-    if (newMessage.trim()) {
-      setChatMessages([...chatMessages, { 
-        id: chatMessages.length + 1, 
-        sender: "provider", 
-        text: newMessage, 
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }]);
-      setNewMessage("");
+  // Fetch messages when conversation opens
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        setLoading(true);
+        const response = await messageService.getConversation(conversation.id, 1, 100);
+        // Map messages to include senderId from sender object
+        const mappedMessages: ChatMessage[] = (response.messages || []).map((msg: { id: string; sender?: { id: string; firstName?: string; lastName?: string }; content: string; createdAt: string; isRead: boolean }) => ({
+          ...msg,
+          senderId: msg.sender?.id || '',
+        }));
+        setChatMessages(mappedMessages);
+        // Mark as read
+        if (conversation.unreadCount > 0) {
+          await messageService.markAsRead(conversation.id);
+        }
+      } catch (err) {
+        console.error('Error fetching messages:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMessages();
+  }, [conversation.id, conversation.unreadCount]);
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || sending) return;
+    
+    const content = newMessage.trim();
+    setNewMessage("");
+    setSending(true);
+
+    // Optimistic update
+    const tempMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      senderId: currentUserId,
+      content,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setChatMessages(prev => [...prev, tempMessage]);
+
+    try {
+      const sentMessage = await messageService.sendMessage({
+        conversationId: conversation.id,
+        recipientId: conversation.participant.id,
+        content,
+      });
+      // Replace temp message with real one
+      setChatMessages(prev => 
+        prev.map(m => m.id === tempMessage.id ? { ...sentMessage, senderId: currentUserId } as ChatMessage : m)
+      );
+    } catch (err) {
+      console.error('Error sending message:', err);
+      // Remove optimistic message on error
+      setChatMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setSending(false);
     }
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -493,12 +581,16 @@ function ChatModal({
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+              {conversation.participant.firstName?.charAt(0) || '?'}
             </div>
             <div>
-              <p className="font-medium">{message.clientName}</p>
-              <p className="text-xs text-gray-500">Job #{message.jobId}</p>
+              <p className="font-medium">
+                {conversation.participant.firstName} {conversation.participant.lastName}
+              </p>
+              {conversation.property && (
+                <p className="text-xs text-gray-500">{conversation.property.title}</p>
+              )}
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -508,20 +600,32 @@ function ChatModal({
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {chatMessages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === "provider" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                msg.sender === "provider" 
-                  ? "bg-blue-500 text-white rounded-br-md" 
-                  : "bg-gray-100 text-gray-900 rounded-bl-md"
-              }`}>
-                <p className="text-sm">{msg.text}</p>
-                <p className={`text-xs mt-1 ${msg.sender === "provider" ? "text-blue-100" : "text-gray-400"}`}>
-                  {msg.time}
-                </p>
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
             </div>
-          ))}
+          ) : chatMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <MessageCircle className="w-12 h-12 mb-2 text-gray-300" />
+              <p>No messages yet</p>
+              <p className="text-sm">Start the conversation!</p>
+            </div>
+          ) : (
+            chatMessages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                  msg.senderId === currentUserId 
+                    ? "bg-blue-500 text-white rounded-br-md" 
+                    : "bg-gray-100 text-gray-900 rounded-bl-md"
+                }`}>
+                  <p className="text-sm">{msg.content}</p>
+                  <p className={`text-xs mt-1 ${msg.senderId === currentUserId ? "text-blue-100" : "text-gray-400"}`}>
+                    {formatTime(msg.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Input */}
@@ -533,10 +637,12 @@ function ChatModal({
             placeholder="Type a message..."
             className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            disabled={sending}
           />
           <button 
             onClick={handleSend}
-            className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            disabled={sending || !newMessage.trim()}
           >
             <Send className="w-5 h-5" />
           </button>
@@ -574,8 +680,101 @@ export default function ProviderDashboard() {
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [providerProfile, setProviderProfile] = useState<{ businessName?: string; isVerified?: boolean; isKycVerified?: boolean } | null>(null);
-  const [messages] = useState<Message[]>([]); // TODO: Implement real messages API
+  const [conversations, setConversations] = useState<ProviderConversation[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState<ProviderConversation | null>(null);
   const [transactions] = useState<Transaction[]>([]); // TODO: Implement real transactions API
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  // Normalize conversation from API response
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const normalizeConversation = useCallback((conv: any, userId: string): ProviderConversation | null => {
+    let participant: ConversationParticipant | undefined;
+    let unreadCount = 0;
+
+    if (conv.participant && conv.participant.id) {
+      participant = conv.participant;
+      unreadCount = conv.unreadCount || 0;
+    } else if (conv.participantOneId && conv.participantTwoId) {
+      const isParticipantOne = conv.participantOneId === userId;
+      participant = isParticipantOne ? conv.participantTwo : conv.participantOne;
+      unreadCount = isParticipantOne ? conv.participantOneUnreadCount : conv.participantTwoUnreadCount;
+    }
+
+    if (!participant || !participant.id) {
+      return null;
+    }
+
+    return {
+      id: conv.id,
+      participant: {
+        id: participant.id,
+        firstName: participant.firstName || 'Unknown',
+        lastName: participant.lastName || 'User',
+        email: participant.email || '',
+        avatar: participant.avatar,
+      },
+      lastMessage: conv.lastMessageContent || conv.lastMessage || null,
+      lastMessageAt: conv.lastMessageAt || null,
+      unreadCount: unreadCount || 0,
+      property: conv.property || null,
+    };
+  }, []);
+
+  // Fetch conversations from API
+  const fetchConversations = useCallback(async () => {
+    try {
+      setConversationsLoading(true);
+      const response = await messageService.getConversations(1, 50);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const conversationsData: any[] = Array.isArray(response) ? response : (response.data || []);
+      
+      let userId = currentUserId;
+      if (!userId) {
+        const authData = localStorage.getItem('auth-storage');
+        if (authData) {
+          try {
+            const parsed = JSON.parse(authData);
+            userId = parsed.state?.user?.id || '';
+            setCurrentUserId(userId);
+          } catch (e) {
+            console.error('Error parsing auth data:', e);
+          }
+        }
+      }
+
+      const normalizedConvs = conversationsData
+        .map((conv) => normalizeConversation(conv, userId))
+        .filter((conv): conv is ProviderConversation => conv !== null);
+      
+      setConversations(normalizedConvs);
+    } catch (err) {
+      console.error('Error fetching conversations:', err);
+      setConversations([]);
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, [currentUserId, normalizeConversation]);
+
+  // Fetch conversations when messages tab is active
+  useEffect(() => {
+    if (activeTab === 'messages') {
+      fetchConversations();
+    }
+  }, [activeTab, fetchConversations]);
+
+  // Get current user ID on mount
+  useEffect(() => {
+    const authData = localStorage.getItem('auth-storage');
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        setCurrentUserId(parsed.state?.user?.id || '');
+      } catch (e) {
+        console.error('Error parsing auth data:', e);
+      }
+    }
+  }, []);
   const [verificationRequest, setVerificationRequest] = useState<{ status?: string; submittedAt?: string; rejectionReason?: string; reviewedAt?: string } | null>(null);
   const [isLoadingVerification, setIsLoadingVerification] = useState(false);
   const [verificationFiles, setVerificationFiles] = useState<{
@@ -799,7 +998,6 @@ export default function ProviderDashboard() {
 
     fetchJobs();
   }, [jobFilter]);
-  const [selectedChat, setSelectedChat] = useState<Message | null>(null);
   const [showWithdraw, setShowWithdraw] = useState(false);
   
   // Calculate stats from real data
@@ -869,9 +1067,6 @@ export default function ProviderDashboard() {
           onClose={() => setSelectedJob(null)} 
           onUpdateStatus={handleUpdateStatus}
         />
-      )}
-      {selectedChat && (
-        <ChatModal message={selectedChat} onClose={() => setSelectedChat(null)} />
       )}
       {showWithdraw && (
         <WithdrawModal 
@@ -1130,28 +1325,40 @@ export default function ProviderDashboard() {
         {/* MESSAGES TAB */}
         {activeTab === "messages" && (
           <div className="bg-white rounded-xl shadow-sm divide-y">
-            {messages.length > 0 ? messages.map((msg) => (
+            {conversationsLoading ? (
+              <div className="p-8 text-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">Loading conversations...</p>
+              </div>
+            ) : conversations.length > 0 ? conversations.map((conv) => (
               <div 
-                key={msg.id}
-                onClick={() => setSelectedChat(msg)}
+                key={conv.id}
+                onClick={() => setSelectedConversation(conv)}
                 className="p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
               >
                 <div className="relative">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    {conv.participant.firstName?.charAt(0) || '?'}
                   </div>
-                  {msg.unread && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full" />
+                  {conv.unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                      {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                    </span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className={`font-medium ${msg.unread ? "text-gray-900" : "text-gray-600"}`}>
-                      {msg.clientName}
+                    <p className={`font-medium ${conv.unreadCount > 0 ? "text-gray-900" : "text-gray-600"}`}>
+                      {conv.participant.firstName} {conv.participant.lastName}
                     </p>
-                    <span className="text-xs text-gray-400">{msg.timestamp}</span>
+                    <span className="text-xs text-gray-400">
+                      {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleDateString() : ''}
+                    </span>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{msg.lastMessage}</p>
+                  {conv.property && (
+                    <p className="text-xs text-blue-600 truncate">{conv.property.title}</p>
+                  )}
+                  <p className="text-sm text-gray-500 truncate">{conv.lastMessage || 'No messages yet'}</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </div>
@@ -1159,9 +1366,22 @@ export default function ProviderDashboard() {
               <div className="p-8 text-center text-gray-500">
                 <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p>No messages yet</p>
+                <p className="text-sm mt-2">When clients message you, they will appear here</p>
               </div>
             )}
           </div>
+        )}
+
+        {/* Chat Modal for Provider */}
+        {selectedConversation && (
+          <ProviderChatModal
+            conversation={selectedConversation}
+            currentUserId={currentUserId}
+            onClose={() => {
+              setSelectedConversation(null);
+              fetchConversations();
+            }}
+          />
         )}
 
         {/* RATINGS TAB */}

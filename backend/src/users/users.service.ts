@@ -401,6 +401,16 @@ export class UsersService {
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const previous30Days = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
+    // Calculate recent and previous bookings
+    const recentBookings = bookings.filter(
+      (b) => new Date(b.createdAt) >= last30Days,
+    );
+    const previousBookings = bookings.filter(
+      (b) =>
+        new Date(b.createdAt) >= previous30Days &&
+        new Date(b.createdAt) < last30Days,
+    );
+
     // Calculate views change from properties created in last 30 days vs previous 30 days
     // We'll use a simple approach: compare properties created in each period
     // For more accurate tracking, you'd want a property_views table with timestamps
