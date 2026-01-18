@@ -26,6 +26,31 @@ export interface DashboardAnalytics {
   viewsChange: string;
   messagesChange: string;
   revenueChange: string;
+  chartData?: {
+    last7Days: {
+      date: string;
+      views: number;
+      bookings: number;
+      revenue: number;
+    }[];
+    propertyPerformance: {
+      id: string;
+      title: string;
+      views: number;
+      type: string;
+    }[];
+    bookingsByType: {
+      inquiries: number;
+      viewings: number;
+      bookings: number;
+    };
+    bookingsByStatus: {
+      pending: number;
+      confirmed: number;
+      completed: number;
+      cancelled: number;
+    };
+  };
 }
 
 export const dashboardService = {

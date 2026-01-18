@@ -15,6 +15,7 @@ import { Booking } from '../bookings/entities/booking.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { Favorite } from '../favorites/entities/favorite.entity';
 import { PropertyReview } from '../property-reviews/entities/property-review.entity';
+import { PropertyAvailabilityBlock } from '../properties/entities/property-availability.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -45,7 +46,8 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         Booking, 
         Notification, 
         Favorite, 
-        PropertyReview
+        PropertyReview,
+        PropertyAvailabilityBlock
       ],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
       synchronize: false, // Disabled - use migrations

@@ -13,12 +13,29 @@ import {
   TrendingDown,
   ArrowLeft,
   RefreshCw,
+  Calendar,
+  PieChart,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useAuthStore } from "@/store";
 import { dashboardService } from "@/services";
 import { formatCurrency } from "@/lib/utils";
 import type { DashboardAnalytics } from "@/services/dashboard.service";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart as RechartsPie,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 export default function AnalyticsPage() {
   const router = useRouter();
@@ -322,22 +339,211 @@ export default function AnalyticsPage() {
               </Card>
             </div>
 
-            {/* Coming Soon Section */}
-            <Card className="p-6">
-              <div className="text-center">
-                <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Advanced Analytics</h3>
-                <p className="text-muted-foreground mb-4">
-                  Detailed charts, trends over time, and property-specific insights coming soon
-                </p>
-                <div className="flex gap-2 justify-center">
-                  <Button variant="outline" asChild>
-                    <Link href="/dashboard">Back to Dashboard</Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/dashboard/properties">Manage Properties</Link>
-                  </Button>
+            {/* Charts Section */}
+            {analytics.chartData && (
+              <>
+                {/* Views & Bookings Over Time */}
+                <Card className="p-6">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold">Activity Over Last 7 Days</h3>
+                  </div>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={analytics.chartData.last7Days}>
+                        <defs>
+                          <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis 
+                          dataKey="date" 
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'white', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                          }}
+                        />
+                        <Legend />
+                        <Area 
+                          type="monotone" 
+                          dataKey="views" 
+                          stroke="#8884d8" 
+                          fillOpacity={1} 
+                          fill="url(#colorViews)" 
+                          name="Views"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="bookings" 
+                          stroke="#82ca9d" 
+                          fillOpacity={1} 
+                          fill="url(#colorBookings)" 
+                          name="Bookings"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+
+                {/* Property Performance & Booking Breakdown */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Top Properties by Views */}
+                  <Card className="p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                      <BarChart3 className="w-5 h-5 text-purple-600" />
+                      <h3 className="text-lg font-semibold">Top Properties by Views</h3>
+                    </div>
+                    {analytics.chartData.propertyPerformance.length > 0 ? (
+                      <div className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart 
+                            data={analytics.chartData.propertyPerformance} 
+                            layout="vertical"
+                            margin={{ left: 20, right: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 12 }} />
+                            <YAxis 
+                              dataKey="title" 
+                              type="category" 
+                              width={100}
+                              tick={{ fontSize: 11 }}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'white', 
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '8px'
+                              }}
+                              formatter={(value: number) => [`${value} views`, 'Views']}
+                            />
+                            <Bar 
+                              dataKey="views" 
+                              fill="#8b5cf6" 
+                              radius={[0, 4, 4, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                        <p>No property data available yet</p>
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* Booking Types Breakdown */}
+                  <Card className="p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                      <PieChart className="w-5 h-5 text-green-600" />
+                      <h3 className="text-lg font-semibold">Booking Types</h3>
+                    </div>
+                    {(() => {
+                      const pieData = [
+                        { name: 'Inquiries', value: analytics.chartData?.bookingsByType.inquiries || 0, color: '#3b82f6' },
+                        { name: 'Viewings', value: analytics.chartData?.bookingsByType.viewings || 0, color: '#10b981' },
+                        { name: 'Bookings', value: analytics.chartData?.bookingsByType.bookings || 0, color: '#f59e0b' },
+                      ].filter(item => item.value > 0);
+                      
+                      const total = pieData.reduce((sum, item) => sum + item.value, 0);
+                      
+                      return total > 0 ? (
+                        <div className="h-[250px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPie>
+                              <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={90}
+                                paddingAngle={5}
+                                dataKey="value"
+                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                labelLine={false}
+                              >
+                                {pieData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip 
+                                formatter={(value: number) => [value, 'Count']}
+                              />
+                              <Legend />
+                            </RechartsPie>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                          <p>No booking data available yet</p>
+                        </div>
+                      );
+                    })()}
+                  </Card>
                 </div>
+
+                {/* Booking Status Overview */}
+                <Card className="p-6">
+                  <div className="flex items-center gap-2 mb-6">
+                    <MessageSquare className="w-5 h-5 text-orange-600" />
+                    <h3 className="text-lg font-semibold">Booking Status Overview</h3>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                      <div className="text-3xl font-bold text-yellow-600">
+                        {analytics.chartData?.bookingsByStatus.pending || 0}
+                      </div>
+                      <div className="text-sm text-yellow-700 mt-1">Pending</div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                      <div className="text-3xl font-bold text-blue-600">
+                        {analytics.chartData?.bookingsByStatus.confirmed || 0}
+                      </div>
+                      <div className="text-sm text-blue-700 mt-1">Confirmed</div>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                      <div className="text-3xl font-bold text-green-600">
+                        {analytics.chartData?.bookingsByStatus.completed || 0}
+                      </div>
+                      <div className="text-sm text-green-700 mt-1">Completed</div>
+                    </div>
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                      <div className="text-3xl font-bold text-red-600">
+                        {analytics.chartData?.bookingsByStatus.cancelled || 0}
+                      </div>
+                      <div className="text-sm text-red-700 mt-1">Cancelled</div>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+
+            {/* Actions */}
+            <Card className="p-6">
+              <div className="flex flex-wrap gap-4 justify-center">
+                <Button variant="outline" asChild>
+                  <Link href="/dashboard">Back to Dashboard</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/dashboard/properties">Manage Properties</Link>
+                </Button>
               </div>
             </Card>
           </div>

@@ -23,7 +23,7 @@ import { Button, Badge, Card } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
 import { propertyService } from "@/services/property.service";
 import { useAuth } from "@/hooks";
-import { PropertyViewingModal, PropertyInquiryModal, PropertyPaymentModal, ImageLightbox, PropertyWishlistButton, PropertyBadges, PropertyReviews, PropertyRating, SimilarProperties, PriceBreakdown } from "@/components/properties";
+import { PropertyViewingModal, PropertyInquiryModal, PropertyPaymentModal, ImageLightbox, PropertyWishlistButton, PropertyBadges, PropertyReviews, PropertyRating, SimilarProperties, PriceBreakdown, AvailabilityCalendar } from "@/components/properties";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import type { Property } from "@/types";
 
@@ -259,6 +259,13 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Booking dates for airbnb/hotel
+  const [bookingDates, setBookingDates] = useState<{
+    checkIn: Date | null;
+    checkOut: Date | null;
+    nights: number;
+    totalPrice: number;
+  }>({ checkIn: null, checkOut: null, nights: 0, totalPrice: 0 });
   const { addToRecentlyViewed } = useRecentlyViewed();
 
   // Restore viewing modal after login/registration
@@ -634,6 +641,31 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
           </div>
         </Card>
 
+        {(property.propertyType === "airbnb" || property.propertyType === "hotel") && (
+          <Card className="mb-8">
+            <div className="p-6">
+              <AvailabilityCalendar 
+                propertyId={property.id} 
+                isOwner={isOwner}
+                pricePerNight={
+                  property.propertyType === "hotel" 
+                    ? ((property as any).standardRoomRate || property.price || 0)
+                    : ((property as any).nightlyRate || property.price || 0)
+                }
+                cleaningFee={(property as any).cleaningFee || 0}
+                serviceFee={(property as any).serviceFee || 0}
+                currency={property.currency || "UGX"}
+                onBookingRequest={(checkIn, checkOut, nights, totalPrice) => {
+                  console.log("Booking requested:", { checkIn, checkOut, nights, totalPrice });
+                  // Store the booking dates and open payment modal
+                  setBookingDates({ checkIn, checkOut, nights, totalPrice });
+                  setIsPaymentModalOpen(true);
+                }}
+              />
+            </div>
+          </Card>
+        )}
+
         {/* Contact/Inquiry Card */}
         <Card>
           <div className="p-6">
@@ -722,7 +754,11 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
       <PropertyPaymentModal
         property={property}
         isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
+        onClose={() => {
+          setIsPaymentModalOpen(false);
+          setBookingDates({ checkIn: null, checkOut: null, nights: 0, totalPrice: 0 });
+        }}
+        bookingDates={bookingDates}
       />
 
       {/* Image Lightbox */}

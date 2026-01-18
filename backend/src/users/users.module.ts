@@ -11,10 +11,11 @@ import { ProviderVerificationRequest } from '../providers/entities/provider-veri
 import { R2Service } from '../common/r2.service';
 import { Booking } from '../bookings/entities/booking.entity';
 import { Property } from '../properties/entities/property.entity';
+import { PropertyView } from '../properties/entities/property-view.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Provider, ProviderVerificationRequest, Booking, Property]),
+    TypeOrmModule.forFeature([User, Provider, ProviderVerificationRequest, Booking, Property, PropertyView]),
     PropertiesModule,
     MulterModule.register({
       storage: memoryStorage(),

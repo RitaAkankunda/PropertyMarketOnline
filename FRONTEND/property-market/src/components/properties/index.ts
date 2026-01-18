@@ -15,3 +15,4 @@ export { PropertyRating } from "./PropertyRating";
 export { RecentlyViewedProperties } from "./RecentlyViewedProperties";
 export { SimilarProperties } from "./SimilarProperties";
 export { PriceBreakdown } from "./PriceBreakdown";
+export { AvailabilityCalendar } from "./AvailabilityCalendar";

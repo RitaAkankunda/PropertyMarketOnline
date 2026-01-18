@@ -5,19 +5,22 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Booking, BookingStatus } from './entities/booking.entity';
+import { Booking, BookingStatus, BookingType } from './entities/booking.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { PropertiesService } from 'src/properties/properties.service';
 import { UsersService } from 'src/users/users.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
+import { PropertyAvailabilityBlock } from 'src/properties/entities/property-availability.entity';
 
 @Injectable()
 export class BookingsService {
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
+    @InjectRepository(PropertyAvailabilityBlock)
+    private readonly availabilityRepository: Repository<PropertyAvailabilityBlock>,
     private readonly propertiesService: PropertiesService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
@@ -53,6 +56,24 @@ export class BookingsService {
       user = await this.usersService.findOneById(userId);
       if (!user) {
         throw new NotFoundException('User not found');
+      }
+    }
+
+    // Prevent booking on blocked dates (for Airbnb/hotel bookings)
+    if (
+      createBookingDto.type === BookingType.BOOKING &&
+      createBookingDto.checkInDate &&
+      createBookingDto.checkOutDate
+    ) {
+      const overlappingBlock = await this.availabilityRepository
+        .createQueryBuilder('block')
+        .where('block.propertyId = :propertyId', { propertyId: createBookingDto.propertyId })
+        .andWhere('block.startDate <= :endDate', { endDate: createBookingDto.checkOutDate })
+        .andWhere('block.endDate >= :startDate', { startDate: createBookingDto.checkInDate })
+        .getOne();
+
+      if (overlappingBlock) {
+        throw new BadRequestException('Selected dates are not available');
       }
     }
 

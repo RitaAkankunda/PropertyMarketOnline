@@ -8,6 +8,7 @@ import { UserRole } from './enums/user-role.enum';
 import { PropertiesService } from 'src/properties/properties.service';
 import { Booking, BookingType, BookingStatus } from 'src/bookings/entities/booking.entity';
 import { Property } from 'src/properties/entities/property.entity';
+import { PropertyView } from 'src/properties/entities/property-view.entity';
 
 export interface CreateOAuthUserDto {
   email: string;
@@ -28,6 +29,8 @@ export class UsersService {
     private readonly bookingRepository: Repository<Booking>,
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
+    @InjectRepository(PropertyView)
+    private readonly propertyViewRepository: Repository<PropertyView>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -479,6 +482,92 @@ export class UsersService {
           ? '100'
           : '0';
 
+    // Generate chart data for the last 7 days using REAL view data from property_views table
+    const last7Days: { date: string; views: number; bookings: number; revenue: number }[] = [];
+    const propertyIds = properties.map((p) => p.id);
+
+    // Get real views from property_views table grouped by day
+    let viewsByDay: { date: string; count: string }[] = [];
+    if (propertyIds.length > 0) {
+      try {
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        viewsByDay = await this.propertyViewRepository
+          .createQueryBuilder('view')
+          .select("TO_CHAR(view.createdAt, 'YYYY-MM-DD')", 'date')
+          .addSelect('COUNT(*)', 'count')
+          .where('view.propertyId IN (:...propertyIds)', { propertyIds })
+          .andWhere('view.createdAt >= :sevenDaysAgo', { sevenDaysAgo })
+          .groupBy("TO_CHAR(view.createdAt, 'YYYY-MM-DD')")
+          .orderBy("TO_CHAR(view.createdAt, 'YYYY-MM-DD')", 'ASC')
+          .getRawMany();
+      } catch (error) {
+        console.log('[ANALYTICS] property_views table may not exist yet:', error.message);
+      }
+    }
+
+    // Create a map for quick lookup
+    const viewsMap = new Map(viewsByDay.map((v) => [v.date, parseInt(v.count, 10)]));
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayStart = new Date(dateStr);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+      // Count bookings created on this day
+      const dayBookings = bookings.filter((b) => {
+        const createdAt = new Date(b.createdAt);
+        return createdAt >= dayStart && createdAt < dayEnd;
+      });
+
+      // Calculate revenue for this day
+      const dayRevenue = dayBookings
+        .filter((b) => b.status === BookingStatus.COMPLETED && b.paymentStatus === 'completed')
+        .reduce((sum, b) => sum + (Number(b.paymentAmount) || 0), 0);
+
+      // Get real views from property_views table (or fallback to estimate if table is empty)
+      let dayViews = viewsMap.get(dateStr) || 0;
+      
+      // If no tracked views yet, show a small approximation based on total property views
+      // This handles the transition period before we have tracking data
+      if (viewsByDay.length === 0 && totalViews > 0) {
+        dayViews = Math.round(totalViews / 7);
+      }
+
+      last7Days.push({
+        date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        views: dayViews,
+        bookings: dayBookings.length,
+        revenue: dayRevenue,
+      });
+    }
+
+    // Property performance data (views per property)
+    const propertyPerformance = properties
+      .map((p) => ({
+        id: p.id,
+        title: p.title.length > 20 ? p.title.substring(0, 20) + '...' : p.title,
+        views: p.views || 0,
+        type: p.propertyType,
+      }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 5); // Top 5 properties
+
+    // Booking breakdown by type
+    const bookingsByType = {
+      inquiries: bookings.filter((b) => b.type === BookingType.INQUIRY).length,
+      viewings: bookings.filter((b) => b.type === BookingType.VIEWING).length,
+      bookings: bookings.filter((b) => b.type === BookingType.BOOKING).length,
+    };
+
+    // Booking status breakdown
+    const bookingsByStatus = {
+      pending: bookings.filter((b) => b.status === BookingStatus.PENDING).length,
+      confirmed: bookings.filter((b) => b.status === BookingStatus.CONFIRMED).length,
+      completed: bookings.filter((b) => b.status === BookingStatus.COMPLETED).length,
+      cancelled: bookings.filter((b) => b.status === BookingStatus.CANCELLED).length,
+    };
+
     return {
       totalProperties,
       totalViews,
@@ -487,6 +576,13 @@ export class UsersService {
       propertyChange: `${propertyChange}%`,
       viewsChange: `${viewsChange}%`,
       messagesChange: `${messagesChange}`,
+      // Chart data
+      chartData: {
+        last7Days,
+        propertyPerformance,
+        bookingsByType,
+        bookingsByStatus,
+      },
       revenueChange: `${revenueChange}%`,
     };
   }

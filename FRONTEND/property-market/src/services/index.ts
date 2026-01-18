@@ -8,6 +8,7 @@ export { adminService } from "./admin.service";
 export { dashboardService } from "./dashboard.service";
 export { maintenanceTicketsService } from "./maintenance-tickets.service";
 export { notificationsService } from "./notifications.service";
+export { availabilityService } from "./availability.service";
 export { favoritesService } from "./favorites.service";
 export { propertyReviewsService } from "./property-reviews.service";
 export { default as api } from "./api";

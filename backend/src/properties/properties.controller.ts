@@ -17,6 +17,7 @@ import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { QueryPropertyDto } from './dto/query-property.dto';
+import { BlockAvailabilityDto } from './dto/block-availability.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from 'src/auth/roles.decorator';
 import { RolesGuard } from 'src/auth/roles.guard';
@@ -83,6 +84,15 @@ export class PropertiesController {
     return this.propertiesService.findOne(id);
   }
 
+  @Get(':id/availability')
+  getAvailability(
+    @Param('id') id: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.propertiesService.getAvailability(id, from, to);
+  }
+
 
   @UseGuards(AuthGuard('jwt'))
   @Get('my/properties')
@@ -113,6 +123,28 @@ export class PropertiesController {
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
     return this.propertiesService.remove(id, req.user.sub, req.user.role);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.LISTER, UserRole.PROPERTY_MANAGER, UserRole.ADMIN)
+  @Post(':id/availability/blocks')
+  blockAvailability(
+    @Param('id') id: string,
+    @Body() dto: BlockAvailabilityDto,
+    @Request() req,
+  ) {
+    return this.propertiesService.blockAvailability(id, dto, req.user.sub, req.user.role);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.LISTER, UserRole.PROPERTY_MANAGER, UserRole.ADMIN)
+  @Delete(':id/availability/blocks/:blockId')
+  removeAvailabilityBlock(
+    @Param('id') id: string,
+    @Param('blockId') blockId: string,
+    @Request() req,
+  ) {
+    return this.propertiesService.removeAvailabilityBlock(id, blockId, req.user.sub, req.user.role);
   }
 
   // Record a view for a property (public endpoint, no auth required)
