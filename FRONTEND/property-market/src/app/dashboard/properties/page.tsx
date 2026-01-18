@@ -13,6 +13,7 @@ import {
   Loader2,
   Search,
   AlertTriangle,
+  Camera,
 } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -237,6 +238,13 @@ export default function MyPropertiesPage() {
                         {property.status}
                       </Badge>
                     </div>
+                    {/* Photo count badge */}
+                    {property.images && property.images.length > 0 && (
+                      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs font-medium px-2 py-1 rounded-md flex items-center gap-1">
+                        <Camera className="h-3 w-3" />
+                        {property.images.length}
+                      </div>
+                    )}
                   </div>
 
                   {/* Content */}
