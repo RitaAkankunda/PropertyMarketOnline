@@ -774,7 +774,7 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
 
       {/* Reviews Section */}
       {property && (
-        <div id="reviews-section" className="mt-12 scroll-mt-20">
+        <Card id="reviews-section" className="mt-8 p-6 scroll-mt-20">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-slate-900">Reviews & Ratings</h2>
             <PropertyRating propertyId={property.id} size="md" showReviewCount={true} />
@@ -783,7 +783,7 @@ function PropertyDetailPageContent({ params }: { params: Promise<{ id: string }>
             propertyId={property.id} 
             propertyOwnerId={(property as any).ownerId || (property as any).owner?.id}
           />
-        </div>
+        </Card>
       )}
 
       {/* Similar Properties Section */}

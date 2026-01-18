@@ -90,53 +90,49 @@ export function PropertyReviews({ propertyId, propertyOwnerId }: PropertyReviews
     <div className="space-y-6">
       {/* Statistics Section */}
       {statistics && (
-        <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-slate-50 rounded-lg p-6 border">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Overall Rating */}
-            <div className="text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-                <span className="text-4xl font-bold text-slate-900">
-                  {statistics.averageRating.toFixed(1)}
+            <div className="flex items-center gap-4">
+              <span className="text-5xl font-bold text-slate-900">
+                {statistics.averageRating.toFixed(1)}
+              </span>
+              <div className="flex flex-col">
+                {renderStars(statistics.averageRating, "lg")}
+                <span className="text-sm text-slate-600 mt-1">
+                  {statistics.totalReviews} {statistics.totalReviews === 1 ? "review" : "reviews"}
                 </span>
-                <div className="flex flex-col">
-                  {renderStars(statistics.averageRating, "lg")}
-                  <span className="text-sm text-slate-600 mt-1">
-                    {statistics.totalReviews} {statistics.totalReviews === 1 ? "review" : "reviews"}
-                  </span>
-                </div>
               </div>
             </div>
 
             {/* Rating Breakdown */}
-            <div className="md:col-span-2">
-              <div className="space-y-2">
-                {[5, 4, 3, 2, 1].map((rating) => {
-                  const count = statistics.ratingBreakdown[rating as keyof typeof statistics.ratingBreakdown];
-                  const percentage = statistics.totalReviews > 0 
-                    ? (count / statistics.totalReviews) * 100 
-                    : 0;
-                  
-                  return (
-                    <div key={rating} className="flex items-center gap-2">
-                      <span className="text-sm text-slate-600 w-8">{rating}</span>
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-yellow-400"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                      <span className="text-sm text-slate-600 w-12 text-right">{count}</span>
+            <div className="space-y-1.5">
+              {[5, 4, 3, 2, 1].map((rating) => {
+                const count = statistics.ratingBreakdown[rating as keyof typeof statistics.ratingBreakdown];
+                const percentage = statistics.totalReviews > 0 
+                  ? (count / statistics.totalReviews) * 100 
+                  : 0;
+                
+                return (
+                  <div key={rating} className="flex items-center gap-2">
+                    <span className="text-sm text-slate-600 w-3">{rating}</span>
+                    <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden max-w-[200px]">
+                      <div
+                        className="h-full bg-yellow-400"
+                        style={{ width: `${percentage}%` }}
+                      />
                     </div>
-                  );
-                })}
-              </div>
+                    <span className="text-sm text-slate-500 w-6 text-right">{count}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Category Averages */}
           {statistics.categoryAverages && (
-            <div className="mt-6 pt-6 border-t grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="mt-4 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(statistics.categoryAverages).map(([category, rating]) => (
                 <div key={category} className="text-center">
                   <p className="text-xs text-slate-500 mb-1 capitalize">{category}</p>
@@ -150,7 +146,7 @@ export function PropertyReviews({ propertyId, propertyOwnerId }: PropertyReviews
               ))}
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       {/* Write Review Button */}
@@ -175,16 +171,16 @@ export function PropertyReviews({ propertyId, propertyOwnerId }: PropertyReviews
       {/* Reviews List */}
       <div className="space-y-4">
         {reviews.length === 0 ? (
-          <Card className="p-8 text-center">
+          <div className="p-8 text-center bg-slate-50 rounded-lg border">
             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 mb-2">No reviews yet</p>
             <p className="text-sm text-gray-400">
               Be the first to review this property!
             </p>
-          </Card>
+          </div>
         ) : (
           reviews.map((review) => (
-            <Card key={review.id} className="p-6">
+            <div key={review.id} className="p-5 bg-white rounded-lg border">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-4 flex-1">
                   {/* Reviewer Avatar */}
@@ -267,7 +263,7 @@ export function PropertyReviews({ propertyId, propertyOwnerId }: PropertyReviews
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           ))
         )}
       </div>
