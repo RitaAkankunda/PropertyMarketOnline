@@ -26,7 +26,18 @@ import {
   Paintbrush,
   Sparkles,
   Truck,
+  X,
+  Check,
+  Play,
+  Filter,
+  Map,
+  Bell,
+  Lock,
+  Users,
+  BarChart3,
+  Smartphone,
 } from "lucide-react";
+// Auth is checked client-side only to avoid SSR issues
 import { Button, Card } from "@/components/ui";
 import { APP_NAME } from "@/lib/constants";
 import { propertyService, providerService } from "@/services";
@@ -42,57 +53,256 @@ const heroCategories = [
   { id: "list", label: "List Property", icon: TrendingUp, href: "/listings/create" },
 ];
 
-// Features
+// Features with rich data for dynamic modals
 const features = [
   {
+    id: "search",
     icon: Search,
     title: "Smart Property Search",
-    description:
-      "Find your perfect property with advanced filters, map view, and AI-powered recommendations.",
-    href: "/properties",
+    description: "Find your perfect property with advanced filters, map view, and AI-powered recommendations.",
     color: "bg-blue-500",
+    detailedDescription: "Our intelligent search engine helps you discover properties that match your exact needs. Filter by location, price, amenities, and more.",
+    highlights: [
+      { icon: Filter, text: "50+ filter options" },
+      { icon: Map, text: "Interactive map view" },
+      { icon: Sparkles, text: "AI recommendations" },
+      { icon: Bell, text: "Save searches & get alerts" },
+    ],
+    stats: { label: "Properties Listed", value: "2,500+" },
+    primaryCTA: { label: "Start Searching", href: "/properties", requiresAuth: false },
+    secondaryCTA: { label: "View Map", href: "/properties?view=map", requiresAuth: false },
+    demoImage: "/images/search-demo.png",
   },
   {
+    id: "verified",
     icon: BadgeCheck,
     title: "Verified Listings",
-    description:
-      "Every listing goes through our verification process to ensure authenticity and reduce fraud.",
-    href: "/about#verification",
+    description: "Every listing goes through our verification process to ensure authenticity and reduce fraud.",
     color: "bg-green-500",
+    detailedDescription: "We verify property ownership, photos, and details to protect you from scams. Look for the verified badge on listings.",
+    highlights: [
+      { icon: Shield, text: "Document verification" },
+      { icon: Check, text: "Photo authenticity check" },
+      { icon: Users, text: "Owner identity confirmed" },
+      { icon: Lock, text: "Secure transactions" },
+    ],
+    stats: { label: "Verified Rate", value: "95%" },
+    primaryCTA: { label: "Browse Verified", href: "/properties?verified=true", requiresAuth: false },
+    secondaryCTA: { label: "How It Works", href: "#verification-process", requiresAuth: false },
   },
   {
+    id: "payments",
     icon: CreditCard,
     title: "Secure Payments",
-    description:
-      "Pay with MTN MoMo, Airtel Money, or cards. All transactions are secured and tracked.",
-    href: "/payments",
+    description: "Pay with MTN MoMo, Airtel Money, or cards. All transactions are secured and tracked.",
     color: "bg-purple-500",
+    detailedDescription: "Make payments safely through our platform. We support mobile money, cards, and bank transfers with full transaction tracking.",
+    highlights: [
+      { icon: Smartphone, text: "MTN MoMo & Airtel Money" },
+      { icon: CreditCard, text: "Visa & Mastercard" },
+      { icon: Lock, text: "256-bit encryption" },
+      { icon: Check, text: "Instant receipts" },
+    ],
+    stats: { label: "Transactions Processed", value: "UGX 5B+" },
+    primaryCTA: { label: "View Payments", href: "/dashboard/payments", requiresAuth: true },
+    secondaryCTA: { label: "Payment Methods", href: "/dashboard/payments", requiresAuth: true },
   },
   {
+    id: "providers",
     icon: Wrench,
     title: "Service Providers",
-    description:
-      "Connect with verified electricians, plumbers, carpenters, and more for all your property needs.",
-    href: "/providers",
+    description: "Connect with verified electricians, plumbers, carpenters, and more for all your property needs.",
     color: "bg-orange-500",
+    detailedDescription: "Find trusted professionals for repairs, renovations, and maintenance. All providers are vetted and reviewed by our community.",
+    highlights: [
+      { icon: BadgeCheck, text: "Verified professionals" },
+      { icon: Star, text: "Customer ratings" },
+      { icon: Clock, text: "Quick response times" },
+      { icon: Shield, text: "Service guarantee" },
+    ],
+    stats: { label: "Active Providers", value: "500+" },
+    primaryCTA: { label: "Find Providers", href: "/providers", requiresAuth: false },
+    secondaryCTA: { label: "Become a Provider", href: "/providers/register", requiresAuth: false },
   },
   {
+    id: "messaging",
     icon: MessageSquare,
     title: "In-App Messaging",
-    description:
-      "Communicate directly with property owners, agents, and service providers securely.",
-    href: "/messages",
+    description: "Communicate directly with property owners, agents, and service providers securely.",
     color: "bg-pink-500",
+    detailedDescription: "Chat in real-time with property owners and service providers. Share images, schedule viewings, and negotiate - all within the app.",
+    highlights: [
+      { icon: MessageSquare, text: "Real-time messaging" },
+      { icon: Bell, text: "Push notifications" },
+      { icon: Lock, text: "End-to-end privacy" },
+      { icon: Clock, text: "Message history" },
+    ],
+    stats: { label: "Messages Sent", value: "50K+" },
+    primaryCTA: { label: "Open Messages", href: "/dashboard/messages", requiresAuth: true },
+    secondaryCTA: { label: "Start a Chat", href: "/properties", requiresAuth: false },
   },
   {
+    id: "analytics",
     icon: TrendingUp,
     title: "Analytics Dashboard",
-    description:
-      "Track views, leads, and performance of your listings with detailed analytics.",
-    href: "/dashboard",
+    description: "Track views, leads, and performance of your listings with detailed analytics.",
     color: "bg-cyan-500",
+    detailedDescription: "Get insights into how your properties perform. Track views, inquiries, bookings, and revenue trends over time.",
+    highlights: [
+      { icon: BarChart3, text: "Performance metrics" },
+      { icon: TrendingUp, text: "Trend analysis" },
+      { icon: Users, text: "Visitor insights" },
+      { icon: Bell, text: "Weekly reports" },
+    ],
+    stats: { label: "Data Points Tracked", value: "1M+" },
+    primaryCTA: { label: "View Dashboard", href: "/dashboard/analytics", requiresAuth: true },
+    secondaryCTA: { label: "List Property", href: "/listings/create", requiresAuth: true },
   },
 ];
+
+// Feature Modal Component
+function FeatureModal({ 
+  feature, 
+  onClose, 
+  isAuthenticated 
+}: { 
+  feature: typeof features[0]; 
+  onClose: () => void; 
+  isAuthenticated: boolean;
+}) {
+  const router = useRouter();
+
+  const handlePrimaryCTA = () => {
+    if (feature.primaryCTA.requiresAuth && !isAuthenticated) {
+      router.push(`/auth/login?redirect=${encodeURIComponent(feature.primaryCTA.href)}`);
+    } else {
+      router.push(feature.primaryCTA.href);
+    }
+    onClose();
+  };
+
+  const handleSecondaryCTA = () => {
+    if (feature.secondaryCTA.requiresAuth && !isAuthenticated) {
+      router.push(`/auth/login?redirect=${encodeURIComponent(feature.secondaryCTA.href)}`);
+    } else {
+      router.push(feature.secondaryCTA.href);
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className={`${feature.color} p-6 rounded-t-2xl relative overflow-hidden`}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors z-10"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+              <feature.icon className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">{feature.title}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-white/80 text-sm">{feature.stats.label}:</span>
+                <span className="text-white font-semibold">{feature.stats.value}</span>
+              </div>
+            </div>
+          </div>
+          {/* Decorative circles */}
+          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full pointer-events-none" />
+          <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full pointer-events-none" />
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <p className="text-slate-600 text-lg mb-6">
+            {feature.detailedDescription}
+          </p>
+
+          {/* Highlights */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {feature.highlights.map((highlight, idx) => {
+              // Map color to light background
+              const colorMap: Record<string, { bg: string; text: string }> = {
+                'bg-blue-500': { bg: 'bg-blue-100', text: 'text-blue-600' },
+                'bg-green-500': { bg: 'bg-green-100', text: 'text-green-600' },
+                'bg-purple-500': { bg: 'bg-purple-100', text: 'text-purple-600' },
+                'bg-orange-500': { bg: 'bg-orange-100', text: 'text-orange-600' },
+                'bg-pink-500': { bg: 'bg-pink-100', text: 'text-pink-600' },
+                'bg-cyan-500': { bg: 'bg-cyan-100', text: 'text-cyan-600' },
+              };
+              const colors = colorMap[feature.color] || { bg: 'bg-slate-100', text: 'text-slate-600' };
+              
+              return (
+                <div 
+                  key={idx}
+                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl"
+                >
+                  <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center`}>
+                    <highlight.icon className={`w-5 h-5 ${colors.text}`} />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700">{highlight.text}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Auth Notice */}
+          {(feature.primaryCTA.requiresAuth || feature.secondaryCTA.requiresAuth) && !isAuthenticated && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-6">
+              <Lock className="w-4 h-4 text-amber-600" />
+              <span className="text-sm text-amber-800">
+                Sign in to access this feature
+              </span>
+            </div>
+          )}
+
+          {/* CTAs */}
+          <div className="flex gap-3">
+            <Button
+              onClick={handlePrimaryCTA}
+              className={`flex-1 ${feature.color} hover:opacity-90 text-white`}
+            >
+              {feature.primaryCTA.requiresAuth && !isAuthenticated ? (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Sign in to {feature.primaryCTA.label}
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  {feature.primaryCTA.label}
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSecondaryCTA}
+              className="flex-1"
+            >
+              {feature.secondaryCTA.label}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Property Types
 const propertyTypes = [
@@ -172,10 +382,25 @@ const whyChooseUs = [
 
 export default function HomePage() {
   const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const hasFetchedStats = useRef(false);
+  
+  // Handle auth state on client side only to avoid SSR issues
+  useEffect(() => {
+    try {
+      const authData = localStorage.getItem('auth-storage');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        setIsAuthenticated(!!parsed?.state?.isAuthenticated);
+      }
+    } catch (e) {
+      // Ignore errors during SSR
+    }
+  }, []);
   const hasFetchedProperties = useRef(false);
   const [propertiesByType, setPropertiesByType] = useState<Record<PropertyType, Property[]>>({} as Record<PropertyType, Property[]>);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedFeature, setSelectedFeature] = useState<typeof features[0] | null>(null);
   const [stats, setStats] = useState([
     { value: "-", label: "Properties Listed" },
     { value: "-", label: "Total Bookings" },
@@ -439,33 +664,46 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature) => (
-              <Card
-                key={feature.title}
-                className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md"
+              <div
+                key={feature.id}
+                onClick={() => setSelectedFeature(feature)}
+                className="cursor-pointer"
               >
-                <div className="p-6">
-                  <div
-                    className={`w-14 h-14 ${feature.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                  >
-                    <feature.icon className="w-7 h-7 text-white" />
+                <Card
+                  className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md h-full"
+                >
+                  <div className="p-6">
+                    <div
+                      className={`w-14 h-14 ${feature.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                    >
+                      <feature.icon className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                      {feature.title}
+                    </h3>
+                    <p className="text-slate-600 mb-4">{feature.description}</p>
+                    <button
+                      className="inline-flex items-center text-blue-600 font-medium hover:text-blue-700 group/btn"
+                    >
+                      Learn more
+                      <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-slate-600 mb-4">{feature.description}</p>
-                  <Link
-                    href={feature.href}
-                    className="inline-flex items-center text-blue-600 font-medium hover:text-blue-700"
-                  >
-                    Learn more
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </div>
-              </Card>
+                </Card>
+              </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Feature Modal */}
+      {selectedFeature && (
+        <FeatureModal
+          feature={selectedFeature}
+          onClose={() => setSelectedFeature(null)}
+          isAuthenticated={isAuthenticated}
+        />
+      )}
 
       {/* Property Types Section */}
       <section className="py-20 bg-slate-50">
