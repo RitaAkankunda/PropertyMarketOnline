@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Home, Search, Plus, User, Menu, X, MessageSquare, Bell, Building2, Wrench, LogIn, MapPin, Truck, ChevronDown, Briefcase, Wallet, Settings, Calendar } from "lucide-react";
+import { Home, Search, Plus, User, Menu, X, Bell, Building2, Wrench, LogIn, MapPin, Truck, ChevronDown, Briefcase, Wallet, Settings, Calendar, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
@@ -23,22 +23,18 @@ const mainNavLinks = [
 const listerNavLinks = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/listings/create", label: "List Property", icon: Plus },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
 const userNavLinks = [
   { href: "/dashboard/user", label: "My Requests", icon: Home },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
 const adminNavLinks = [
   { href: "/admin", label: "Admin Dashboard", icon: Home },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
 const providerNavLinks = [
   { href: "/dashboard/provider", label: "Provider Dashboard", icon: Briefcase },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
 export function Header() {
@@ -400,6 +396,7 @@ export function Header() {
                 <Link
                   href="/dashboard/messages"
                   className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+                  title="Messages"
                 >
                   <MessageSquare className="h-5 w-5" />
                 </Link>
