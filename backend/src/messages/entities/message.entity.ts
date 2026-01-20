@@ -62,6 +62,9 @@ export class Message {
   @Column({ name: 'deleted_at', type: 'timestamp with time zone', nullable: true })
   deletedAt: Date | null;
 
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any> | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;
 }

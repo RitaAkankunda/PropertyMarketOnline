@@ -240,16 +240,6 @@ export function Header() {
                   </div>
                 )}
                 
-                {/* Hide bookings icon for service providers - they manage jobs in their dashboard */}
-                {!isServiceProvider && (
-                  <Link
-                    href="/bookings"
-                    className="inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
-                    title="My Bookings"
-                  >
-                    <Calendar className="h-5 w-5" />
-                  </Link>
-                )}
                 <div className="relative" ref={notificationMenuRef}>
                   <button
                     onClick={async (e) => {
@@ -331,7 +321,20 @@ export function Header() {
                                     // Navigate based on notification type
                                     setShowNotificationDropdown(false);
                                     
-                                    if (notification.data?.jobId) {
+                                    if (notification.type === 'booking_created' || notification.type === 'BOOKING_CREATED') {
+                                      // For property inquiries/bookings:
+                                      // - Authenticated users with conversation → go to messages
+                                      // - Guest inquiries or no conversation → go to bookings
+                                      if (notification.data?.conversationId) {
+                                        router.push(`/dashboard/messages?conversation=${notification.data.conversationId}`);
+                                      } else if (notification.data?.bookingId) {
+                                        router.push(`/dashboard/bookings?highlight=${notification.data.bookingId}`);
+                                      } else if (notification.data?.propertyId) {
+                                        router.push(`/dashboard/bookings?propertyId=${notification.data.propertyId}`);
+                                      } else {
+                                        router.push('/dashboard/bookings');
+                                      }
+                                    } else if (notification.data?.jobId) {
                                       // For service providers, navigate to provider dashboard with job
                                       if (isServiceProvider) {
                                         router.push(`/dashboard/provider?jobId=${notification.data.jobId}`);
@@ -339,7 +342,7 @@ export function Header() {
                                         router.push(`/bookings`);
                                       }
                                     } else if (notification.data?.bookingId) {
-                                      router.push(`/bookings`);
+                                      router.push('/dashboard/bookings');
                                     } else if (notification.data?.propertyId) {
                                       router.push(`/properties/${notification.data.propertyId}`);
                                     } else {

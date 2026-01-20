@@ -329,4 +329,76 @@ export class MessagesService {
       blockedBy: null,
     });
   }
+
+  // Create a guest inquiry message (system message to property owner)
+  async createGuestInquiryMessage(
+    ownerId: string,
+    propertyId: string,
+    guestInfo: {
+      name: string;
+      email: string;
+      phone: string;
+      message: string;
+      bookingId: string;
+    }
+  ) {
+    // For guest inquiries, we create a special "system" conversation
+    // where the owner can see the inquiry but the guest isn't a registered user
+    
+    // Check if there's already a conversation for this property from the same email
+    // We'll use a pseudo-conversation approach where participantTwo is null or a system ID
+    
+    // Create a conversation with owner as both participants (self-conversation for inbox)
+    // This is a workaround since we don't have a guest user ID
+    let conversation = await this.conversationRepository.findOne({
+      where: {
+        participantOneId: ownerId,
+        participantTwoId: ownerId,
+        propertyId: propertyId,
+      },
+    });
+
+    if (!conversation) {
+      conversation = this.conversationRepository.create({
+        participantOneId: ownerId,
+        participantTwoId: ownerId, // Self-reference for guest inquiries
+        propertyId: propertyId,
+      });
+      conversation = await this.conversationRepository.save(conversation);
+    }
+
+    // Create the message with guest info embedded
+    const messageContent = `📬 **Guest Inquiry**\n\n${guestInfo.message}\n\n---\n*Reply to this inquiry by contacting the guest directly:*\n📧 ${guestInfo.email}\n📞 ${guestInfo.phone}`;
+
+    const message = this.messageRepository.create({
+      conversationId: conversation.id,
+      senderId: ownerId, // System message appears as from owner
+      content: messageContent,
+      type: MessageType.SYSTEM,
+      metadata: {
+        isGuestInquiry: true,
+        guestName: guestInfo.name,
+        guestEmail: guestInfo.email,
+        guestPhone: guestInfo.phone,
+        bookingId: guestInfo.bookingId,
+      },
+    });
+
+    const savedMessage = await this.messageRepository.save(message);
+
+    // Update conversation
+    await this.conversationRepository.update(conversation.id, {
+      lastMessageContent: `Guest inquiry from ${guestInfo.name}`,
+      lastMessageAt: new Date(),
+      participantOneUnreadCount: () => 'participantOneUnreadCount + 1',
+    });
+
+    console.log('[MESSAGES SERVICE] ✅ Guest inquiry message created:', {
+      conversationId: conversation.id,
+      messageId: savedMessage.id,
+      guestName: guestInfo.name,
+    });
+
+    return conversation;
+  }
 }

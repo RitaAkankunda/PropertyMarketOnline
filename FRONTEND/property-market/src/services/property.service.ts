@@ -545,8 +545,17 @@ export const propertyService = {
     paymentMethod?: string;
     currency?: string;
   }): Promise<any> {
-    const response = await api.post('/bookings', data);
-    return response.data;
+    console.log('🌐 [PROPERTY SERVICE] createBooking called with data:', JSON.stringify(data, null, 2));
+    try {
+      const response = await api.post('/bookings', data);
+      console.log('🌐 [PROPERTY SERVICE] createBooking response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('🌐 [PROPERTY SERVICE] createBooking ERROR:', error);
+      console.error('🌐 [PROPERTY SERVICE] Error response:', error.response?.data);
+      console.error('🌐 [PROPERTY SERVICE] Error status:', error.response?.status);
+      throw error;
+    }
   },
 
   // Get user's bookings

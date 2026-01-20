@@ -70,8 +70,9 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
   const isForLease = property.listingType === "lease";
   const isCommercial = property.propertyType === "commercial" || property.propertyType === "office" || property.propertyType === "warehouse";
 
-  // Determine if payment step is needed
-  const needsPayment = isAirbnb || isForRent || isForLease || (isForSale && property.price > 100000);
+  // Determine if payment step is needed - only for Airbnb bookings where user is actually booking a stay
+  // Regular inquiries for rentals/sales don't require payment upfront
+  const needsPayment = isAirbnb;
 
   // Calculate estimated cost for short-term rentals
   const calculateStayCost = () => {
@@ -112,16 +113,14 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🚀 [INQUIRY] handleSubmit called!');
+    console.log('🚀 [INQUIRY] needsPayment:', needsPayment);
+    console.log('🚀 [INQUIRY] isAirbnb:', isAirbnb);
+    console.log('🚀 [INQUIRY] property.propertyType:', property.propertyType);
     setIsSubmitting(true);
 
     try {
-      // Check if user is authenticated
-      if (!isAuthenticated) {
-        alert("Please login to submit an inquiry");
-        onClose();
-        return;
-      }
-
+      // Allow guest submissions - they provide their contact info in the form
       const bookingData: any = {
         propertyId: property.id,
         type: isAirbnb ? 'booking' : 'inquiry',
@@ -158,13 +157,20 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
         bookingData.paymentMethod = selectedPaymentMethod;
       }
 
-      await propertyService.createBooking(bookingData);
+      console.log('[INQUIRY MODAL] Submitting booking data:', bookingData);
+      const result = await propertyService.createBooking(bookingData);
+      console.log('[INQUIRY MODAL] Booking created successfully:', result);
 
       setIsSubmitting(false);
       setStep(needsPayment ? 4 : 3); // Success step (4 if payment, 3 if no payment)
     } catch (error: any) {
-      console.error("Error submitting inquiry:", error);
-      alert(error?.response?.data?.message || "Failed to submit inquiry. Please try again.");
+      console.error("[INQUIRY MODAL] Error submitting inquiry:", error);
+      console.error("[INQUIRY MODAL] Error details:", {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+      });
+      alert(error?.response?.data?.message || error?.message || "Failed to submit inquiry. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -520,7 +526,20 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
 
         {/* Step 2: Contact information */}
         {step === 2 && (
-          <form onSubmit={needsPayment ? (e) => { e.preventDefault(); setStep(3); } : handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={(e) => {
+            console.log('🔥 [FORM SUBMIT] Step 2 form submitted!');
+            console.log('🔥 [FORM SUBMIT] needsPayment:', needsPayment);
+            console.log('🔥 [FORM SUBMIT] property.propertyType:', property.propertyType);
+            console.log('🔥 [FORM SUBMIT] property.listingType:', property.listingType);
+            if (needsPayment) {
+              console.log('🔥 [FORM SUBMIT] Going to payment step (step 3)');
+              e.preventDefault();
+              setStep(3);
+            } else {
+              console.log('🔥 [FORM SUBMIT] Calling handleSubmit for inquiry...');
+              handleSubmit(e);
+            }
+          }} className="p-6 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name
@@ -814,6 +833,33 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
                 )}
               </ul>
             </div>
+
+            {/* Prompt for guests to create account */}
+            {!isAuthenticated && (
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-5 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">💬 Want to chat with the owner?</p>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Create a free account to message property owners directly, track your inquiries, and save your favorite properties.
+                    </p>
+                    <a
+                      href={`/auth/register?email=${encodeURIComponent(formData.email)}&name=${encodeURIComponent(formData.name)}`}
+                      className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Create Free Account
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Button
               onClick={handleClose}
               className="w-full bg-blue-600 hover:bg-blue-700"

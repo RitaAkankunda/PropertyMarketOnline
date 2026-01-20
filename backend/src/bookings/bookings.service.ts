@@ -13,6 +13,7 @@ import { UsersService } from 'src/users/users.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
 import { PropertyAvailabilityBlock } from 'src/properties/entities/property-availability.entity';
+import { MessagesService } from 'src/messages/messages.service';
 
 @Injectable()
 export class BookingsService {
@@ -24,6 +25,7 @@ export class BookingsService {
     private readonly propertiesService: PropertiesService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    private readonly messagesService: MessagesService,
   ) {}
 
   async create(createBookingDto: CreateBookingDto, userId: string | null): Promise<Booking> {
@@ -131,16 +133,89 @@ export class BookingsService {
       throw new BadRequestException(`Failed to create booking: ${error.message || 'Unknown error'}`);
     }
 
-    // Send notification to property owner
+    // FIRST: Auto-create conversation with property owner (for both authenticated and guest users)
+    // We do this FIRST so we can include the conversationId in the notification
+    let conversationId: string | null = null;
+    const requesterName = user 
+      ? `${user.firstName} ${user.lastName}` 
+      : createBookingDto.name || 'Guest';
+    
+    if (property.ownerId) {
+      try {
+        // Build initial message based on booking type
+        let initialMessage = '';
+        const bookingTypeLabel = createBookingDto.type === BookingType.VIEWING 
+          ? 'viewing' 
+          : createBookingDto.type === BookingType.INQUIRY 
+          ? 'inquiry'
+          : 'booking';
+        
+        initialMessage = `🏠 **New ${bookingTypeLabel.charAt(0).toUpperCase() + bookingTypeLabel.slice(1)} Request**\n\n`;
+        
+        if (!userId) {
+          // Guest user - include their info prominently
+          initialMessage += `👤 **From:** ${requesterName} (Guest)\n`;
+          initialMessage += `📧 **Email:** ${createBookingDto.email || 'Not provided'}\n`;
+          initialMessage += `📞 **Phone:** ${createBookingDto.phone || 'Not provided'}\n\n`;
+        }
+        
+        initialMessage += `Hi, I'm interested in your property "${property.title}".\n\n`;
+        
+        if (createBookingDto.type === BookingType.VIEWING && createBookingDto.scheduledDate) {
+          initialMessage += `📅 **Requested Date:** ${createBookingDto.scheduledDate}\n`;
+          if (createBookingDto.scheduledTime) {
+            initialMessage += `⏰ **Preferred Time:** ${createBookingDto.scheduledTime}\n`;
+          }
+        }
+        
+        if (createBookingDto.message) {
+          initialMessage += `\n💬 **Message:** ${createBookingDto.message}\n`;
+        }
+        
+        if (userId) {
+          initialMessage += `\n📞 **Contact:** ${createBookingDto.phone || user?.phone || 'Not provided'}`;
+          initialMessage += `\n📧 **Email:** ${createBookingDto.email || user?.email || 'Not provided'}`;
+        }
+        
+        console.log('[BOOKINGS SERVICE] Creating conversation with property owner:', {
+          userId: userId || 'guest',
+          ownerId: property.ownerId,
+          propertyId: property.id,
+        });
+        
+        // For authenticated users, create a full two-way conversation
+        if (userId && userId !== property.ownerId) {
+          try {
+            const conversation = await this.messagesService.createConversation(userId, {
+              recipientId: property.ownerId,
+              propertyId: property.id,
+              initialMessage,
+            });
+            conversationId = conversation?.id || null;
+            console.log('[BOOKINGS SERVICE] ✅ Conversation created for authenticated user:', { conversationId });
+          } catch (convError) {
+            console.error('[BOOKINGS SERVICE] ❌ Failed to create conversation for authenticated user:', convError);
+          }
+        } else if (!userId) {
+          // For guest users, skip conversation creation for now
+          // They can reply via email/phone, owner can create conversation later if needed
+          console.log('[BOOKINGS SERVICE] Guest inquiry - skipping conversation creation');
+        }
+        
+        console.log('[BOOKINGS SERVICE] ✅ Conversation created successfully:', { conversationId });
+      } catch (error: any) {
+        console.error('[BOOKINGS SERVICE] ❌ Failed to create conversation:', error);
+        // Don't fail the booking creation if conversation creation fails
+      }
+    }
+
+    // SECOND: Send notification to property owner (WITH conversationId)
     try {
-      const requesterName = user 
-        ? `${user.firstName} ${user.lastName}` 
-        : createBookingDto.name || 'Guest';
-      
       console.log('[BOOKINGS SERVICE] Creating notification for property owner:', {
         ownerId: property.ownerId,
         type: NotificationType.BOOKING_CREATED,
         bookingId: savedBooking.id,
+        conversationId: conversationId,
       });
       
       const notification = await this.notificationsService.create(
@@ -152,6 +227,7 @@ export class BookingsService {
           bookingId: savedBooking.id,
           propertyId: property.id,
           type: createBookingDto.type,
+          conversationId: conversationId, // Include conversation ID so notification can link to messages
         },
       );
       
@@ -159,6 +235,7 @@ export class BookingsService {
         id: notification.id,
         type: notification.type,
         userId: notification.userId,
+        conversationId: conversationId,
       });
     } catch (error: any) {
       console.error('[BOOKINGS SERVICE] ❌ Failed to send notification:', error);

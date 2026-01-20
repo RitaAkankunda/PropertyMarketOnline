@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui";
+import { propertyService } from "@/services/property.service";
 import type { Property } from "@/types";
 
 interface PropertyInquiryModalProps {
@@ -27,18 +28,31 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      console.log("🚀 [INQUIRY] Submitting property inquiry...");
+      
+      // Create booking/inquiry via API
+      const bookingData = {
+        propertyId: property.id,
+        type: 'inquiry' as const,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        message: formData.message || formData.subject,
+        currency: 'UGX',
+      };
 
-    console.log("Property inquiry submitted:", {
-      propertyId: property.id,
-      propertyType: property.propertyType,
-      listingType: property.listingType,
-      formData,
-    });
+      console.log("🚀 [INQUIRY] Booking data:", bookingData);
+      const result = await propertyService.createBooking(bookingData);
+      console.log("✅ [INQUIRY] Booking created successfully:", result);
 
-    setIsSubmitting(false);
-    setStep(2); // Success step
+      setIsSubmitting(false);
+      setStep(2); // Success step
+    } catch (error: any) {
+      console.error("❌ [INQUIRY] Error submitting inquiry:", error);
+      alert(error?.response?.data?.message || error?.message || "Failed to submit inquiry. Please try again.");
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -215,6 +229,24 @@ export function PropertyInquiryModal({ property, isOpen, onClose }: PropertyInqu
                 <li>✓ Check your email within 24-48 hours</li>
               </ul>
             </div>
+
+            {/* Create Account Section */}
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-5 mb-6">
+              <p className="text-sm font-semibold text-gray-900 mb-2">💬 Want better control over your inquiries?</p>
+              <p className="text-sm text-gray-600 mb-4">
+                Create a free account to message property owners directly, track all your inquiries, and save your favorite properties.
+              </p>
+              <a
+                href={`/auth/register?simple=true&return=${encodeURIComponent("/bookings")}&email=${encodeURIComponent(formData.email)}&firstName=${encodeURIComponent(formData.name)}&phone=${encodeURIComponent(formData.phone)}`}
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Create Free Account
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </a>
+            </div>
+
             <Button
               onClick={handleClose}
               className="w-full bg-blue-600 hover:bg-blue-700"

@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { Button, Card, Badge, Avatar, Input } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
-import { propertyService, authService, dashboardService, providerService, notificationsService, favoritesService } from "@/services";
+import { propertyService, authService, dashboardService, providerService, notificationsService, favoritesService, messageService } from "@/services";
 import { useAuthStore } from "@/store";
 import { useRequireRole } from "@/hooks/use-auth";
 import { useNotificationAlerts } from "@/hooks/use-notifications";
@@ -72,9 +72,15 @@ interface Appointment {
   id: string;
   title: string;
   property: string;
+  propertyId?: string;
   client: string;
+  clientEmail?: string;
+  clientPhone?: string;
   date: string;
   time: string;
+  status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  type?: 'incoming' | 'outgoing';
+  message?: string;
 }
 
 // Navigation item type
@@ -94,13 +100,14 @@ interface NavGroup {
 }
 
 // Grouped navigation items
-const getGroupedNavigation = (savedCount: number = 0): NavGroup[] => [
+const getGroupedNavigation = (savedCount: number = 0, bookingsCount: number = 0, unreadMessagesCount: number = 0): NavGroup[] => [
   {
     name: "Main",
     items: [
       { name: "Overview", href: "/dashboard", icon: Home, current: true },
       { name: "My Properties", href: "/dashboard/properties", icon: Building2 },
-      { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: 0 },
+      { name: "Bookings & Viewings", href: "/dashboard/bookings", icon: Calendar, badge: bookingsCount > 0 ? bookingsCount : undefined },
+      { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined },
       { name: "Saved Properties", href: "/dashboard/saved", icon: Heart, badge: savedCount > 0 ? savedCount : undefined },
       { name: "Recently Viewed", href: "/dashboard/recently-viewed", icon: History },
       { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
@@ -119,10 +126,11 @@ const getGroupedNavigation = (savedCount: number = 0): NavGroup[] => [
 ];
 
 // Keep flat navigation for backward compatibility
-const getBaseNavigation = (savedCount: number = 0) => [
+const getBaseNavigation = (savedCount: number = 0, bookingsCount: number = 0, unreadMessagesCount: number = 0) => [
   { name: "Overview", href: "/dashboard", icon: Home, current: true },
   { name: "My Properties", href: "/dashboard/properties", icon: Building2, current: false },
-  { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: 0, current: false },
+  { name: "Bookings & Viewings", href: "/dashboard/bookings", icon: Calendar, badge: bookingsCount > 0 ? bookingsCount : undefined, current: false },
+  { name: "Messages", href: "/dashboard/messages", icon: MessageSquare, badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined, current: false },
   { name: "Saved Properties", href: "/dashboard/saved", icon: Heart, badge: savedCount > 0 ? savedCount : undefined, current: false },
   { name: "Recently Viewed", href: "/dashboard/recently-viewed", icon: History, current: false },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, current: false },
@@ -239,6 +247,8 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [savedPropertiesCount, setSavedPropertiesCount] = useState<number>(0);
+  const [pendingBookingsCount, setPendingBookingsCount] = useState<number>(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
   
   // Fetch notifications from API
   const fetchNotifications = async () => {
@@ -423,9 +433,24 @@ export default function DashboardPage() {
         try {
           const appointmentsResponse = await dashboardService.getAppointments();
           setAppointments(appointmentsResponse || []);
+          // Count pending bookings for sidebar badge
+          const pendingCount = (appointmentsResponse || []).filter(
+            (apt: Appointment) => apt.status === 'pending'
+          ).length;
+          setPendingBookingsCount(pendingCount);
         } catch (error) {
           console.error("Failed to fetch appointments:", error);
           setAppointments([]);
+          setPendingBookingsCount(0);
+        }
+
+        // Fetch unread messages count
+        try {
+          const unreadCount = await messageService.getUnreadCount();
+          setUnreadMessagesCount(unreadCount);
+        } catch (error) {
+          console.error("Failed to fetch unread messages count:", error);
+          setUnreadMessagesCount(0);
         }
         
       } catch (error) {
@@ -534,7 +559,7 @@ export default function DashboardPage() {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {getGroupedNavigation(savedPropertiesCount).map((group) => (
+            {getGroupedNavigation(savedPropertiesCount, pendingBookingsCount, unreadMessagesCount).map((group) => (
               <div key={group.name} className="mb-2">
                 {/* Group with collapsible items */}
                 {group.collapsible ? (
@@ -658,143 +683,7 @@ export default function DashboardPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-3 ml-4 relative">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="relative"
-                onClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('[BELL CLICK] Bell icon clicked');
-                  const newState = !showNotificationDropdown;
-                  setShowNotificationDropdown(newState);
-                  // Always fetch fresh notifications when opening dropdown
-                  if (newState) {
-                    await fetchNotifications();
-                  }
-                }}
-              >
-                <Bell className="w-5 h-5" />
-                {notifications.filter(n => !n.isRead).length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {notifications.filter(n => !n.isRead).length > 9 ? '9+' : notifications.filter(n => !n.isRead).length}
-                  </span>
-                )}
-              </Button>
-              
-              {/* Notification Dropdown */}
-              {showNotificationDropdown && (
-                <>
-                  {/* Backdrop */}
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setShowNotificationDropdown(false)}
-                  />
-                  {/* Dropdown Panel */}
-                  <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
-                    {/* Header */}
-                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-bold text-lg">Notifications</h3>
-                          {notifications.filter(n => !n.isRead).length > 0 && (
-                            <p className="text-sm text-blue-100">
-                              {notifications.filter(n => !n.isRead).length} unread
-                            </p>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-white hover:bg-white/20"
-                          onClick={() => setShowNotificationDropdown(false)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Notifications List */}
-                    <div className="flex-1 overflow-y-auto">
-                      {notifications.length > 0 ? (
-                        <div className="divide-y divide-gray-100">
-                          {notifications.map((notif) => (
-                            <div
-                              key={notif.id}
-                              className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                !notif.isRead ? 'bg-blue-50' : ''
-                              }`}
-                              onClick={async () => {
-                                // Mark as read
-                                if (!notif.isRead) {
-                                  try {
-                                    await notificationsService.markAsRead(notif.id);
-                                    setNotifications(notifications.map(n =>
-                                      n.id === notif.id ? { ...n, isRead: true } : n
-                                    ));
-                                  } catch (err) {
-                                    console.error("Error marking notification as read:", err);
-                                  }
-                                }
-                                
-                                // Navigate to related job if available
-                                if (notif.data?.jobId) {
-                                  setShowNotificationDropdown(false);
-                                  router.push(`/dashboard/user?tab=requests&jobId=${notif.data.jobId}`);
-                                }
-                              }}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                                  !notif.isRead ? 'bg-blue-100' : 'bg-gray-100'
-                                }`}>
-                                  <Bell className={`w-5 h-5 ${!notif.isRead ? 'text-blue-600' : 'text-gray-400'}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-medium ${!notif.isRead ? 'text-gray-900' : 'text-gray-600'}`}>
-                                    {notif.title}
-                                  </p>
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    {notif.message}
-                                  </p>
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    {new Date(notif.createdAt).toLocaleString()}
-                                  </p>
-                                </div>
-                                {!notif.isRead && (
-                                  <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2" />
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-8 text-center">
-                          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-gray-500 text-sm">No notifications</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Footer */}
-                    {notifications.length > 0 && (
-                      <div className="p-3 border-t border-gray-200 bg-gray-50">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-sm"
-                          onClick={() => {
-                            setShowNotificationDropdown(false);
-                            router.push('/dashboard/user?tab=notifications');
-                          }}
-                        >
-                          View all notifications
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+              {/* Notification bell removed - already available in main header */}
               
               <Link
                 href="/listings/create"
@@ -1057,55 +946,6 @@ export default function DashboardPage() {
                 </div>
               </Card>
 
-              {/* Upcoming Appointments */}
-              <Card>
-                <div className="p-6 border-b">
-                  <h2 className="text-lg font-semibold text-slate-900">Upcoming</h2>
-                </div>
-                <div className="divide-y">
-                  {appointments.length > 0 ? (
-                    appointments.map((appointment) => (
-                    <div key={appointment.id} className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Calendar className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900 text-sm">{appointment.title}</p>
-                          <p className="text-xs text-slate-500">{appointment.property}</p>
-                          <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
-                            <Clock className="w-3 h-3" />
-                            {appointment.date} at {appointment.time}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                  ) : (
-                    <div className="p-8 text-center">
-                      <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-sm text-slate-500 mb-2">No upcoming appointments</p>
-                      <p className="text-xs text-slate-400 mb-4">
-                        Schedule property viewings and meetings with potential buyers
-                      </p>
-                      <Button variant="outline" size="sm" onClick={() => {
-                        // TODO: Open appointment scheduling modal
-                        console.log("Schedule appointment");
-                      }}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Schedule Now
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 border-t">
-                  <Button variant="outline" className="w-full" size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Schedule Appointment
-                  </Button>
-                </div>
-              </Card>
-
               {/* Verification Reminder - Only show if user is not verified */}
               {user && !user.isVerified && (
                 <Card className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
@@ -1196,7 +1036,7 @@ export default function DashboardPage() {
 
               {/* Navigation */}
               <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-                {getBaseNavigation(savedPropertiesCount).map((item) => (
+                {getBaseNavigation(savedPropertiesCount, pendingBookingsCount, unreadMessagesCount).map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -85,6 +85,11 @@ export default function RegisterPage() {
   const isSimplified = searchParams.get("simple") === "true";
   const returnUrl = searchParams.get("return") || null;
 
+  // Get query parameters for pre-filling
+  const prefillFirstName = searchParams.get("firstName") || "";
+  const prefillEmail = searchParams.get("email") || "";
+  const prefillPhone = searchParams.get("phone") || "";
+
   // Use appropriate schema based on mode
   const schema = isSimplified ? simplifiedRegisterSchema : registerSchema;
   type FormData = typeof isSimplified extends true ? SimplifiedRegisterFormData : RegisterFormData;
@@ -100,6 +105,9 @@ export default function RegisterPage() {
     defaultValues: {
       acceptTerms: false,
       role: isSimplified ? "buyer" : undefined,
+      firstName: prefillFirstName,
+      email: prefillEmail,
+      phone: prefillPhone,
     },
   });
 

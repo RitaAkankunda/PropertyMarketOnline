@@ -351,50 +351,62 @@ export function PropertyViewingModal({ property, isOpen, onClose }: PropertyView
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Appointment Scheduled!</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Viewing Scheduled!</h3>
             <p className="text-gray-600 mb-6">
-              Your viewing appointment has been scheduled. The property owner will contact you to confirm the details.
+              Your viewing request has been sent to the property owner. They will contact you at <strong>{formData.email}</strong> or <strong>{formData.phone}</strong> to confirm.
             </p>
+            
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-left">
+              <p className="text-sm font-semibold text-green-800 mb-2">📅 Your Viewing Details:</p>
+              <ul className="text-sm text-gray-700 space-y-2">
+                <li><strong>Property:</strong> {property.title}</li>
+                <li><strong>Date:</strong> {new Date(formData.viewingDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</li>
+                <li><strong>Time:</strong> {formData.viewingTime}</li>
+                <li><strong>Contact:</strong> {formData.name} ({formData.phone})</li>
+              </ul>
+            </div>
+
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm font-medium text-gray-900 mb-2">What to expect:</p>
+              <p className="text-sm font-medium text-gray-900 mb-2">What happens next:</p>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>✓ Confirmation email with property details</li>
-                <li>✓ Owner contact information</li>
-                <li>✓ Directions and parking instructions</li>
-                <li>✓ Contact owner 30 minutes before viewing</li>
+                <li>✓ Property owner receives your viewing request</li>
+                <li>✓ They will confirm via email or phone within 24 hours</li>
+                <li>✓ You'll receive directions and parking info</li>
+                <li>✓ Arrive 5 minutes early for your viewing</li>
               </ul>
             </div>
             
-            {/* Optional account creation for guests */}
+            {/* Prompt for guests to create account */}
             {!isAuthenticated && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mb-6">
-                <p className="text-sm font-semibold text-gray-900 mb-2">💡 Create a free account</p>
-                <p className="text-sm text-gray-700 mb-4">
-                  Track all your bookings, save favorite properties, and get faster responses from property owners.
-                </p>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/auth/register?simple=true&email=${encodeURIComponent(formData.email)}&name=${encodeURIComponent(formData.name)}`}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors text-center"
-                  >
-                    Create Account
-                  </Link>
-                  <Button
-                    onClick={handleClose}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Maybe Later
-                  </Button>
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-5 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">💬 Want to chat with the owner?</p>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Create a free account to message property owners directly, track your viewings, and get instant updates on your booking.
+                    </p>
+                    <Link
+                      href={`/auth/register?email=${encodeURIComponent(formData.email)}&name=${encodeURIComponent(formData.name)}`}
+                      className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Create Free Account
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
             
             <Button
               onClick={handleClose}
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
-              {isAuthenticated ? "Close" : "Done"}
+              Done
             </Button>
           </div>
         )}

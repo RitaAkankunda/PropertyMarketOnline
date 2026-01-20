@@ -11,6 +11,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { OptionalJwtGuard } from '../auth/guards/optional-jwt.guard';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -20,6 +21,7 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
+  @UseGuards(OptionalJwtGuard)
   async create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
     try {
       console.log('[BOOKINGS CONTROLLER] ====== CREATE BOOKING REQUEST ======');

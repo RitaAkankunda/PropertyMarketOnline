@@ -6,6 +6,8 @@ import type { User, AuthState } from "@/types";
 import { authService, type LoginCredentials, type RegisterData } from "@/services/auth.service";
 
 interface AuthStore extends AuthState {
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   login: (credentials: LoginCredentials) => Promise<{ user: User; token: string }>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
@@ -21,6 +23,11 @@ export const useAuthStore = create<AuthStore>()(
       token: null,
       isAuthenticated: false,
       isLoading: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (state) => {
+        set({ _hasHydrated: state });
+      },
 
       login: async (credentials) => {
         set({ isLoading: true });
@@ -115,6 +122,9 @@ export const useAuthStore = create<AuthStore>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

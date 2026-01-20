@@ -169,6 +169,63 @@ export class UsersService {
 
     const activities = [];
 
+    // Get property IDs for this user
+    const propertyIds = properties.map(p => p.id);
+
+    // Get recent bookings/viewings for user's properties (as property owner)
+    if (propertyIds.length > 0) {
+      const recentBookings = await this.bookingRepository
+        .createQueryBuilder('booking')
+        .leftJoinAndSelect('booking.property', 'property')
+        .where('booking.propertyId IN (:...propertyIds)', { propertyIds })
+        .orderBy('booking.createdAt', 'DESC')
+        .take(10)
+        .getMany();
+
+      for (const booking of recentBookings) {
+        const daysSinceCreated = Math.floor(
+          (Date.now() - new Date(booking.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (daysSinceCreated <= 30) {
+          const typeLabel = booking.type === BookingType.VIEWING ? 'viewing' : 
+                           booking.type === BookingType.INQUIRY ? 'inquiry' : 'booking';
+          activities.push({
+            id: `booking-${booking.id}`,
+            type: 'message' as const,
+            message: `New ${typeLabel} request for "${booking.property?.title || 'property'}" from ${booking.name}`,
+            time: this.formatTimeAgo(booking.createdAt),
+            read: false,
+            timestamp: new Date(booking.createdAt),
+          });
+        }
+      }
+    }
+
+    // Get bookings the user has made (outgoing)
+    const userBookings = await this.bookingRepository
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.property', 'property')
+      .where('booking.userId = :userId', { userId })
+      .orderBy('booking.createdAt', 'DESC')
+      .take(5)
+      .getMany();
+
+    for (const booking of userBookings) {
+      const daysSinceCreated = Math.floor(
+        (Date.now() - new Date(booking.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysSinceCreated <= 30) {
+        activities.push({
+          id: `my-booking-${booking.id}`,
+          type: 'view' as const,
+          message: `You scheduled a viewing for "${booking.property?.title || 'property'}"`,
+          time: this.formatTimeAgo(booking.createdAt),
+          read: true,
+          timestamp: new Date(booking.createdAt),
+        });
+      }
+    }
+
     // Generate activities from properties
     for (const property of properties) {
       // Property created activity (show recent listings)
@@ -179,10 +236,11 @@ export class UsersService {
         if (daysSinceCreated <= 30) {
           activities.push({
             id: `created-${property.id}`,
-            type: 'verification',
+            type: 'verification' as const,
             message: `Property "${property.title}" was listed`,
             time: this.formatTimeAgo(property.createdAt),
             read: false,
+            timestamp: new Date(property.createdAt),
           });
         }
       }
@@ -195,31 +253,104 @@ export class UsersService {
         if (daysSinceUpdated <= 7) {
           activities.push({
             id: `updated-${property.id}`,
-            type: 'inquiry',
+            type: 'inquiry' as const,
             message: `Property "${property.title}" was updated`,
             time: this.formatTimeAgo(property.updatedAt),
             read: false,
+            timestamp: new Date(property.updatedAt),
           });
         }
       }
     }
 
-    // Sort by most recent (newest first)
-    // We'll sort by the property's updatedAt/createdAt timestamp
+    // Sort by timestamp (most recent first)
     activities.sort((a, b) => {
-      // Extract timestamp from activity ID (created-{id} or updated-{id})
-      // For proper sorting, we should compare the actual property dates
-      // For now, reverse order since properties are already sorted by updatedAt DESC
-      return 0; // Properties are already sorted, activities maintain that order
+      const timeA = a.timestamp ? a.timestamp.getTime() : 0;
+      const timeB = b.timestamp ? b.timestamp.getTime() : 0;
+      return timeB - timeA;
     });
 
-    return activities.slice(0, 10); // Return last 10 activities
+    // Remove timestamp before returning (not needed in frontend)
+    return activities.slice(0, 10).map(({ timestamp, ...activity }) => activity);
   }
 
   async getDashboardAppointments(userId: string) {
-    // For now, return empty array - appointments would be in a separate table
-    // This is a placeholder for future appointment system
-    return [];
+    // Get viewing appointments for the user's properties (as property owner)
+    // and viewing appointments the user has scheduled (as potential buyer/renter)
+    const now = new Date();
+
+    // Get appointments where user is the property owner (incoming viewing requests)
+    const incomingAppointments = await this.bookingRepository
+      .createQueryBuilder('booking')
+      .innerJoinAndSelect('booking.property', 'property')
+      .leftJoinAndSelect('booking.user', 'user')
+      .where('property.ownerId = :userId', { userId })
+      .andWhere('booking.type = :type', { type: BookingType.VIEWING })
+      .andWhere('booking.status IN (:...statuses)', { 
+        statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED] 
+      })
+      .andWhere('booking.scheduledDate >= :today', { today: now.toISOString().split('T')[0] })
+      .orderBy('booking.scheduledDate', 'ASC')
+      .addOrderBy('booking.scheduledTime', 'ASC')
+      .take(10)
+      .getMany();
+
+    // Get appointments where user scheduled a viewing (outgoing viewing requests)
+    const outgoingAppointments = await this.bookingRepository
+      .createQueryBuilder('booking')
+      .innerJoinAndSelect('booking.property', 'property')
+      .leftJoinAndSelect('property.owner', 'owner')
+      .where('booking.userId = :userId', { userId })
+      .andWhere('booking.type = :type', { type: BookingType.VIEWING })
+      .andWhere('booking.status IN (:...statuses)', { 
+        statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED] 
+      })
+      .andWhere('booking.scheduledDate >= :today', { today: now.toISOString().split('T')[0] })
+      .orderBy('booking.scheduledDate', 'ASC')
+      .addOrderBy('booking.scheduledTime', 'ASC')
+      .take(10)
+      .getMany();
+
+    // Transform incoming appointments (viewing requests on your properties)
+    const formattedIncoming = incomingAppointments.map((booking) => ({
+      id: booking.id,
+      title: `Viewing Request`,
+      property: booking.property?.title || 'Unknown Property',
+      propertyId: booking.propertyId,
+      client: booking.name || (booking.user ? `${booking.user.firstName} ${booking.user.lastName}` : 'Guest'),
+      clientEmail: booking.email,
+      clientPhone: booking.phone,
+      date: booking.scheduledDate,
+      time: booking.scheduledTime || 'TBD',
+      status: booking.status,
+      type: 'incoming' as const,
+      message: booking.message,
+    }));
+
+    // Transform outgoing appointments (viewings you've scheduled)
+    const formattedOutgoing = outgoingAppointments.map((booking) => ({
+      id: booking.id,
+      title: `Property Viewing`,
+      property: booking.property?.title || 'Unknown Property',
+      propertyId: booking.propertyId,
+      client: booking.property?.owner 
+        ? `${booking.property.owner.firstName} ${booking.property.owner.lastName}` 
+        : 'Property Owner',
+      date: booking.scheduledDate,
+      time: booking.scheduledTime || 'TBD',
+      status: booking.status,
+      type: 'outgoing' as const,
+      message: booking.message,
+    }));
+
+    // Combine and sort by date/time
+    const allAppointments = [...formattedIncoming, ...formattedOutgoing].sort((a, b) => {
+      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
+    return allAppointments.slice(0, 10);
   }
 
   async getAdminActivities() {
@@ -435,15 +566,6 @@ export class UsersService {
           : '0';
 
     // Calculate messages change (inquiries in last 30 days vs previous 30 days)
-    const recentBookings = bookings.filter(
-      (b) => new Date(b.createdAt) >= last30Days,
-    );
-    const previousBookings = bookings.filter(
-      (b) =>
-        new Date(b.createdAt) >= previous30Days &&
-        new Date(b.createdAt) < last30Days,
-    );
-
     const recentMessages = recentBookings.filter(
       (b) => b.type === BookingType.INQUIRY,
     ).length;

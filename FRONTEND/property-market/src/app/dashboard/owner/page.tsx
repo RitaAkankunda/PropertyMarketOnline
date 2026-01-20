@@ -548,14 +548,7 @@ export default function OwnerDashboard() {
               <p className="text-blue-100">Manage your properties & maintenance</p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2 bg-white/20 rounded-lg relative">
-                <Bell className="w-5 h-5" />
-                {pendingTickets > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
-                    {pendingTickets}
-                  </span>
-                )}
-              </button>
+              {/* Notification bell removed - already available in main header */}
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5" />
               </div>

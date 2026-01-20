@@ -252,6 +252,7 @@ function PropertiesPage() {
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="icon"
                     onClick={() => setViewMode("grid")}
+                    title="Grid View - See properties in a grid layout"
                   >
                     <Grid className="h-4 w-4" />
                   </Button>
@@ -259,6 +260,7 @@ function PropertiesPage() {
                     variant={viewMode === "list" ? "default" : "ghost"}
                     size="icon"
                     onClick={() => setViewMode("list")}
+                    title="List View - See properties in a detailed list"
                   >
                     <List className="h-4 w-4" />
                   </Button>
@@ -266,7 +268,7 @@ function PropertiesPage() {
                     variant={viewMode === "map" ? "default" : "ghost"}
                     size="icon"
                     onClick={() => setViewMode("map")}
-                    title="Map View"
+                    title="Map View - See properties on an interactive map"
                   >
                     <Map className="h-4 w-4" />
                   </Button>

@@ -7,6 +7,7 @@ import {
   IsBoolean,
   Min,
   Max,
+  ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PropertyType, ListingType } from '../entities/property.entity';
@@ -470,6 +471,7 @@ export class CreatePropertyDto {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(15, { message: 'Maximum 15 images allowed per property' })
   @IsString({ each: true })
   images?: string[];
 }

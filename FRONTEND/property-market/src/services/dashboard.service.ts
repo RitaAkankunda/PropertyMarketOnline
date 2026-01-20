@@ -12,9 +12,15 @@ export interface DashboardAppointment {
   id: string;
   title: string;
   property: string;
+  propertyId?: string;
   client: string;
+  clientEmail?: string;
+  clientPhone?: string;
   date: string;
   time: string;
+  status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  type?: 'incoming' | 'outgoing';
+  message?: string;
 }
 
 export interface DashboardAnalytics {

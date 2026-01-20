@@ -139,9 +139,10 @@ api.interceptors.response.use(
       // Don't auto-redirect for provider registration - let the component handle it
       const isProviderRegistration = error.config?.url?.includes('/providers/register');
       
-      // Don't auto-redirect for public endpoints (homepage stats, properties list, etc.)
+      // Don't auto-redirect for public endpoints (homepage stats, properties list, bookings creation, etc.)
       const isPublicEndpoint = 
         error.config?.url?.includes('/bookings/verify') ||
+        (error.config?.url?.includes('/bookings') && error.config?.method === 'post') || // Allow guest bookings
         error.config?.url?.includes('/properties') ||
         error.config?.url?.includes('/providers') ||
         error.config?.url?.includes('/jobs') && !error.config?.url?.includes('/jobs/my') && !error.config?.url?.includes('/jobs/provider');

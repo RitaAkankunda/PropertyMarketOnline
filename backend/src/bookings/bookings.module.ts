@@ -7,6 +7,7 @@ import { PropertyAvailabilityBlock } from 'src/properties/entities/property-avai
 import { PropertiesModule } from 'src/properties/properties.module';
 import { UsersModule } from 'src/users/users.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { MessagesModule } from 'src/messages/messages.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
     PropertiesModule,
     UsersModule,
     NotificationsModule,
+    MessagesModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
