@@ -1,16 +1,18 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res, Query, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { GoogleAuthGuard } from './guards';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { EmailVerificationService } from 'src/common/email-verification.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
 
   @HttpCode(HttpStatus.CREATED)
@@ -23,6 +25,56 @@ export class AuthController {
   @Post('login')
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('verify-email')
+  async verifyEmail(
+    @Query('token') token: string,
+    @Query('email') email: string,
+  ) {
+    if (!token || !email) {
+      throw new BadRequestException('Verification token and email are required');
+    }
+
+    const user = await this.emailVerificationService.verifyEmailWithToken(token, email);
+    
+    return {
+      message: 'Email verified successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isEmailVerified: user.isEmailVerified,
+      },
+    };
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('resend-verification-email')
+  async resendVerificationEmail(@Body() body: { email: string }) {
+    if (!body.email) {
+      throw new BadRequestException('Email is required');
+    }
+
+    await this.emailVerificationService.resendVerificationEmail(body.email);
+    
+    return {
+      message: 'Verification email sent. Please check your inbox.',
+    };
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('verification-status')
+  async getVerificationStatus(@Body() body: { userId: string }) {
+    if (!body.userId) {
+      throw new BadRequestException('User ID is required');
+    }
+
+    const status = await this.emailVerificationService.getEmailVerificationStatus(body.userId);
+    
+    return status;
   }
 
   // Google OAuth

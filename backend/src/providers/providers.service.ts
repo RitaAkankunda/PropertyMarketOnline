@@ -1046,7 +1046,7 @@ export class ProvidersService {
     try {
       const user = await this.userRepository.findOne({ where: { id: provider.userId } });
       if (user) {
-        await this.emailService.sendVerificationRequestSubmitted(
+        await this.emailService.sendVerificationApproved(
           user.email,
           `${user.firstName} ${user.lastName}`,
         );

@@ -398,8 +398,11 @@ export default function HomePage() {
     }
   }, []);
   const hasFetchedProperties = useRef(false);
+  const hasFetchedProviders = useRef(false);
   const [propertiesByType, setPropertiesByType] = useState<Record<PropertyType, Property[]>>({} as Record<PropertyType, Property[]>);
+  const [featuredProviders, setFeaturedProviders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProviders, setIsLoadingProviders] = useState(true);
   const [selectedFeature, setSelectedFeature] = useState<typeof features[0] | null>(null);
   const [stats, setStats] = useState([
     { value: "-", label: "Properties Listed" },
@@ -517,6 +520,36 @@ export default function HomePage() {
     };
 
     fetchProperties();
+  }, []);
+
+  useEffect(() => {
+    // Prevent multiple fetches
+    if (hasFetchedProviders.current) return;
+    hasFetchedProviders.current = true;
+
+    const fetchProviders = async () => {
+      setIsLoadingProviders(true);
+      try {
+        // Fetch top verified providers with good ratings
+        const providersResponse = await providerService.getProviders(
+          { verified: true },
+          1,
+          8 // Get 8 featured providers
+        );
+        
+        const providers = providersResponse.data || [];
+        setFeaturedProviders(providers);
+      } catch (err) {
+        // Silently handle errors
+        if (process.env.NODE_ENV === 'development') {
+          console.error("[HOME PAGE] Failed to fetch providers:", err);
+        }
+      } finally {
+        setIsLoadingProviders(false);
+      }
+    };
+
+    fetchProviders();
   }, []);
 
   return (
@@ -841,104 +874,125 @@ export default function HomePage() {
       {/* Service Providers Section */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="inline-block mb-4 bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-sm font-medium">
-                SERVICE PROVIDERS
-              </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                Find Trusted Service Providers for Your Property
-              </h2>
-              <p className="text-lg text-slate-600 mb-8">
-                Connect with verified electricians, plumbers, carpenters,
-                cleaners, and more. All providers are KYC verified with ratings
-                and reviews from real customers.
-              </p>
+          <div className="text-center mb-12">
+            <span className="inline-block mb-4 bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-sm font-medium">
+              TRUSTED PROFESSIONALS
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Featured Service Providers
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Connect with verified electricians, plumbers, carpenters, cleaners, and more.
+            </p>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                {serviceCategories.map((category) => {
-                  const categorySlug = category.name.toLowerCase().replace(/\s+/g, '-');
-                  return (
-                    <Link
-                      key={category.name}
-                      href={`/providers?category=${encodeURIComponent(categorySlug)}`}
-                      className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
-                    >
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                        <category.icon className="w-5 h-5 text-blue-600" />
+          {isLoadingProviders ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-white rounded-xl overflow-hidden shadow-md p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-16 h-16 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-5 bg-slate-200 rounded mb-2"></div>
+                        <div className="h-4 w-24 bg-slate-200 rounded"></div>
                       </div>
-                      <div>
-                        <p className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">
-                          {category.name}
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          Find providers
+                    </div>
+                    <div className="h-4 bg-slate-200 rounded mb-2"></div>
+                    <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : featuredProviders.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {featuredProviders.map((provider) => (
+                  <Link
+                    key={provider.id}
+                    href={`/providers/${provider.id}`}
+                    className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 p-6"
+                  >
+                    <div className="flex items-start gap-3 mb-4">
+                      {provider.profilePicture ? (
+                        <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                          <Image
+                            src={provider.profilePicture}
+                            alt={`${provider.user?.firstName} ${provider.user?.lastName}`}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-semibold text-xl flex-shrink-0">
+                          {provider.user?.firstName?.charAt(0)}{provider.user?.lastName?.charAt(0)}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-slate-900 truncate">
+                            {provider.user?.firstName} {provider.user?.lastName}
+                          </h3>
+                          {provider.isVerified && (
+                            <BadgeCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-600 capitalize truncate">
+                          {provider.serviceCategory?.replace(/-/g, ' ')}
                         </p>
                       </div>
-                    </Link>
-                  );
-                })}
+                    </div>
+                    
+                    {provider.bio && (
+                      <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                        {provider.bio}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium text-slate-900">
+                          {provider.averageRating?.toFixed(1) || '5.0'}
+                        </span>
+                        <span className="text-sm text-slate-500">
+                          ({provider.totalReviews || 0})
+                        </span>
+                      </div>
+                      <span className="text-sm text-blue-600 group-hover:text-blue-700 flex items-center gap-1">
+                        View Profile
+                        <ChevronRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
+              
+              <div className="text-center">
                 <Link
                   href="/providers"
-                  className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+                  className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium bg-orange-600 text-white shadow hover:bg-orange-700 transition-colors"
                 >
-                  Find a Provider
+                  View All Service Providers
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
-                <Link
-                  href="/auth/register/provider"
-                  className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
-                  Become a Provider
-                </Link>
               </div>
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Wrench className="w-8 h-8 text-orange-600" />
+              </div>
+              <p className="text-slate-600 mb-4">No service providers available yet.</p>
+              <Link
+                href="/auth/register"
+                className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Become a Provider
+              </Link>
             </div>
-
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-3xl p-8 text-white">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                    <Wrench className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold">
-                      Service Provider Portal
-                    </h3>
-                    <p className="text-white/80">
-                      Manage jobs, earnings & reviews
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-white/10 rounded-xl">
-                    <span>Active Jobs</span>
-                    <span className="font-bold">-</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-white/10 rounded-xl">
-                    <span>This Month&apos;s Earnings</span>
-                    <span className="font-bold">Track your income</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-white/10 rounded-xl">
-                    <span>Average Rating</span>
-                    <span className="flex items-center gap-1 font-bold">
-                      -{" "}
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Badge */}
-              <div className="absolute -top-4 -right-4 bg-green-500 text-white px-4 py-2 rounded-full font-medium shadow-lg">
-                <BadgeCheck className="w-4 h-4 inline mr-1" />
-                KYC Verified
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 

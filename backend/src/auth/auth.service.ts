@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from 'src/users/enums/user-role.enum';
 import { User } from 'src/users/entities/user.entity';
+import { EmailVerificationService } from 'src/common/email-verification.service';
+import { EmailValidationService } from 'src/common/email-validation.service';
 import * as bcrypt from 'bcrypt';
 
 export interface OAuthUserData {
@@ -21,6 +23,8 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly emailVerificationService: EmailVerificationService,
+    private readonly emailValidationService: EmailValidationService,
   ) {}
 
   async signUp(createUserDto: CreateUserDto) {
@@ -29,7 +33,18 @@ export class AuthService {
       throw new ForbiddenException('Admin role cannot be assigned during registration');
     }
 
+    // Validate email format and check for disposable domains
+    this.emailValidationService.validateEmailOrThrow(createUserDto.email);
+
     const user = await this.usersService.create(createUserDto);
+
+    // Send verification email
+    try {
+      await this.emailVerificationService.sendVerificationEmail(user);
+    } catch (error) {
+      console.error('[AUTH] Failed to send verification email:', error);
+      // Log error but don't fail signup - user can resend later
+    }
 
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
@@ -39,6 +54,8 @@ export class AuthService {
     return {
       accessToken,
       user: result,
+      requiresEmailVerification: !user.isEmailVerified,
+      message: 'Account created successfully. Please check your email to verify your address.',
     };
   }
 

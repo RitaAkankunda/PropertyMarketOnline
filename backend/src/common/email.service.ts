@@ -57,8 +57,90 @@ export class EmailService {
   }
 
   /**
-   * Send verification request submitted email
+   * Send email verification email
    */
+  async sendVerificationEmail(data: {
+    to: string;
+    userName: string;
+    verificationLink: string;
+    expiryHours: number;
+  }): Promise<void> {
+    if (!this.enabled) {
+      this.logger.log(`[EMAIL DISABLED] Verification email would be sent to ${data.to}`);
+      return;
+    }
+
+    const subject = 'Verify Your Email Address - Property Market';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 20px 0; text-align: center; background-color: #ffffff;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 20px; border-radius: 8px;">
+                <h1 style="color: #f97316; margin: 0 0 20px 0; font-size: 24px; font-weight: bold;">Verify Your Email Address</h1>
+                <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hello ${data.userName},</p>
+                <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Thank you for signing up with Property Market! To activate your account, please verify your email address.</p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${data.verificationLink}" style="display: inline-block; background-color: #f97316; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Verify Email Address</a>
+                </div>
+                
+                <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0;">Or copy and paste this link in your browser:</p>
+                <p style="color: #0066cc; font-size: 12px; word-break: break-all; margin: 10px 0 20px 0;">${data.verificationLink}</p>
+                
+                <div style="background-color: #fff7ed; border-left: 4px solid #f97316; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                  <p style="color: #333333; font-size: 14px; font-weight: bold; margin: 0 0 10px 0;">⏱️ Important:</p>
+                  <ul style="color: #333333; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                    <li>This verification link expires in ${data.expiryHours} hours</li>
+                    <li>Your account remains inactive until email verification is complete</li>
+                    <li>You can request a new verification email if this one expires</li>
+                  </ul>
+                </div>
+                
+                <p style="color: #666666; font-size: 13px; margin: 20px 0 0 0;">If you didn't create this account, please ignore this email.</p>
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+                  <p style="color: #666666; font-size: 12px; margin: 0;">Best regards,<br><strong style="color: #f97316;">The Property Market Team</strong></p>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const plainText = `
+Verify Your Email Address - Property Market
+
+Hello ${data.userName},
+
+Thank you for signing up with Property Market! To activate your account, please verify your email address.
+
+Click here to verify: ${data.verificationLink}
+
+Important:
+- This verification link expires in ${data.expiryHours} hours
+- Your account remains inactive until email verification is complete
+- You can request a new verification email if this one expires
+
+If you didn't create this account, please ignore this email.
+
+Best regards,
+The Property Market Team
+    `;
+
+    await this.sendEmail(data.to, subject, html);
+  }
+
+  /**
+   * Send email
   async sendVerificationRequestSubmitted(email: string, providerName: string): Promise<void> {
     if (!this.enabled) {
       this.logger.log(`[EMAIL DISABLED] Verification request submitted email would be sent to ${email}`);

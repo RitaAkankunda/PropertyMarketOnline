@@ -50,6 +50,21 @@ export class User {
   @Column({ default: false })
   isVerified: boolean;
 
+  @Column({ nullable: true })
+  emailVerificationToken?: string;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  emailVerificationTokenExpires?: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  emailVerifiedAt?: Date;
+
+  @Column({ default: false })
+  isEmailVerified: boolean;
+
+  @Column({ default: 0 })
+  emailVerificationAttempts: number;
+
   @OneToMany(() => Property, (property) => property.owner)
   properties: Property[];
 

@@ -90,29 +90,57 @@ export class CreatePaymentsTables1705000000032 implements MigrationInterface {
       )
     `);
 
-    // Add foreign key constraints
+    // Add foreign key constraints with existence checks
     await queryRunner.query(`
-      ALTER TABLE "payments" 
-      ADD CONSTRAINT "FK_payments_userId" 
-      FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'FK_payments_userId'
+        ) THEN
+          ALTER TABLE "payments" 
+          ADD CONSTRAINT "FK_payments_userId" 
+          FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL;
+        END IF;
+      END $$;
     `);
 
     await queryRunner.query(`
-      ALTER TABLE "payments" 
-      ADD CONSTRAINT "FK_payments_propertyId" 
-      FOREIGN KEY ("propertyId") REFERENCES "properties"("id") ON DELETE SET NULL
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'FK_payments_propertyId'
+        ) THEN
+          ALTER TABLE "payments" 
+          ADD CONSTRAINT "FK_payments_propertyId" 
+          FOREIGN KEY ("propertyId") REFERENCES "properties"("id") ON DELETE SET NULL;
+        END IF;
+      END $$;
     `);
 
     await queryRunner.query(`
-      ALTER TABLE "payments" 
-      ADD CONSTRAINT "FK_payments_bookingId" 
-      FOREIGN KEY ("bookingId") REFERENCES "bookings"("id") ON DELETE SET NULL
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'FK_payments_bookingId'
+        ) THEN
+          ALTER TABLE "payments" 
+          ADD CONSTRAINT "FK_payments_bookingId" 
+          FOREIGN KEY ("bookingId") REFERENCES "bookings"("id") ON DELETE SET NULL;
+        END IF;
+      END $$;
     `);
 
     await queryRunner.query(`
-      ALTER TABLE "payment_methods" 
-      ADD CONSTRAINT "FK_payment_methods_userId" 
-      FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'FK_payment_methods_userId'
+        ) THEN
+          ALTER TABLE "payment_methods" 
+          ADD CONSTRAINT "FK_payment_methods_userId" 
+          FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+        END IF;
+      END $$;
     `);
 
     // Create indexes for better query performance

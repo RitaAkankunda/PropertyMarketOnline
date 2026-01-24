@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreatePropertyAvailabilityBlocks028 implements MigrationInterface {
-  name = 'CreatePropertyAvailabilityBlocks028';
+export class CreatePropertyAvailabilityBlocks1700000028000 implements MigrationInterface {
+  name = 'CreatePropertyAvailabilityBlocks1700000028000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
@@ -22,18 +22,33 @@ export class CreatePropertyAvailabilityBlocks028 implements MigrationInterface {
       ON "property_availability_blocks" ("propertyId", "startDate", "endDate")
     `);
 
+    // Only add constraints if they don't exist
     await queryRunner.query(`
-      ALTER TABLE "property_availability_blocks"
-      ADD CONSTRAINT "FK_property_availability_blocks_property"
-      FOREIGN KEY ("propertyId") REFERENCES "properties"("id")
-      ON DELETE CASCADE ON UPDATE NO ACTION
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'FK_property_availability_blocks_property'
+        ) THEN
+          ALTER TABLE "property_availability_blocks"
+          ADD CONSTRAINT "FK_property_availability_blocks_property"
+          FOREIGN KEY ("propertyId") REFERENCES "properties"("id")
+          ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+      END $$;
     `);
 
     await queryRunner.query(`
-      ALTER TABLE "property_availability_blocks"
-      ADD CONSTRAINT "FK_property_availability_blocks_user"
-      FOREIGN KEY ("createdById") REFERENCES "users"("id")
-      ON DELETE SET NULL ON UPDATE NO ACTION
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'FK_property_availability_blocks_user'
+        ) THEN
+          ALTER TABLE "property_availability_blocks"
+          ADD CONSTRAINT "FK_property_availability_blocks_user"
+          FOREIGN KEY ("createdById") REFERENCES "users"("id")
+          ON DELETE SET NULL ON UPDATE NO ACTION;
+        END IF;
+      END $$;
     `);
   }
 
