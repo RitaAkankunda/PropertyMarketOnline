@@ -216,10 +216,10 @@ function FeatureModal({
               <feature.icon className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">{feature.title}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-white">{feature.title}</h2>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-white/80 text-sm">{feature.stats.label}:</span>
-                <span className="text-white font-semibold">{feature.stats.value}</span>
+                <span className="text-white/80 text-base">{feature.stats.label}:</span>
+                <span className="text-white text-lg font-semibold">{feature.stats.value}</span>
               </div>
             </div>
           </div>
@@ -230,7 +230,7 @@ function FeatureModal({
 
         {/* Content */}
         <div className="p-6">
-          <p className="text-slate-600 text-lg mb-6">
+          <p className="text-slate-600 text-lg md:text-xl mb-6">
             {feature.detailedDescription}
           </p>
 
@@ -256,7 +256,7 @@ function FeatureModal({
                   <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center`}>
                     <highlight.icon className={`w-5 h-5 ${colors.text}`} />
                   </div>
-                  <span className="text-sm font-medium text-slate-700">{highlight.text}</span>
+                  <span className="text-base font-medium text-slate-700">{highlight.text}</span>
                 </div>
               );
             })}
@@ -596,7 +596,7 @@ export default function HomePage() {
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-slate-300 mb-8 max-w-2xl mx-auto">
               Buy, rent, lease, or sell property with confidence. Connect with
               verified listings and trusted service providers all in one place.
             </p>
@@ -653,7 +653,7 @@ export default function HomePage() {
                   <div className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-1.5 md:mb-2 leading-none">
                     {stat.value}
                   </div>
-                  <div className="text-[10px] sm:text-xs md:text-sm text-slate-200 md:text-slate-300 font-medium leading-snug px-1 break-words hyphens-auto">
+                  <div className="text-sm md:text-base text-slate-200 md:text-slate-300 font-medium leading-snug px-1 break-words hyphens-auto">
                     {stat.label}
                   </div>
                 </div>
@@ -711,10 +711,10 @@ export default function HomePage() {
                     >
                       <feature.icon className="w-7 h-7 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                    <h3 className="text-xl md:text-2xl font-semibold text-slate-900 mb-2">
                       {feature.title}
                     </h3>
-                    <p className="text-slate-600 mb-4">{feature.description}</p>
+                    <p className="text-base md:text-lg text-slate-600 mb-4">{feature.description}</p>
                     <button
                       className="inline-flex items-center text-blue-600 font-medium hover:text-blue-700 group/btn"
                     >
@@ -822,13 +822,13 @@ export default function HomePage() {
                               )}
                             </div>
                             <div className="p-4">
-                              <h4 className="font-semibold text-slate-900 mb-2 line-clamp-1">
+                              <h4 className="text-base md:text-lg font-semibold text-slate-900 mb-2 line-clamp-1">
                                 {property.title}
                               </h4>
-                              <p className="text-xl font-bold text-blue-600 mb-3">
+                              <p className="text-xl md:text-2xl font-bold text-blue-600 mb-3">
                                 {property.currency} {property.price?.toLocaleString()}
                               </p>
-                              <div className="flex items-center justify-between text-sm text-slate-500">
+                              <div className="flex items-center justify-between text-base text-slate-500">
                                 <span>View Details</span>
                                 <ChevronRight className="w-4 h-4" />
                               </div>
@@ -846,7 +846,7 @@ export default function HomePage() {
                     <div className="text-center">
                       <Link
                         href={`/properties?type=${type.type}`}
-                        className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium border border-input bg-white shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                        className="inline-flex items-center justify-center h-12 px-8 text-base md:text-lg rounded-lg font-medium border border-input bg-white shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                       >
                         View All {type.name}
                         <ArrowRight className="w-4 h-4 ml-2" />
@@ -860,7 +860,7 @@ export default function HomePage() {
               <div className="text-center pt-4">
                 <Link
                   href="/properties"
-                  className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-semibold bg-blue-600 text-white shadow hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center justify-center h-12 px-8 text-base md:text-lg rounded-lg font-semibold bg-blue-600 text-white shadow hover:bg-blue-700 transition-colors"
                 >
                   View All Properties
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -931,14 +931,14 @@ export default function HomePage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-slate-900 truncate">
+                          <h3 className="text-base md:text-lg font-semibold text-slate-900 truncate">
                             {provider.user?.firstName} {provider.user?.lastName}
                           </h3>
                           {provider.isVerified && (
                             <BadgeCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
                           )}
                         </div>
-                        <p className="text-sm text-slate-600 capitalize truncate">
+                        <p className="text-sm md:text-base text-slate-600 capitalize truncate">
                           {provider.serviceCategory?.replace(/-/g, ' ')}
                         </p>
                       </div>
@@ -972,7 +972,7 @@ export default function HomePage() {
               <div className="text-center">
                 <Link
                   href="/providers"
-                  className="inline-flex items-center justify-center h-12 px-8 text-base rounded-lg font-medium bg-orange-600 text-white shadow hover:bg-orange-700 transition-colors"
+                  className="inline-flex items-center justify-center h-12 px-8 text-base md:text-lg rounded-lg font-medium bg-orange-600 text-white shadow hover:bg-orange-700 transition-colors"
                 >
                   View All Service Providers
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -1007,10 +1007,10 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Why Choose {APP_NAME}?
             </h2>
-            <p className="text-lg text-blue-100 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto">
               We&apos;re building the most trusted property platform in the
               region.
             </p>
@@ -1022,8 +1022,8 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <item.icon className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-blue-100">{item.description}</p>
+                <h3 className="text-xl md:text-2xl font-semibold mb-2">{item.title}</h3>
+                <p className="text-base md:text-lg text-blue-100">{item.description}</p>
               </div>
             ))}
           </div>
@@ -1093,10 +1093,10 @@ export default function HomePage() {
       <section className="py-20 bg-slate-900 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Ready to Find Your Dream Property?
             </h2>
-            <p className="text-lg text-slate-400 mb-8">
+            <p className="text-lg md:text-xl text-slate-400 mb-8">
               Start your property journey with us today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
