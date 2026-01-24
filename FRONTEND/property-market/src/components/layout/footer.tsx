@@ -56,14 +56,14 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center space-x-2 mb-4">
               <Building2 className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold text-white">{APP_NAME}</span>
+              <span className="text-2xl md:text-3xl font-bold text-white">{APP_NAME}</span>
             </Link>
-            <p className="text-slate-400 mb-6 text-sm leading-relaxed">
+            <p className="text-slate-400 mb-6 text-base leading-relaxed">
               Your trusted real estate marketplace for buying, renting, leasing,
               and selling property. Connecting property owners with verified
               buyers and renters.
             </p>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-base">
               <div className="flex items-center space-x-2 text-slate-400">
                 <MapPin className="h-4 w-4" />
                 <span>Kampala, Uganda</span>
@@ -81,13 +81,13 @@ export function Footer() {
 
           {/* Company Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Company</h3>
+            <h3 className="text-white font-semibold text-lg md:text-xl mb-4">Company</h3>
             <ul className="space-y-2">
               {footerLinks.company.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                    className="text-slate-400 hover:text-white text-base transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -98,13 +98,13 @@ export function Footer() {
 
           {/* Properties Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Properties</h3>
+            <h3 className="text-white font-semibold text-lg md:text-xl mb-4">Properties</h3>
             <ul className="space-y-2">
               {footerLinks.properties.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                    className="text-slate-400 hover:text-white text-base transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -115,13 +115,13 @@ export function Footer() {
 
           {/* Services Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Services</h3>
+            <h3 className="text-white font-semibold text-lg md:text-xl mb-4">Services</h3>
             <ul className="space-y-2">
               {footerLinks.services.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                    className="text-slate-400 hover:text-white text-base transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -132,13 +132,13 @@ export function Footer() {
 
           {/* Support Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Support</h3>
+            <h3 className="text-white font-semibold text-lg md:text-xl mb-4">Support</h3>
             <ul className="space-y-2">
               {footerLinks.support.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                    className="text-slate-400 hover:text-white text-base transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -152,7 +152,7 @@ export function Footer() {
 
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-base">
             © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
           </p>
           <div className="flex items-center space-x-4">

@@ -147,7 +147,7 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <Building2 className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-primary hidden sm:inline-block">
+            <span className="text-2xl md:text-3xl font-bold text-primary hidden sm:inline-block">
               {APP_NAME}
             </span>
           </Link>
@@ -159,7 +159,7 @@ export function Header() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                  "px-4 py-2 rounded-lg text-base md:text-lg font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                   pathname === link.href && "bg-accent text-accent-foreground"
                 )}
               >
@@ -173,7 +173,7 @@ export function Header() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        "px-4 py-2 rounded-lg text-base md:text-lg font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                         pathname === link.href && "bg-accent text-accent-foreground"
                       )}
                     >
@@ -187,7 +187,7 @@ export function Header() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        "px-4 py-2 rounded-lg text-base md:text-lg font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                         pathname === link.href && "bg-accent text-accent-foreground"
                       )}
                     >
@@ -201,7 +201,7 @@ export function Header() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        "px-4 py-2 rounded-lg text-base md:text-lg font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                         pathname === link.href && "bg-accent text-accent-foreground"
                       )}
                     >
@@ -215,7 +215,7 @@ export function Header() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        "px-4 py-2 rounded-lg text-base md:text-lg font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                         pathname === link.href && "bg-accent text-accent-foreground"
                       )}
                     >
@@ -233,7 +233,7 @@ export function Header() {
                 {/* Role Badge - Only show for listers, providers, and admins */}
                 {roleBadge && (
                   <div className={cn(
-                    "px-2.5 py-1 rounded-md text-xs font-medium border",
+                    "px-2.5 py-1 rounded-md text-sm font-medium border",
                     roleBadge.color
                   )}>
                     {roleBadge.label}
